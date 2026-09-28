@@ -1,5 +1,6 @@
 import axios from 'axios'
-import { API_BASE_URL } from '@/config/api'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
 export interface PropertyMatch {
   propertyId: string
@@ -23,7 +24,7 @@ export const matchingAPI = {
   ): Promise<PropertyMatch[]> {
     try {
       const response = await axios.get<MatchingResponse>(
-        `${API_BASE_URL}/properties/${propertyId}/similar?limit=${limit}`
+        `${API_URL}/properties/${propertyId}/similar?limit=${limit}`
       )
 
       if (response.data.success) {
