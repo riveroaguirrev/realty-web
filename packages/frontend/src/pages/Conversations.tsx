@@ -69,21 +69,23 @@ export const Conversations = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-slate-100">
+        <nav className="bg-white shadow-md sticky top-0 z-50">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <h1 className="text-2xl font-bold text-gray-900">Realty</h1>
-              <div className="flex gap-4">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                Realty
+              </h1>
+              <div className="flex gap-6">
                 <button
                   onClick={() => navigate('/search')}
-                  className="text-gray-600 hover:text-gray-900"
+                  className="px-4 py-2 text-gray-700 hover:text-blue-600 font-semibold transition-colors"
                 >
-                  Búsqueda
+                  🔍 Búsqueda
                 </button>
                 <button
                   onClick={() => navigate('/dashboard')}
-                  className="text-gray-600 hover:text-gray-900"
+                  className="px-4 py-2 text-gray-700 hover:text-blue-600 font-semibold transition-colors"
                 >
                   ← Dashboard
                 </button>
@@ -92,27 +94,33 @@ export const Conversations = () => {
           </div>
         </nav>
 
-        <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">Conversaciones</h2>
+        <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h2 className="text-4xl font-bold text-gray-900 mb-2">💬 Conversaciones</h2>
+            <p className="text-gray-600">Chat con otros asesores</p>
+          </div>
 
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
+            <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm">
+              <p className="font-medium">Error</p>
+              <p className="text-sm">{error}</p>
             </div>
           )}
 
           {conversations.length === 0 ? (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <p className="text-gray-600 text-lg mb-4">No tienes conversaciones aún</p>
+            <div className="bg-white rounded-xl shadow-lg p-16 text-center">
+              <div className="text-6xl mb-4">🗨️</div>
+              <p className="text-gray-600 text-lg mb-2">Sin conversaciones aún</p>
+              <p className="text-gray-500 text-sm mb-6">Comienza a charlar con otros asesores</p>
               <button
                 onClick={() => navigate('/search')}
-                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-shadow"
               >
-                Buscar asesores
+                🔍 Encontrar Asesores
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow overflow-hidden divide-y divide-gray-200">
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden divide-y divide-gray-200">
               {conversations.map((conv) => {
                 const otherParticipant = getOtherParticipant(conv)
                 const lastMsg = conv.messages?.[0]
