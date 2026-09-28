@@ -113,19 +113,21 @@ export const ConversationDetail = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <nav className="bg-white shadow">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex flex-col">
+        <nav className="bg-white shadow-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Realty</h1>
-                <p className="text-sm text-gray-600">
-                  {otherAdvisor?.firstName} {otherAdvisor?.lastName}
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                  Realty
+                </h1>
+                <p className="text-sm text-blue-600 font-semibold">
+                  💬 {otherAdvisor?.firstName} {otherAdvisor?.lastName}
                 </p>
               </div>
               <button
                 onClick={() => navigate('/messages')}
-                className="text-gray-600 hover:text-gray-900"
+                className="px-4 py-2 text-gray-700 hover:text-blue-600 font-semibold transition-colors"
               >
                 ← Conversaciones
               </button>
@@ -133,18 +135,20 @@ export const ConversationDetail = () => {
           </div>
         </nav>
 
-        <div className="flex-1 max-w-3xl mx-auto w-full bg-white shadow-lg flex flex-col">
+        <div className="flex-1 max-w-3xl mx-auto w-full bg-white shadow-xl flex flex-col rounded-xl">
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="flex-1 overflow-y-auto p-8 space-y-4">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                {error}
+              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm mb-4">
+                <p className="font-medium">Error</p>
+                <p className="text-sm">{error}</p>
               </div>
             )}
 
             {messages.length === 0 ? (
-              <div className="text-center text-gray-500 py-12">
-                <p>Inicia una conversación</p>
+              <div className="text-center text-gray-500 py-20">
+                <p className="text-2xl mb-2">🗨️</p>
+                <p className="text-lg">Inicia una conversación</p>
               </div>
             ) : (
               messages.map((msg) => (
@@ -190,22 +194,22 @@ export const ConversationDetail = () => {
           </div>
 
           {/* Input Area */}
-          <div className="border-t border-gray-200 p-4">
-            <form onSubmit={handleSendMessage} className="flex gap-2">
+          <div className="border-t-2 border-blue-100 p-6 bg-gradient-to-r from-blue-50 to-transparent">
+            <form onSubmit={handleSendMessage} className="flex gap-3">
               <input
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Escribe un mensaje..."
                 disabled={sending}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 transition-all"
               />
               <button
                 type="submit"
                 disabled={!inputValue.trim() || sending}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg disabled:opacity-50 font-semibold transition-all"
               >
-                {sending ? '...' : 'Enviar'}
+                {sending ? '...' : '📤 Enviar'}
               </button>
             </form>
           </div>
