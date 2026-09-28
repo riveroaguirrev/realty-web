@@ -1,96 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { propertyService } from '@/services/property.service'
+import { verifyAuth, sendError } from '@/middleware/auth'
+import { Errors } from '@/utils/errors'
+import { handleCORS, addCORSHeaders } from '@/middleware/cors'
+
+export async function OPTIONS(req: NextRequest) {
+  return handleCORS(req)
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const page = req.nextUrl.searchParams.get('page') || '1'
-    const pageSize = req.nextUrl.searchParams.get('pageSize') || '10'
-    const skip = (parseInt(page) - 1) * parseInt(pageSize)
+    const url = new URL(req.url)
+    const page = parseInt(url.searchParams.get('page') || '1')
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '10')
+    const city = url.searchParams.get('city') || undefined
+    const region = url.searchParams.get('region') || undefined
+    const type = url.searchParams.get('type') || undefined
+    const priceMin = url.searchParams.get('priceMin') ? parseInt(url.searchParams.get('priceMin')!) : undefined
+    const priceMax = url.searchParams.get('priceMax') ? parseInt(url.searchParams.get('priceMax')!) : undefined
 
-    const properties = await prisma.property.findMany({
-      skip,
-      take: parseInt(pageSize),
-      include: {
-        advisor: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+    const result = await propertyService.listProperties({
+      city,
+      region,
+      type,
+      priceMin,
+      priceMax,
+      page,
+      pageSize,
     })
 
-    const total = await prisma.property.count()
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
-      data: properties,
+      data: result.properties,
       meta: {
-        page: parseInt(page),
-        pageSize: parseInt(pageSize),
-        total,
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
       },
     })
+    return addCORSHeaders(response, req)
   } catch (error) {
     console.error('Error fetching properties:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          message: 'Failed to fetch properties',
-        },
-      },
-      { status: 500 }
-    )
+    const response = sendError(Errors.INTERNAL_ERROR, 500)
+    return addCORSHeaders(response, req)
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await verifyAuth(req)
+
+    if (!auth.user) {
+      const response = sendError(Errors.UNAUTHORIZED, 401)
+      return addCORSHeaders(response, req)
+    }
+
     const body = await req.json()
 
-    const property = await prisma.property.create({
-      data: {
-        title: body.title,
-        description: body.description,
-        slug: body.title.toLowerCase().replace(/\s+/g, '-'),
-        type: body.type,
-        price: body.price,
-        address: body.address,
-        city: body.city,
-        region: body.region,
-        bedrooms: body.bedrooms,
-        bathrooms: body.bathrooms,
-        areaSquareMeters: body.areaSquareMeters,
-        images: body.images || [],
-        advisorId: body.advisorId,
-        organizationId: body.organizationId,
-        status: 'AVAILABLE',
-      },
-      include: {
-        advisor: true,
-      },
+    const property = await propertyService.createProperty({
+      ...body,
+      advisorId: auth.user.id,
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: property,
     })
+    return addCORSHeaders(response, req)
   } catch (error) {
     console.error('Error creating property:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          message: 'Failed to create property',
-        },
-      },
-      { status: 400 }
-    )
+    const response = sendError(error || Errors.INTERNAL_ERROR, 400)
+    return addCORSHeaders(response, req)
   }
 }
