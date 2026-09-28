@@ -12,7 +12,7 @@ export const Register = () => {
     password: '',
     firstName: '',
     lastName: '',
-    role: UserRole.BUYER as UserRole,
+    role: UserRole.ADVISOR as UserRole,
   })
 
   const [formError, setFormError] = useState<string | null>(null)

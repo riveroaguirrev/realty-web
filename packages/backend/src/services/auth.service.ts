@@ -5,7 +5,7 @@ import { Errors } from '@/utils/errors'
 
 export class AuthService {
   async signUp(payload: SignUpPayload): Promise<{ user: User; accessToken: string }> {
-    const { email, password, firstName, lastName, role } = payload
+    const { email, password, firstName, lastName } = payload
 
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -25,7 +25,7 @@ export class AuthService {
           email,
           firstName,
           lastName,
-          role: role as any,
+          role: AdvisorRole.AGENT,
           status: 'ACTIVE',
           isVerified: false,
           specializations: [],
