@@ -7,6 +7,9 @@ import { Profile } from '@/pages/auth/Profile'
 import { Dashboard } from '@/pages/Dashboard'
 import { Properties } from '@/pages/Properties'
 import { CreateProperty } from '@/pages/CreateProperty'
+import { OrganizationSetup } from '@/pages/OrganizationSetup'
+import { OrganizationDashboard } from '@/pages/OrganizationDashboard'
+import { InviteAccept } from '@/pages/InviteAccept'
 
 const queryClient = new QueryClient()
 
@@ -28,6 +31,11 @@ function App() {
           {/* Properties */}
           <Route path="/properties" element={<Properties />} />
           <Route path="/properties/create" element={<CreateProperty />} />
+
+          {/* Organization Routes */}
+          <Route path="/organization/setup" element={<OrganizationSetup />} />
+          <Route path="/organization/dashboard" element={<OrganizationDashboard />} />
+          <Route path="/invite" element={<InviteAccept />} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
