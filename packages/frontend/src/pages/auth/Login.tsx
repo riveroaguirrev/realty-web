@@ -39,47 +39,55 @@ export const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h1 className="text-center text-3xl font-bold text-gray-900 mb-6">Realty</h1>
-        <h2 className="text-center text-2xl font-bold text-gray-900">Sign in to your account</h2>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
+        <div className="text-center">
+          <h1 className="text-center text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-4">
+            Realty
+          </h1>
+          <h2 className="text-center text-2xl font-bold text-gray-900">Inicia sesión</h2>
+          <p className="text-center text-gray-600 mt-2">Accede a tu cuenta para continuar</p>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow rounded-lg">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-12 px-8 shadow-2xl rounded-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             {(error || formError) && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                {error || formError}
+              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm">
+                <p className="font-semibold">Error de inicio de sesión</p>
+                <p className="text-sm">{error || formError}</p>
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                📧 Correo electrónico
               </label>
               <input
                 id="email"
                 name="email"
                 type="email"
+                placeholder="tu@email.com"
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-50"
                 disabled={isLoading}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                🔐 Contraseña
               </label>
               <input
                 id="password"
                 name="password"
                 type="password"
+                placeholder="••••••••"
                 value={formData.password}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-50"
                 disabled={isLoading}
               />
             </div>
@@ -87,18 +95,20 @@ export const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? '⏳ Iniciando sesión...' : '🚀 Iniciar sesión'}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/auth/register" className="text-blue-600 hover:text-blue-500 font-medium">
-              Create one
-            </Link>
-          </p>
+          <div className="mt-8 pt-8 border-t-2 border-gray-100">
+            <p className="text-center text-gray-600">
+              ¿No tienes cuenta?{' '}
+              <Link to="/auth/register" className="text-blue-600 hover:text-blue-700 font-bold transition-colors">
+                Crea una ahora
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
