@@ -1,4 +1,41 @@
 // ============================================================================
+// AUTH TYPES
+// ============================================================================
+
+export enum UserRole {
+  ADVISOR = 'ADVISOR',
+  BUYER = 'BUYER',
+}
+
+export interface User {
+  id: string
+  email: string
+  role: UserRole
+  firstName: string
+  lastName: string
+  profileImage?: string
+  bio?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface AuthPayload {
+  email: string
+  password: string
+}
+
+export interface SignUpPayload extends AuthPayload {
+  firstName: string
+  lastName: string
+  role: UserRole
+}
+
+export interface AuthResponse {
+  user: User
+  accessToken: string
+}
+
+// ============================================================================
 // PROPERTY TYPES
 // ============================================================================
 
