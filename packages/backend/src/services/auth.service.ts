@@ -1,6 +1,6 @@
 import { supabase, getSupabaseClient } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
-import { User, UserRole, SignUpPayload, AuthPayload } from '@shared/types'
+import { User, UserRole, SignUpPayload, AuthPayload, AdvisorRole, Permission } from '@shared/types'
 import { Errors } from '@/utils/errors'
 
 export class AuthService {
@@ -26,12 +26,13 @@ export class AuthService {
           firstName,
           lastName,
           role: role as any,
-          isActive: true,
+          status: 'ACTIVE',
           isVerified: false,
           specializations: [],
           rating: 0,
           reviewCount: 0,
         },
+        include: { organization: true },
       })
 
       const session = authData.session
@@ -68,6 +69,7 @@ export class AuthService {
 
       const advisor = await prisma.advisor.findUnique({
         where: { id: authData.user.id },
+        include: { organization: true },
       })
 
       if (!advisor) {
@@ -97,6 +99,7 @@ export class AuthService {
 
       const advisor = await prisma.advisor.findUnique({
         where: { id: data.user.id },
+        include: { organization: true },
       })
 
       if (!advisor) {
@@ -137,6 +140,7 @@ export class AuthService {
   }
 
   private mapAdvisorToUser(advisor: any): User {
+    const permissions = this.getPermissionsForRole(advisor.role)
     return {
       id: advisor.id,
       email: advisor.email,
@@ -145,9 +149,21 @@ export class AuthService {
       role: advisor.role,
       profileImage: advisor.profileImage,
       bio: advisor.bio,
+      organizationId: advisor.organizationId || undefined,
+      organizationName: advisor.organization?.name || undefined,
+      roleInOrganization: advisor.role as AdvisorRole,
+      permissions,
       createdAt: advisor.createdAt,
       updatedAt: advisor.updatedAt,
     }
+  }
+
+  private getPermissionsForRole(role: any): Permission[] {
+    const basePermissions = [Permission.PROPERTY_LIST, Permission.PROPERTY_CREATE, Permission.PROPERTY_DELETE]
+    if (role === 'DIRECTOR') {
+      return [...basePermissions, Permission.ORG_ADMIN, Permission.ADVISOR_MANAGE]
+    }
+    return basePermissions
   }
 }
 
