@@ -1,0 +1,313 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ORGANIZATIONS (Oficinas Inmobiliarias)
+// ============================================================================
+
+model Organization {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  slug          String   @unique
+  description   String?
+  city          String
+  region        String
+  phone         String?
+  email         String?
+  website       String?
+  logo          String?
+
+  // Metadata
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  advisors      Advisor[]
+  properties    Property[]
+  commissions   Commission[]
+
+  @@index([city, region])
+}
+
+// ============================================================================
+// ADVISORS (Asesores - independientes y de oficina)
+// ============================================================================
+
+model Advisor {
+  id                  String    @id @default(cuid())
+  firstName           String
+  lastName            String
+  email               String    @unique
+  phone               String?
+  profileImage        String?
+  bio                 String?
+
+  // Organization (null = independiente)
+  organizationId      String?
+  organization        Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  // Specialization & Rating
+  specializations     String[]  // ["residencial", "comercial", "terreno"]
+  rating              Float?    @default(0)
+  reviewCount         Int       @default(0)
+
+  // Status
+  isVerified          Boolean   @default(false)
+  isActive            Boolean   @default(true)
+
+  // Metadata
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  properties          Property[]
+  requirements        Requirement[]
+  matches             Match[]
+  notifications       Notification[]
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([isActive])
+}
+
+// ============================================================================
+// PROPERTIES (Inmuebles)
+// ============================================================================
+
+model Property {
+  id                  String    @id @default(cuid())
+  title               String
+  description         String?
+  slug                String    @unique
+
+  // Basic Info
+  type                PropertyType
+  price               Decimal   @db.Decimal(12, 2)
+  currency            String    @default("USD")
+
+  // Location
+  address             String
+  city                String
+  region              String
+  latitude            Float?
+  longitude           Float?
+  zipCode             String?
+
+  // Features
+  bedrooms            Int?
+  bathrooms           Int?
+  areaSquareMeters    Float?
+  hasGarage           Boolean   @default(false)
+  hasGarden           Boolean   @default(false)
+  hasPool             Boolean   @default(false)
+  yearBuilt           Int?
+
+  // Media
+  images              String[]  // URLs to images
+  videoUrl            String?
+
+  // Relations
+  advisorId           String
+  advisor             Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  organizationId      String?
+  organization        Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  // Status
+  status              PropertyStatus @default(AVAILABLE)
+
+  // Metadata
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  publishedAt         DateTime?
+
+  // Relations
+  matches             Match[]
+
+  @@index([advisorId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([type])
+  @@index([city, region])
+}
+
+// ============================================================================
+// REQUIREMENTS (Requerimientos/Búsquedas)
+// ============================================================================
+
+model Requirement {
+  id                  String    @id @default(cuid())
+  title               String
+  description         String?
+
+  // Buyer/Seeker Info
+  buyerId             String
+  buyer               Advisor   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  // Search Criteria
+  propertyType        PropertyType[]
+  priceMin            Decimal?  @db.Decimal(12, 2)
+  priceMax            Decimal?  @db.Decimal(12, 2)
+  currency            String    @default("USD")
+
+  // Location Preferences
+  cities              String[]
+  regions             String[]
+
+  // Feature Preferences
+  bedroomsMin         Int?
+  bedroomsMax         Int?
+  bathroomsMin        Int?
+  bathroomsMax        Int?
+  areaMin             Float?
+  areaMax             Float?
+
+  // Nice to have
+  requiresGarage      Boolean   @default(false)
+  requiresGarden      Boolean   @default(false)
+  requiresPool        Boolean   @default(false)
+
+  // Status
+  isActive            Boolean   @default(true)
+  priority            Priority  @default(MEDIUM)
+
+  // Metadata
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  matches             Match[]
+
+  @@index([buyerId])
+  @@index([isActive])
+}
+
+// ============================================================================
+// MATCHES (Sugerencias de propiedades)
+// ============================================================================
+
+model Match {
+  id                  String    @id @default(cuid())
+
+  // Relations
+  requirementId       String
+  requirement         Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  propertyId          String
+  property            Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  advisorId           String
+  advisor             Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+
+  // Scoring
+  matchScore          Float     @default(0) // 0-100
+  reason              String?   // Why this property matches
+
+  // Status
+  status              MatchStatus @default(SUGGESTED)
+
+  // Metadata
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  viewedAt            DateTime?
+  contactedAt         DateTime?
+
+  @@unique([requirementId, propertyId])
+  @@index([requirementId])
+  @@index([propertyId])
+  @@index([advisorId])
+  @@index([status])
+}
+
+// ============================================================================
+// COMMISSIONS (Comisiones por organización)
+// ============================================================================
+
+model Commission {
+  id                  String    @id @default(cuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  percentage          Float     // Porcentaje de comisión
+  description         String?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([organizationId])
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id                  String    @id @default(cuid())
+  advisorId           String
+  advisor             Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+
+  type                NotificationType
+  title               String
+  message             String
+  data                Json?     // Metadata (propertyId, requirementId, etc)
+
+  isRead              Boolean   @default(false)
+  readAt              DateTime?
+
+  createdAt           DateTime  @default(now())
+
+  @@index([advisorId])
+  @@index([isRead])
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  LAND
+  APARTMENT
+  HOUSE
+  OFFICE
+  INDUSTRIAL
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  UNDER_OFFER
+  SOLD
+  RENT
+  ARCHIVED
+}
+
+enum MatchStatus {
+  SUGGESTED
+  VIEWED
+  CONTACTED
+  ACCEPTED
+  REJECTED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NotificationType {
+  NEW_MATCH
+  PROPERTY_UPDATED
+  REQUIREMENT_CREATED
+  ADVISOR_REVIEW
+  SYSTEM
+}

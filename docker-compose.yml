@@ -1,0 +1,20 @@
+# ============================================================================
+# Supabase Local Development Setup
+# ============================================================================
+#
+# Instead of Docker, we use Supabase CLI for local development.
+# This provides PostgreSQL + Auth + Real-time all in one.
+#
+# Installation:
+#   brew install supabase/tap/supabase
+#
+# Usage:
+#   supabase start      # Start Supabase locally
+#   supabase stop       # Stop services
+#   supabase status     # Check status
+#
+# For production: Use Supabase Cloud (supabase.com)
+# ============================================================================
+
+# This file is kept for reference but not used with Supabase CLI.
+# Use `supabase start` instead in the terminal.
