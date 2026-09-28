@@ -10,6 +10,9 @@ import { CreateProperty } from '@/pages/CreateProperty'
 import { OrganizationSetup } from '@/pages/OrganizationSetup'
 import { OrganizationDashboard } from '@/pages/OrganizationDashboard'
 import { InviteAccept } from '@/pages/InviteAccept'
+import { PropertySearch } from '@/pages/PropertySearch'
+import { PropertyDetail } from '@/pages/PropertyDetail'
+import { Favorites } from '@/pages/Favorites'
 
 const queryClient = new QueryClient()
 
@@ -31,6 +34,11 @@ function App() {
           {/* Properties */}
           <Route path="/properties" element={<Properties />} />
           <Route path="/properties/create" element={<CreateProperty />} />
+          <Route path="/properties/:id" element={<PropertyDetail />} />
+
+          {/* Search & Discovery */}
+          <Route path="/search" element={<PropertySearch />} />
+          <Route path="/favorites" element={<Favorites />} />
 
           {/* Organization Routes */}
           <Route path="/organization/setup" element={<OrganizationSetup />} />
