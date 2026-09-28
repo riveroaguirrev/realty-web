@@ -87,14 +87,16 @@ export const PropertyDetail = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
+        <nav className="bg-white shadow-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <h1 className="text-2xl font-bold text-gray-900">Realty</h1>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                Realty
+              </h1>
               <button
                 onClick={() => navigate('/search')}
-                className="text-gray-600 hover:text-gray-900"
+                className="px-4 py-2 text-gray-700 hover:text-blue-600 font-semibold transition-colors"
               >
                 ← Volver a Búsqueda
               </button>
@@ -130,31 +132,32 @@ export const PropertyDetail = () => {
               )}
 
               {/* Details */}
-              <div className="bg-white rounded-lg shadow p-6 mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">{property.title}</h1>
+              <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">{property.title}</h1>
+                <p className="text-lg text-gray-600 mb-6">{property.city}, {property.region}</p>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 p-6 bg-gradient-to-r from-blue-50 to-slate-50 rounded-lg">
                   {property.bedrooms !== null && (
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase">Dormitorios</p>
-                      <p className="text-xl font-bold text-gray-900">{property.bedrooms}</p>
+                    <div className="text-center">
+                      <p className="text-4xl font-bold text-blue-600 mb-1">🛏️ {property.bedrooms}</p>
+                      <p className="text-xs font-semibold text-gray-600 uppercase">Dormitorios</p>
                     </div>
                   )}
                   {property.bathrooms !== null && (
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase">Baños</p>
-                      <p className="text-xl font-bold text-gray-900">{property.bathrooms}</p>
+                    <div className="text-center">
+                      <p className="text-4xl font-bold text-blue-600 mb-1">🚿 {property.bathrooms}</p>
+                      <p className="text-xs font-semibold text-gray-600 uppercase">Baños</p>
                     </div>
                   )}
                   {property.areaSquareMeters && (
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase">Área</p>
-                      <p className="text-xl font-bold text-gray-900">{property.areaSquareMeters} m²</p>
+                    <div className="text-center">
+                      <p className="text-4xl font-bold text-blue-600 mb-1">📏 {property.areaSquareMeters}</p>
+                      <p className="text-xs font-semibold text-gray-600 uppercase">m²</p>
                     </div>
                   )}
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase">Tipo</p>
-                    <p className="text-xl font-bold text-gray-900">{property.type}</p>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600 mb-1">🏠</p>
+                    <p className="text-xs font-semibold text-gray-600 uppercase">{property.type}</p>
                   </div>
                 </div>
 
@@ -174,9 +177,9 @@ export const PropertyDetail = () => {
                   </p>
                 </div>
 
-                <div className="border-t border-gray-200 pt-6">
-                  <p className="text-xs font-medium text-gray-500 uppercase">Precio</p>
-                  <p className="text-3xl font-bold text-blue-600">
+                <div className="border-t-2 border-blue-200 pt-6">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Precio</p>
+                  <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
                     €{property.price.toLocaleString('es-ES')}
                   </p>
                 </div>
@@ -185,8 +188,10 @@ export const PropertyDetail = () => {
 
             {/* Advisor Info Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow p-6 sticky top-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-6">Asesor</h2>
+              <div className="bg-white rounded-xl shadow-lg p-8 sticky top-20">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 pb-4 border-b-2 border-blue-100">
+                  👤 Asesor
+                </h2>
 
                 {property.advisor && (
                   <div className="space-y-4">
@@ -228,21 +233,21 @@ export const PropertyDetail = () => {
                   </div>
                 )}
 
-                <div className="mt-6 space-y-3">
+                <div className="mt-8 space-y-3">
                   <button
                     onClick={handleToggleFavorite}
                     disabled={toggleFavLoading}
-                    className={`w-full py-2 px-4 rounded font-medium disabled:opacity-50 ${
+                    className={`w-full py-3 px-4 rounded-lg font-semibold transition-all disabled:opacity-50 ${
                       isFavorite
-                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-red-500 text-white hover:bg-red-600 shadow-md'
+                        : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                     }`}
                   >
                     {toggleFavLoading ? '...' : isFavorite ? '❤ Favorito' : '🤍 Agregar a Favoritos'}
                   </button>
 
-                  <button className="w-full py-2 px-4 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
-                    Contactar Asesor
+                  <button className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow">
+                    📞 Contactar Asesor
                   </button>
                 </div>
               </div>
