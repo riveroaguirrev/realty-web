@@ -11,13 +11,11 @@ export function corsHeaders(request: NextRequest) {
   }
 }
 
-export function handleCORS(request: NextRequest) {
-  if (request.method === 'OPTIONS') {
-    return new NextResponse(null, {
-      status: 200,
-      headers: corsHeaders(request),
-    })
-  }
+export function handleCORS(request: NextRequest): NextResponse {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders(request),
+  })
 }
 
 export function addCORSHeaders(response: NextResponse, request: NextRequest) {
