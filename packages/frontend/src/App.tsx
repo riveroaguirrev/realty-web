@@ -13,6 +13,8 @@ import { InviteAccept } from '@/pages/InviteAccept'
 import { PropertySearch } from '@/pages/PropertySearch'
 import { PropertyDetail } from '@/pages/PropertyDetail'
 import { Favorites } from '@/pages/Favorites'
+import { Conversations } from '@/pages/Conversations'
+import { ConversationDetail } from '@/pages/ConversationDetail'
 
 const queryClient = new QueryClient()
 
@@ -38,7 +40,12 @@ function App() {
 
           {/* Search & Discovery */}
           <Route path="/search" element={<PropertySearch />} />
+          <Route path="/properties/:id" element={<PropertyDetail />} />
           <Route path="/favorites" element={<Favorites />} />
+
+          {/* Messaging & Collaboration */}
+          <Route path="/messages" element={<Conversations />} />
+          <Route path="/messages/:id" element={<ConversationDetail />} />
 
           {/* Organization Routes */}
           <Route path="/organization/setup" element={<OrganizationSetup />} />
