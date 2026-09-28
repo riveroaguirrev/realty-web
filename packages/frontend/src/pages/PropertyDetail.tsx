@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { propertyAPI } from '@/services/property'
 import { favoritesAPI } from '@/services/favorites'
+import { SimilarProperties } from '@/components/property/SimilarProperties'
 
 export const PropertyDetail = () => {
   const navigate = useNavigate()
@@ -252,6 +253,11 @@ export const PropertyDetail = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Similar Properties Section */}
+          <div className="mt-12 col-span-1 lg:col-span-3">
+            <SimilarProperties propertyId={property.id} />
           </div>
         </div>
       </div>
