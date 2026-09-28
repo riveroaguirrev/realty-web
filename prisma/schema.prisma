@@ -127,6 +127,8 @@ model Advisor {
   savedSearches         SavedSearch[]
   favorites             Favorite[]
   activityLogs          ActivityLog[]
+  conversationParticipants ConversationParticipant[]
+  messagesSent          Message[]
 
   @@index([organizationId])
   @@index([email])
@@ -474,6 +476,63 @@ model Notification {
   @@index([priority])
   @@index([createdAt])
   @@index([expiresAt])
+}
+
+// ============================================================================
+// MESSAGING & CONVERSATIONS
+// ============================================================================
+
+model Conversation {
+  id                String   @id @default(cuid())
+  type              ConversationType @default(DIRECT)
+  name              String?
+  description       String?
+
+  participants      ConversationParticipant[]
+  messages          Message[]
+  lastMessageAt     DateTime?
+
+  createdBy         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([lastMessageAt])
+  @@index([createdAt])
+}
+
+model ConversationParticipant {
+  id                String   @id @default(cuid())
+  conversationId    String
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  advisorId         String
+  advisor           Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+
+  joinedAt          DateTime @default(now())
+  lastReadAt        DateTime @default(now())
+
+  @@unique([conversationId, advisorId])
+  @@index([advisorId])
+  @@index([conversationId])
+}
+
+model Message {
+  id                String   @id @default(cuid())
+  conversationId    String
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId          String
+  sender            Advisor @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  content           String
+  editedAt          DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
 }
 
 // ============================================================================
@@ -858,6 +917,15 @@ enum ReviewVerification {
   UNVERIFIED
   VERIFIED_BUYER
   VERIFIED_TRANSACTION
+}
+
+// ============================================================================
+// MESSAGING ENUMS
+// ============================================================================
+
+enum ConversationType {
+  DIRECT
+  GROUP
 }
 
 // ============================================================================
