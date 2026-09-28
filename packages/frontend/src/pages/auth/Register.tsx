@@ -43,113 +43,127 @@ export const Register = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h1 className="text-center text-3xl font-bold text-gray-900 mb-6">Realty</h1>
-        <h2 className="text-center text-2xl font-bold text-gray-900">Create your account</h2>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-slate-50 to-green-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
+        <div className="text-center">
+          <h1 className="text-center text-5xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent mb-4">
+            Realty
+          </h1>
+          <h2 className="text-center text-2xl font-bold text-gray-900">Crea tu cuenta</h2>
+          <p className="text-center text-gray-600 mt-2">Únete a nuestra comunidad de asesores</p>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow rounded-lg">
-          <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-12 px-8 shadow-2xl rounded-2xl">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {(error || formError) && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                {error || formError}
+              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm">
+                <p className="font-semibold">Error al registrar</p>
+                <p className="text-sm">{error || formError}</p>
               </div>
             )}
 
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                First Name
-              </label>
-              <input
-                id="firstName"
-                name="firstName"
-                type="text"
-                value={formData.firstName}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                disabled={isLoading}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-semibold text-gray-700 mb-2">
+                  👤 Nombre
+                </label>
+                <input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  placeholder="Juan"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-semibold text-gray-700 mb-2">
+                  📝 Apellido
+                </label>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  placeholder="Pérez"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                Last Name
-              </label>
-              <input
-                id="lastName"
-                name="lastName"
-                type="text"
-                value={formData.lastName}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                📧 Correo electrónico
               </label>
               <input
                 id="email"
                 name="email"
                 type="email"
+                placeholder="tu@email.com"
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
                 disabled={isLoading}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                🔐 Contraseña
               </label>
               <input
                 id="password"
                 name="password"
                 type="password"
+                placeholder="••••••••"
                 value={formData.password}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
                 disabled={isLoading}
               />
             </div>
 
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                I am a...
+              <label htmlFor="role" className="block text-sm font-semibold text-gray-700 mb-2">
+                💼 Tipo de usuario
               </label>
               <select
                 id="role"
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
                 disabled={isLoading}
               >
-                <option value={UserRole.BUYER}>Buyer</option>
-                <option value={UserRole.ADVISOR}>Real Estate Agent</option>
+                <option value={UserRole.BUYER}>🛍️ Comprador</option>
+                <option value={UserRole.ADVISOR}>🏢 Asesor Inmobiliario</option>
               </select>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isLoading ? '⏳ Creando cuenta...' : '✨ Crear cuenta'}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link to="/auth/login" className="text-blue-600 hover:text-blue-500 font-medium">
-              Sign in
-            </Link>
-          </p>
+          <div className="mt-8 pt-8 border-t-2 border-gray-100">
+            <p className="text-center text-gray-600">
+              ¿Ya tienes cuenta?{' '}
+              <Link to="/auth/login" className="text-green-600 hover:text-green-700 font-bold transition-colors">
+                Inicia sesión aquí
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
