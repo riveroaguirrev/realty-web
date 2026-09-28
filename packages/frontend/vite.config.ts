@@ -12,6 +12,7 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, '../shared/src'),
     },
   },
+  envDir: path.resolve(__dirname, '../../'),
   server: {
     port: 5173,
     proxy: {
