@@ -7,6 +7,20 @@ export enum UserRole {
   BUYER = 'BUYER',
 }
 
+export enum AdvisorRole {
+  AGENT = 'AGENT',
+  MANAGER = 'MANAGER',
+  DIRECTOR = 'DIRECTOR',
+}
+
+export enum Permission {
+  ORG_ADMIN = 'org:admin',
+  PROPERTY_LIST = 'property:list',
+  PROPERTY_CREATE = 'property:create',
+  PROPERTY_DELETE = 'property:delete',
+  ADVISOR_MANAGE = 'advisor:manage',
+}
+
 export interface User {
   id: string
   email: string
@@ -15,6 +29,10 @@ export interface User {
   lastName: string
   profileImage?: string
   bio?: string
+  organizationId?: string
+  organizationName?: string
+  roleInOrganization?: AdvisorRole
+  permissions?: Permission[]
   createdAt: Date
   updatedAt: Date
 }
