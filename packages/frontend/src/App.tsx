@@ -15,6 +15,7 @@ import { PropertyDetail } from '@/pages/PropertyDetail'
 import { Favorites } from '@/pages/Favorites'
 import { Conversations } from '@/pages/Conversations'
 import { ConversationDetail } from '@/pages/ConversationDetail'
+import { NotificationCenter } from '@/components/notifications/NotificationCenter'
 
 const queryClient = new QueryClient()
 
@@ -22,6 +23,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <NotificationCenter />
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
