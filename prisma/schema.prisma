@@ -15,28 +15,51 @@ datasource db {
 // ============================================================================
 
 model Organization {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  slug          String   @unique
-  description   String?
-  city          String
-  region        String
-  phone         String?
-  email         String?
-  website       String?
-  logo          String?
+  id                  String   @id @default(cuid())
+  name                String   @unique
+  slug                String   @unique
+  description         String?
+  city                String
+  region              String
+  phone               String?
+  email               String?
+  website             String?
+  logo                String?
+  avatar              String?
+
+  // Business Info
+  taxId               String?   // RFC/RUT
+  tier                OrganizationTier @default(FREE)
+  status              OrganizationStatus @default(ACTIVE)
+  verified            Boolean   @default(false)
+
+  // Limits
+  maxAdvisors         Int       @default(10)
+  maxProperties       Int       @default(100)
+
+  // API & Integration
+  apiKeyHash          String?
+  webhookUrl          String?
+
+  // Business Details
+  bankAccount         Json?     // {accountNumber, bank, accountHolder, etc}
+  businessHours       Json?     // {monday: "9-18", ...}
+  socialLinks         Json?     // {facebook, instagram, linkedin, etc}
 
   // Metadata
-  createdById   String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdById         String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   // Relations
-  advisors      Advisor[]
-  properties    Property[]
-  commissions   Commission[]
+  advisors            Advisor[]
+  properties          Property[]
+  commissions         CommissionStructure[]
+  transactions        Transaction[]
 
   @@index([city, region])
+  @@index([status])
+  @@index([verified])
 }
 
 // ============================================================================
@@ -44,40 +67,72 @@ model Organization {
 // ============================================================================
 
 model Advisor {
-  id                  String    @id @default(cuid())
-  firstName           String
-  lastName            String
-  email               String    @unique
-  phone               String?
-  profileImage        String?
-  bio                 String?
+  id                    String    @id @default(cuid())
+  firstName             String
+  lastName              String
+  email                 String    @unique
+  phone                 String?
+  profileImage          String?
+  bio                   String?
 
   // Organization (null = independiente)
-  organizationId      String?
-  organization        Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId        String?
+  organization          Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
-  // Specialization & Rating
-  specializations     String[]  // ["residencial", "comercial", "terreno"]
-  rating              Float?    @default(0)
-  reviewCount         Int       @default(0)
+  // Professional Info
+  role                  AdvisorRole @default(AGENT)
+  licenseNumber         String?
+  licenseExpiry         DateTime?
+  yearsExperience       Int?
+  specializations       String[]  // ["residencial", "comercial", "terreno"]
+  language              String[]  @default(["es"])
+
+  // Service Area
+  serviceArea           Json?     // {cities: [...], regions: [...]}
+
+  // Performance & Rating
+  rating                Float?    @default(0)
+  reviewCount           Int       @default(0)
+  totalPropertiesListed Int       @default(0)
+  totalSalesCommission  Decimal   @default(0) @db.Decimal(12, 2)
+  averageResponseTime   Int?      // minutes
+  acceptanceRate        Float?    // percentage 0-100
+
+  // Commission & Payment
+  commissionRate        Float?    // personal commission percentage
+  bankAccount           Json?     // {accountNumber, bank, accountHolder, etc}
+
+  // Verification
+  isVerified            Boolean   @default(false)
+  documentUrl           String?
 
   // Status
-  isVerified          Boolean   @default(false)
-  isActive            Boolean   @default(true)
+  status                AdvisorStatus @default(ACTIVE)
+  lastLoginAt           DateTime?
 
   // Metadata
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  metadata              Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   // Relations
-  properties          Property[]
-  requirements        Requirement[]
-  matches             Match[]
-  notifications       Notification[]
+  properties            Property[]
+  requirements          Requirement[]
+  matches               Match[]
+  notifications         Notification[]
+  reviews               Review[]
+  transactionsAsAdvisor Transaction[] @relation("TransactionAdvisor")
+  transactionsAsBuyer   Transaction[] @relation("TransactionBuyer")
+  reviewsGiven          Review[] @relation("ReviewerRelation")
+  savedSearches         SavedSearch[]
+  favorites             Favorite[]
+  activityLogs          ActivityLog[]
 
   @@index([organizationId])
   @@index([email])
-  @@index([isActive])
+  @@index([status])
+  @@index([rating])
+  @@index([createdAt])
 }
 
 // ============================================================================
@@ -85,59 +140,106 @@ model Advisor {
 // ============================================================================
 
 model Property {
-  id                  String    @id @default(cuid())
-  title               String
-  description         String?
-  slug                String    @unique
+  id                    String    @id @default(cuid())
+  title                 String
+  description           String?
+  slug                  String    @unique
 
   // Basic Info
-  type                PropertyType
-  price               Decimal   @db.Decimal(12, 2)
-  currency            String    @default("USD")
+  type                  PropertyType
+  price                 Decimal   @db.Decimal(12, 2)
+  currency              String    @default("USD")
+  condition             PropertyCondition @default(GOOD)
+  furnished            PropertyFurnished @default(UNFURNISHED)
 
   // Location
-  address             String
-  city                String
-  region              String
-  latitude            Float?
-  longitude           Float?
-  zipCode             String?
+  address               String
+  city                  String
+  region                String
+  latitude              Float?
+  longitude             Float?
+  zipCode               String?
 
-  // Features
-  bedrooms            Int?
-  bathrooms           Int?
-  areaSquareMeters    Float?
-  hasGarage           Boolean   @default(false)
-  hasGarden           Boolean   @default(false)
-  hasPool             Boolean   @default(false)
-  yearBuilt           Int?
+  // Property Details
+  bedrooms              Int?
+  bathrooms             Int?
+  parking               Int?
+  areaSquareMeters      Float?
+  lotSize               Float?
+  yearBuilt             Int?
+  yearRenovated         Int?
 
-  // Media
-  images              String[]  // URLs to images
-  videoUrl            String?
+  // Amenities & Features
+  hasGarage             Boolean   @default(false)
+  hasGarden             Boolean   @default(false)
+  hasPool               Boolean   @default(false)
+  features              Json?     // {hasElevator, hasSecurityGate, hasGym, etc}
+  amenities             Json?     // {balcony, patio, terrace, etc}
+  appliances            String[]  // [stove, refrigerator, washer, etc]
+
+  // Financial Details
+  propertyTax           Decimal?  @db.Decimal(10, 2)
+  hoaFees               Decimal?  @db.Decimal(10, 2)
+  utilities             Json?     // {electricity, water, internet, etc}
+
+  // Rental Info
+  rentalMonthlyRate     Decimal?  @db.Decimal(10, 2)
+  rentalFurnished       Boolean?
+  availableDate         DateTime?
+  petPolicy             PetPolicy @default(NOT_ALLOWED)
+
+  // Nearby
+  school                String?
+  distanceToSchool      Float?    // km
+  distanceToTransit     Float?    // km
+
+  // Media & Documentation
+  images                String[]
+  videoUrl              String?
+  virtualTourUrl        String?
+  mapUrl                String?
+  documents             Json?     // {deedUrl, taxReceipt, etc}
+
+  // Contact Info
+  contact               Json?     // {name, phone, email}
+  visitNotes            String?
+
+  // Engagement Metrics
+  viewCount             Int       @default(0)
+  favoritesCount        Int       @default(0)
+
+  // Price History
+  priceHistory          Json?     // [{date, price}]
 
   // Relations
-  advisorId           String
-  advisor             Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
-  organizationId      String?
-  organization        Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  advisorId             String
+  advisor               Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  organizationId        String?
+  organization          Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   // Status
-  status              PropertyStatus @default(AVAILABLE)
+  status                PropertyStatus @default(AVAILABLE)
 
   // Metadata
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  publishedAt         DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  publishedAt           DateTime?
 
   // Relations
-  matches             Match[]
+  matches               Match[]
+  transactions          Transaction[]
+  favorites             Favorite[]
+  reviews               Review[]
+  activityLogs          ActivityLog[]
 
   @@index([advisorId])
   @@index([organizationId])
   @@index([status])
   @@index([type])
   @@index([city, region])
+  @@index([price])
+  @@index([createdAt])
+  @@index([publishedAt])
 }
 
 // ============================================================================
@@ -145,50 +247,84 @@ model Property {
 // ============================================================================
 
 model Requirement {
-  id                  String    @id @default(cuid())
-  title               String
-  description         String?
+  id                      String    @id @default(cuid())
+  title                   String
+  description             String?
 
   // Buyer/Seeker Info
-  buyerId             String
-  buyer               Advisor   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  buyerId                 String
+  buyer                   Advisor   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
 
   // Search Criteria
-  propertyType        PropertyType[]
-  priceMin            Decimal?  @db.Decimal(12, 2)
-  priceMax            Decimal?  @db.Decimal(12, 2)
-  currency            String    @default("USD")
+  propertyType            PropertyType[]
+  budget                  Json?     // {min, max, flexible, preApproved}
+  financing               PropertyFinancing @default(MORTGAGE)
+  downPayment             Decimal?  @db.Decimal(10, 2)
+
+  // Price
+  priceMin                Decimal?  @db.Decimal(12, 2)
+  priceMax                Decimal?  @db.Decimal(12, 2)
+  currency                String    @default("USD")
 
   // Location Preferences
-  cities              String[]
-  regions             String[]
+  cities                  String[]
+  regions                 String[]
+  excludeCities           String[]
+
+  // Commute Preferences
+  maxCommute              Float?    // km
+  schoolDistrict          String?
+  commute                 Json?     // {workplace, maxDistance, preferences}
 
   // Feature Preferences
-  bedroomsMin         Int?
-  bedroomsMax         Int?
-  bathroomsMin        Int?
-  bathroomsMax        Int?
-  areaMin             Float?
-  areaMax             Float?
+  bedroomsMin             Int?
+  bedroomsMax             Int?
+  bathroomsMin            Int?
+  bathroomsMax            Int?
+  areaMin                 Float?
+  areaMax                 Float?
+  furnished              PropertyFurnished @default(DOESNT_MATTER)
 
-  // Nice to have
-  requiresGarage      Boolean   @default(false)
-  requiresGarden      Boolean   @default(false)
-  requiresPool        Boolean   @default(false)
+  // Amenities & Features
+  requiresGarage          Boolean   @default(false)
+  requiresGarden          Boolean   @default(false)
+  requiresPool            Boolean   @default(false)
+  petPolicy               PetPolicy @default(ALLOWED)
+  preferredAmenities      String[]
+  mustHaveFeatures        String[]
+  dealBreakers            String[]
+  niceToHave              String[]
+
+  // Timeline & Contact
+  timeline                SearchTimeline @default(FLEXIBLE)
+  contactFrequency        ContactFrequency @default(AS_NEEDED)
+  notificationMethod      NotificationMethod @default(EMAIL)
+
+  // Engagement
+  viewedProperties        String[]  // Property IDs
+  favoritedProperties     String[]
+  rejectedProperties      String[]  // Don't re-suggest these
+  matchCount              Int       @default(0)
+  responseRate            Float?    // percentage
 
   // Status
-  isActive            Boolean   @default(true)
-  priority            Priority  @default(MEDIUM)
+  status                  RequirementStatus @default(ACTIVE)
+  priority                Priority  @default(MEDIUM)
+  expiryDate              DateTime?
 
   // Metadata
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   // Relations
-  matches             Match[]
+  matches                 Match[]
+  savedSearches           SavedSearch[]
 
   @@index([buyerId])
-  @@index([isActive])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([expiryDate])
 }
 
 // ============================================================================
@@ -196,52 +332,98 @@ model Requirement {
 // ============================================================================
 
 model Match {
-  id                  String    @id @default(cuid())
+  id                      String    @id @default(cuid())
 
   // Relations
-  requirementId       String
-  requirement         Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
-  propertyId          String
-  property            Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  advisorId           String
-  advisor             Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  requirementId           String
+  requirement             Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  propertyId              String
+  property                Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  advisorId               String
+  advisor                 Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
 
-  // Scoring
-  matchScore          Float     @default(0) // 0-100
-  reason              String?   // Why this property matches
+  // Scoring & Matching
+  matchScore              Float     @default(0) // 0-100
+  confidence              Float?    // 0-1
+  algorithm               MatchAlgorithm @default(FUZZY)
+  matchBreakdown          Json?     // {priceMatch: 0.9, locationMatch: 0.85, ...}
+  reasons                 String[]  // Why this matches
+  mismatches              String[]  // What doesn't match
+
+  // Communication
+  contactedBy             ContactedBy @default(SYSTEM)
+  contactedAt             DateTime?
+  notes                   String?
+  feedback                MatchFeedback @default(NO_RESPONSE)
+  communicationChannel    CommunicationChannel @default(EMAIL)
+  communicationHistory    Json?     // [{date, message, from}]
+
+  // Viewing & Follow-up
+  viewedAt                DateTime?
+  viewingDate             DateTime?
+  viewingNotes            String?
+  nextFollowUpDate        DateTime?
 
   // Status
-  status              MatchStatus @default(SUGGESTED)
+  status                  MatchStatus @default(SUGGESTED)
+  priority                Priority  @default(MEDIUM)
+  closedReason            String?   // SOLD, LEASED, NO_RESPONSE, etc
 
   // Metadata
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  viewedAt            DateTime?
-  contactedAt         DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   @@unique([requirementId, propertyId])
   @@index([requirementId])
   @@index([propertyId])
   @@index([advisorId])
   @@index([status])
+  @@index([priority])
+  @@index([createdAt])
 }
 
 // ============================================================================
-// COMMISSIONS (Comisiones por organización)
+// COMMISSION STRUCTURES (Comisiones flexible)
 // ============================================================================
 
-model Commission {
-  id                  String    @id @default(cuid())
-  organizationId      String
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+model CommissionStructure {
+  id                    String    @id @default(cuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  percentage          Float     // Porcentaje de comisión
-  description         String?
+  // Structure Type
+  type                  CommissionType @default(PERCENTAGE)
 
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  // Percentages & Amounts
+  basePercentage        Float     // Comisión base
+  bonusPercentage       Float?    // Comisión adicional por bonus
+  bonusThreshold        Decimal?  @db.Decimal(12, 2)
+
+  // Tiered Structure
+  tierStructure         Json?     // {0-100000: 3%, 100001-500000: 4%, ...}
+
+  // Applicability
+  appliesTo             CommissionAppliesTo @default(ORGANIZATION)
+  forPropertyType       PropertyType[]  // null = all types
+  forCities             String[]   // empty = all cities
+
+  // Limits
+  minTransactionAmount  Decimal?  @db.Decimal(12, 2)
+  maxPercentage         Float?
+
+  // Status & Dates
+  status                CommissionStatus @default(ACTIVE)
+  effectiveFrom         DateTime
+  effectiveUntil        DateTime?
+
+  description           String?
+  notes                 String?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@index([organizationId])
+  @@index([status])
 }
 
 // ============================================================================
@@ -249,26 +431,246 @@ model Commission {
 // ============================================================================
 
 model Notification {
-  id                  String    @id @default(cuid())
-  advisorId           String
-  advisor             Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  id                    String    @id @default(cuid())
+  advisorId             String
+  advisor               Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
 
-  type                NotificationType
-  title               String
-  message             String
-  data                Json?     // Metadata (propertyId, requirementId, etc)
+  // Content
+  type                  NotificationType
+  title                 String
+  message               String
+  priority              Priority  @default(MEDIUM)
 
-  isRead              Boolean   @default(false)
-  readAt              DateTime?
+  // Channel & Action
+  channel               NotificationChannelType @default(IN_APP)
+  actionUrl             String?
+  actionLabel           String?
 
-  createdAt           DateTime  @default(now())
+  // Related Entity
+  relatedEntityId       String?
+  relatedEntityType     String?   // property, requirement, match, etc
+  data                  Json?
+
+  // Delivery Status
+  isRead                Boolean   @default(false)
+  readAt                DateTime?
+  sendAttempts          Int       @default(0)
+  lastAttemptAt         DateTime?
+  failureReason         String?
+
+  // Scheduling & Expiration
+  scheduledFor          DateTime?
+  expiresAt             DateTime?
+  dismissedAt           DateTime?
+
+  // Tracking
+  metadata              Json?     // {source, device, ip, etc}
+
+  createdAt             DateTime  @default(now())
 
   @@index([advisorId])
   @@index([isRead])
+  @@index([type])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([expiresAt])
+}
+
+// ============================================================================
+// TRANSACTIONS (Ventas/Arrendamientos)
+// ============================================================================
+
+model Transaction {
+  id                    String    @id @default(cuid())
+
+  propertyId            String
+  property              Property  @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+
+  buyerId               String
+  buyer                 Advisor   @relation("TransactionBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+
+  advisorId             String
+  advisor               Advisor   @relation("TransactionAdvisor", fields: [advisorId], references: [id], onDelete: Restrict)
+
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  // Details
+  transactionType       TransactionType
+  price                 Decimal   @db.Decimal(12, 2)
+  currency              String    @default("USD")
+  commission            Decimal   @db.Decimal(10, 2)
+  commissionPaid        Decimal?  @db.Decimal(10, 2)
+
+  // Status & Dates
+  status                TransactionStatus @default(IN_PROGRESS)
+  closingDate           DateTime?
+  paymentDate           DateTime?
+
+  // Documentation
+  contractUrl           String?
+  notes                 String?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([propertyId])
+  @@index([buyerId])
+  @@index([advisorId])
+  @@index([status])
+  @@index([organizationId])
+}
+
+// ============================================================================
+// REVIEWS (Reseñas)
+// ============================================================================
+
+model Review {
+  id                    String    @id @default(cuid())
+
+  advisorId             String
+  advisor               Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+
+  reviewerId            String
+  reviewer              Advisor   @relation("ReviewerRelation", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  propertyId            String?
+  property              Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  // Content
+  rating                Int       // 1-5
+  comment               String?
+
+  // Verification
+  verification          ReviewVerification @default(UNVERIFIED)
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([advisorId])
+  @@index([reviewerId])
+  @@index([propertyId])
+  @@unique([advisorId, reviewerId]) // One review per advisor-reviewer pair
+}
+
+// ============================================================================
+// ACTIVITY LOG (Auditoría)
+// ============================================================================
+
+model ActivityLog {
+  id                    String    @id @default(cuid())
+
+  userId                String
+  user                  Advisor   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  propertyId            String?
+  property              Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  // Action Details
+  action                String    // CREATE, UPDATE, DELETE, VIEW, etc
+  entityType            String    // property, requirement, match, etc
+  entityId              String?
+
+  // Changes
+  changes               Json?     // {field: oldValue → newValue}
+
+  // Context
+  ipAddress             String?
+  userAgent             String?
+
+  createdAt             DateTime  @default(now())
+
+  @@index([userId])
+  @@index([propertyId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// SAVED SEARCHES
+// ============================================================================
+
+model SavedSearch {
+  id                    String    @id @default(cuid())
+
+  buyerId               String
+  buyer                 Advisor   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  requirementId         String
+  requirement           Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  name                  String
+  notifyOnNew           Boolean   @default(true)
+
+  createdAt             DateTime  @default(now())
+
+  @@index([buyerId])
+  @@index([requirementId])
+}
+
+// ============================================================================
+// FAVORITES
+// ============================================================================
+
+model Favorite {
+  id                    String    @id @default(cuid())
+
+  buyerId               String
+  buyer                 Advisor   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  propertyId            String
+  property              Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  notes                 String?
+  priority              Priority  @default(MEDIUM)
+
+  createdAt             DateTime  @default(now())
+
+  @@unique([buyerId, propertyId])
+  @@index([buyerId])
+  @@index([propertyId])
 }
 
 // ============================================================================
 // ENUMS
+// ============================================================================
+
+// ============================================================================
+// ORGANIZATION ENUMS
+// ============================================================================
+
+enum OrganizationTier {
+  FREE
+  PREMIUM
+  ENTERPRISE
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+// ============================================================================
+// ADVISOR ENUMS
+// ============================================================================
+
+enum AdvisorRole {
+  AGENT
+  MANAGER
+  DIRECTOR
+}
+
+enum AdvisorStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+  ON_LEAVE
+}
+
+// ============================================================================
+// PROPERTY ENUMS
 // ============================================================================
 
 enum PropertyType {
@@ -289,6 +691,69 @@ enum PropertyStatus {
   ARCHIVED
 }
 
+enum PropertyCondition {
+  NEW
+  EXCELLENT
+  GOOD
+  FAIR
+  NEEDS_REPAIR
+}
+
+enum PropertyFurnished {
+  UNFURNISHED
+  PARTIALLY_FURNISHED
+  FULLY_FURNISHED
+  DOESNT_MATTER
+}
+
+enum PetPolicy {
+  ALLOWED
+  NOT_ALLOWED
+  RESTRICTIONS
+}
+
+// ============================================================================
+// REQUIREMENT ENUMS
+// ============================================================================
+
+enum RequirementStatus {
+  ACTIVE
+  PAUSED
+  FULFILLED
+  EXPIRED
+}
+
+enum SearchTimeline {
+  IMMEDIATE
+  WITHIN_3_MONTHS
+  WITHIN_6_MONTHS
+  FLEXIBLE
+}
+
+enum PropertyFinancing {
+  CASH
+  MORTGAGE
+  OTHER
+}
+
+enum ContactFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  AS_NEEDED
+}
+
+enum NotificationMethod {
+  EMAIL
+  SMS
+  PUSH
+  WHATSAPP
+}
+
+// ============================================================================
+// MATCH ENUMS
+// ============================================================================
+
 enum MatchStatus {
   SUGGESTED
   VIEWED
@@ -297,17 +762,111 @@ enum MatchStatus {
   REJECTED
 }
 
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
+enum MatchAlgorithm {
+  EXACT
+  FUZZY
+  AI
 }
+
+enum MatchFeedback {
+  NO_RESPONSE
+  INTERESTED
+  NOT_INTERESTED
+  WANT_MORE_INFO
+  SCHEDULED_VIEWING
+}
+
+enum ContactedBy {
+  ADVISOR
+  BUYER
+  SYSTEM
+}
+
+enum CommunicationChannel {
+  EMAIL
+  PHONE
+  WHATSAPP
+  IN_PERSON
+}
+
+// ============================================================================
+// COMMISSION ENUMS
+// ============================================================================
+
+enum CommissionType {
+  PERCENTAGE
+  FIXED
+  TIERED
+  REVENUE_SHARE
+}
+
+enum CommissionAppliesTo {
+  ADVISOR
+  ORGANIZATION
+  BOTH
+}
+
+enum CommissionStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// ============================================================================
+// NOTIFICATION ENUMS
+// ============================================================================
 
 enum NotificationType {
   NEW_MATCH
   PROPERTY_UPDATED
   REQUIREMENT_CREATED
   ADVISOR_REVIEW
+  TRANSACTION_COMPLETED
+  COMMISSION_PAID
   SYSTEM
+}
+
+enum NotificationChannelType {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+  WHATSAPP
+}
+
+// ============================================================================
+// TRANSACTION ENUMS
+// ============================================================================
+
+enum TransactionType {
+  SALE
+  LEASE
+  RENTAL
+}
+
+enum TransactionStatus {
+  IN_PROGRESS
+  PENDING_CLOSING
+  CLOSED
+  CANCELLED
+}
+
+// ============================================================================
+// REVIEW ENUMS
+// ============================================================================
+
+enum ReviewVerification {
+  UNVERIFIED
+  VERIFIED_BUYER
+  VERIFIED_TRANSACTION
+}
+
+// ============================================================================
+// GENERIC ENUMS
+// ============================================================================
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
