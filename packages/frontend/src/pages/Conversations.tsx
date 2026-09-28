@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useRealtimeConversations } from '@/hooks/useRealtimeConversations'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { conversationsAPI } from '@/services/conversations'
 
@@ -16,6 +17,35 @@ export const Conversations = () => {
   useEffect(() => {
     if (!accessToken) return
     loadConversations()
+
+    // Subscribe to real-time updates
+    const subscription = useRealtimeConversations({
+      advisorId: accessToken,
+      onConversationUpdated: (updatedConv) => {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === updatedConv.id ? updatedConv : c))
+        )
+      },
+      onNewMessage: (newMessage) => {
+        // Move conversation with new message to top of list
+        setConversations((prev) => {
+          const updated = prev.map((c) =>
+            c.id === newMessage.conversationId
+              ? { ...c, lastMessageAt: newMessage.createdAt }
+              : c
+          )
+          return updated.sort(
+            (a, b) =>
+              new Date(b.lastMessageAt || 0).getTime() -
+              new Date(a.lastMessageAt || 0).getTime()
+          )
+        })
+      },
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [accessToken])
 
   const loadConversations = async (page = 1) => {
