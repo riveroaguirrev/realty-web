@@ -111,6 +111,94 @@ export class PropertyService {
     }
   }
 
+  async searchProperties(filters?: {
+    city?: string
+    region?: string
+    type?: string
+    priceMin?: number
+    priceMax?: number
+    bedroomsMin?: number
+    bedroomsMax?: number
+    bathroomsMin?: number
+    bathroomsMax?: number
+    areaMin?: number
+    areaMax?: number
+    organizationId?: string
+    page?: number
+    pageSize?: number
+  }) {
+    const page = filters?.page || 1
+    const pageSize = filters?.pageSize || 10
+    const skip = (page - 1) * pageSize
+
+    const where: any = { status: 'AVAILABLE' }
+
+    if (filters?.city) where.city = filters.city
+    if (filters?.region) where.region = filters.region
+    if (filters?.type) where.type = filters.type
+    if (filters?.organizationId) where.advisor = { organizationId: filters.organizationId }
+
+    if (filters?.priceMin || filters?.priceMax) {
+      where.price = {}
+      if (filters.priceMin) where.price.gte = filters.priceMin
+      if (filters.priceMax) where.price.lte = filters.priceMax
+    }
+
+    if (filters?.bedroomsMin !== undefined || filters?.bedroomsMax !== undefined) {
+      where.bedrooms = {}
+      if (filters.bedroomsMin !== undefined) where.bedrooms.gte = filters.bedroomsMin
+      if (filters.bedroomsMax !== undefined) where.bedrooms.lte = filters.bedroomsMax
+    }
+
+    if (filters?.bathroomsMin !== undefined || filters?.bathroomsMax !== undefined) {
+      where.bathrooms = {}
+      if (filters.bathroomsMin !== undefined) where.bathrooms.gte = filters.bathroomsMin
+      if (filters.bathroomsMax !== undefined) where.bathrooms.lte = filters.bathroomsMax
+    }
+
+    if (filters?.areaMin !== undefined || filters?.areaMax !== undefined) {
+      where.areaSquareMeters = {}
+      if (filters.areaMin !== undefined) where.areaSquareMeters.gte = filters.areaMin
+      if (filters.areaMax !== undefined) where.areaSquareMeters.lte = filters.areaMax
+    }
+
+    const [properties, total] = await Promise.all([
+      prisma.property.findMany({
+        where,
+        skip,
+        take: pageSize,
+        include: {
+          advisor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              organization: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.property.count({ where }),
+    ])
+
+    return {
+      properties,
+      total,
+      page,
+      pageSize,
+    }
+  }
+
   async getAdvisorProperties(advisorId: string, page = 1, pageSize = 10) {
     const skip = (page - 1) * pageSize
 
