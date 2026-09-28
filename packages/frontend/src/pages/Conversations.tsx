@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useRealtimeConversations } from '@/hooks/useRealtimeConversations'
+import { useNotifications } from '@/hooks/useNotifications'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
+import { UnreadBadge } from '@/components/notifications/UnreadBadge'
 import { conversationsAPI } from '@/services/conversations'
 
 export const Conversations = () => {
@@ -42,6 +44,9 @@ export const Conversations = () => {
         })
       },
     })
+
+    // Setup notifications
+    useNotifications({ advisorId: accessToken })
 
     return () => {
       subscription.unsubscribe()
@@ -159,14 +164,17 @@ export const Conversations = () => {
                   <div
                     key={conv.id}
                     onClick={() => navigate(`/messages/${conv.id}`)}
-                    className="p-4 hover:bg-gray-50 cursor-pointer transition"
+                    className="p-4 hover:bg-gray-50 cursor-pointer transition relative"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">
-                          {otherParticipant?.advisor?.firstName}{' '}
-                          {otherParticipant?.advisor?.lastName}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {otherParticipant?.advisor?.firstName}{' '}
+                            {otherParticipant?.advisor?.lastName}
+                          </h3>
+                          <UnreadBadge conversationId={conv.id} />
+                        </div>
                         <p className="text-sm text-gray-500">
                           {otherParticipant?.advisor?.organization?.name}
                         </p>
