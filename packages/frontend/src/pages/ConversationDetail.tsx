@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useRealtimeMessages } from '@/hooks/useRealtimeMessages'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { conversationsAPI } from '@/services/conversations'
 import { messagesAPI } from '@/services/messages'
@@ -21,6 +22,26 @@ export const ConversationDetail = () => {
   useEffect(() => {
     if (!id || !accessToken) return
     loadConversation()
+
+    // Subscribe to real-time message updates
+    const subscription = useRealtimeMessages({
+      conversationId: id,
+      onMessageReceived: (newMessage) => {
+        setMessages((prev) => [...prev, newMessage])
+      },
+      onMessageDeleted: (messageId) => {
+        setMessages((prev) => prev.filter((m) => m.id !== messageId))
+      },
+      onMessageEdited: (updatedMessage) => {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === updatedMessage.id ? updatedMessage : m))
+        )
+      },
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [id, accessToken])
 
   useEffect(() => {
