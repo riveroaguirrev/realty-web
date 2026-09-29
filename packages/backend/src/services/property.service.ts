@@ -209,10 +209,23 @@ export class PropertyService {
     }
   }
 
-  async updateProperty(id: string, data: Partial<any>) {
+  async updateProperty(id: string, data: PropertyInput) {
     return await prisma.property.update({
       where: { id },
-      data,
+      data: {
+        title: data.title,
+        description: data.description ?? null,
+        type: data.type,
+        price: data.price,
+        address: data.address,
+        city: data.city,
+        region: data.region,
+        bedrooms: data.bedrooms ?? null,
+        bathrooms: data.bathrooms ?? null,
+        areaSquareMeters: data.areaSquareMeters ?? null,
+        images: data.images,
+        ...(data.status && { status: data.status }),
+      },
       include: {
         advisor: {
           select: {

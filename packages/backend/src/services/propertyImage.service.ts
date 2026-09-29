@@ -36,6 +36,20 @@ export class PropertyImageService {
     return supabase.storage.from(BUCKET_NAME).getPublicUrl(path).data.publicUrl
   }
 
+  async deleteByUrls(urls: string[]): Promise<void> {
+    const paths = urls.map((url) => this.extractStoragePath(url)).filter((path): path is string => !!path)
+    if (paths.length === 0) return
+
+    const { error } = await supabase.storage.from(BUCKET_NAME).remove(paths)
+    if (error) console.error('Failed to delete property images:', error.message)
+  }
+
+  private extractStoragePath(url: string): string | null {
+    const marker = `/storage/v1/object/public/${BUCKET_NAME}/`
+    const index = url.indexOf(marker)
+    return index === -1 ? null : decodeURIComponent(url.slice(index + marker.length))
+  }
+
   private async ensureBucket(): Promise<void> {
     if (this.bucketReady) return
 

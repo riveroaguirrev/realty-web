@@ -1,4 +1,4 @@
-import { supabase, getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
 import { User, UserRole, SignUpPayload, AuthPayload, AdvisorRole, Permission } from '@shared/types'
 import { Errors } from '@/utils/errors'
@@ -8,7 +8,7 @@ export class AuthService {
     const { email, password, firstName, lastName } = payload
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await getSupabaseClient().auth.signUp({
         email,
         password,
       })
@@ -53,7 +53,7 @@ export class AuthService {
     const { email, password } = payload
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await getSupabaseClient().auth.signInWithPassword({
         email,
         password,
       })

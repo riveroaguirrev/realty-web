@@ -1,4 +1,4 @@
-import { Permission, AdvisorRole } from '@shared/types'
+import { Permission } from '@shared/types'
 import { Errors } from '@/utils/errors'
 
 export const isOrgAdmin = (permissions?: Permission[]): boolean => {
@@ -27,6 +27,33 @@ export const canAccessOrganization = (advisorOrgId: string | null | undefined, t
 
 export const requireOrgAccess = (advisorOrgId: string | null | undefined, targetOrgId: string): void => {
   if (!canAccessOrganization(advisorOrgId, targetOrgId)) {
+    throw Errors.FORBIDDEN
+  }
+}
+
+interface PropertyOwnership {
+  advisorId: string
+  organizationId: string | null
+}
+
+interface PropertyActor {
+  id: string
+  organizationId?: string
+  permissions?: Permission[]
+}
+
+export const canManageProperty = (actor: PropertyActor, property: PropertyOwnership): boolean => {
+  if (property.advisorId === actor.id) return true
+
+  const isDirectorOfSameOrganization =
+    isOrgAdmin(actor.permissions) &&
+    !!property.organizationId &&
+    property.organizationId === actor.organizationId
+  return isDirectorOfSameOrganization
+}
+
+export const requirePropertyManagement = (actor: PropertyActor, property: PropertyOwnership): void => {
+  if (!canManageProperty(actor, property)) {
     throw Errors.FORBIDDEN
   }
 }

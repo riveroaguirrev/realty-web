@@ -53,4 +53,22 @@ export const propertyAPI = {
     })
     return res.data
   },
+
+  update: async (token: string, id: string, data: any) => {
+    const res = await apiClient.put(`/properties/${id}`, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    return res.data
+  },
+
+  remove: async (token: string, id: string) => {
+    const res = await apiClient.delete(`/properties/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    return res.data
+  },
 }

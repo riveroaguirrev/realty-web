@@ -1,5 +1,5 @@
 import { UserRole } from '@shared/types'
-import type { PropertyType } from '@prisma/client'
+import type { PropertyStatus, PropertyType } from '@prisma/client'
 
 export const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -57,6 +57,7 @@ export const validateLogin = (payload: any) => {
 }
 
 const PROPERTY_TYPES = ['RESIDENTIAL', 'COMMERCIAL', 'LAND', 'APARTMENT', 'HOUSE', 'OFFICE', 'INDUSTRIAL']
+const PROPERTY_STATUSES = ['AVAILABLE', 'UNDER_OFFER', 'SOLD', 'RENT', 'ARCHIVED']
 const MAX_PROPERTY_IMAGES = 20
 
 export interface PropertyInput {
@@ -71,6 +72,7 @@ export interface PropertyInput {
   bathrooms?: number
   areaSquareMeters?: number
   images: string[]
+  status?: PropertyStatus
 }
 
 const isNonEmptyString = (value: unknown): value is string =>
@@ -110,6 +112,10 @@ export const validatePropertyInput = (payload: any) => {
     else areaSquareMeters = body.areaSquareMeters
   }
 
+  if (body.status !== undefined && !PROPERTY_STATUSES.includes(body.status)) {
+    errors.push(`Status must be one of: ${PROPERTY_STATUSES.join(', ')}`)
+  }
+
   const images = body.images ?? []
   if (!Array.isArray(images) || images.length > MAX_PROPERTY_IMAGES || !images.every(isNonEmptyString)) {
     errors.push(`Images must be a list of at most ${MAX_PROPERTY_IMAGES} URLs`)
@@ -129,6 +135,7 @@ export const validatePropertyInput = (payload: any) => {
     bathrooms,
     areaSquareMeters,
     images,
+    status: body.status,
   }
   return { isValid: true as const, errors, data }
 }

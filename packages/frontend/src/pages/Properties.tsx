@@ -4,6 +4,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { propertyAPI } from '@/services/property'
 import { PropertyCard } from '@/components/property/PropertyCard'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
+import { getErrorMessage } from '@/utils/errorMessage'
+import { getPropertyStatusLabel } from '@/utils/propertyStatus'
 
 interface Property {
   id: string
@@ -15,6 +17,7 @@ interface Property {
   bathrooms?: number
   areaSquareMeters?: number
   images?: string[]
+  status: string
 }
 
 export const Properties = () => {
@@ -34,7 +37,7 @@ export const Properties = () => {
         const result = await propertyAPI.getMyProperties(accessToken, 1, 20)
         setProperties(result)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load properties')
+        setError(getErrorMessage(err, 'Failed to load properties'))
       } finally {
         setIsLoading(false)
       }
@@ -42,6 +45,18 @@ export const Properties = () => {
 
     loadProperties()
   }, [accessToken])
+
+  const handleDelete = async (property: Property) => {
+    if (!accessToken) return
+    if (!window.confirm(`Delete "${property.title}"? This cannot be undone.`)) return
+
+    try {
+      await propertyAPI.remove(accessToken, property.id)
+      setProperties((prev) => prev.filter((p) => p.id !== property.id))
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to delete property'))
+    }
+  }
 
   return (
     <ProtectedRoute>
@@ -90,7 +105,31 @@ export const Properties = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {properties.map((property) => (
-                <PropertyCard key={property.id} {...property} />
+                <div key={property.id} className="bg-white rounded-lg shadow">
+                  <PropertyCard
+                    {...property}
+                    onClick={() => navigate(`/properties/${property.id}`)}
+                  />
+                  <div className="flex items-center justify-between gap-2 p-3 border-t">
+                    <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                      {getPropertyStatusLabel(property.status)}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => navigate(`/properties/${property.id}/edit`)}
+                        className="px-3 py-1 text-sm text-blue-700 border border-blue-200 rounded hover:bg-blue-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(property)}
+                        className="px-3 py-1 text-sm text-red-700 border border-red-200 rounded hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}

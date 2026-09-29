@@ -7,6 +7,7 @@ import { Profile } from '@/pages/auth/Profile'
 import { Dashboard } from '@/pages/Dashboard'
 import { Properties } from '@/pages/Properties'
 import { CreateProperty } from '@/pages/CreateProperty'
+import { EditProperty } from '@/pages/EditProperty'
 import { OrganizationSetup } from '@/pages/OrganizationSetup'
 import { OrganizationDashboard } from '@/pages/OrganizationDashboard'
 import { InviteAccept } from '@/pages/InviteAccept'
@@ -38,11 +39,11 @@ function App() {
           {/* Properties */}
           <Route path="/properties" element={<Properties />} />
           <Route path="/properties/create" element={<CreateProperty />} />
+          <Route path="/properties/:id/edit" element={<EditProperty />} />
           <Route path="/properties/:id" element={<PropertyDetail />} />
 
           {/* Search & Discovery */}
           <Route path="/search" element={<PropertySearch />} />
-          <Route path="/properties/:id" element={<PropertyDetail />} />
           <Route path="/favorites" element={<Favorites />} />
 
           {/* Messaging & Collaboration */}

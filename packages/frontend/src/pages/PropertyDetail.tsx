@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { propertyAPI } from '@/services/property'
 import { favoritesAPI } from '@/services/favorites'
 import { conversationsAPI } from '@/services/conversations'
+import { canManageProperty } from '@/utils/propertyPermissions'
 import { SimilarProperties } from '@/components/property/SimilarProperties'
 
 export const PropertyDetail = () => {
@@ -266,6 +267,15 @@ export const PropertyDetail = () => {
                   >
                     {toggleFavLoading ? '...' : isFavorite ? '❤ Favorito' : '🤍 Agregar a Favoritos'}
                   </button>
+
+                  {canManageProperty(user, property) && (
+                    <button
+                      onClick={() => navigate(`/properties/${property.id}/edit`)}
+                      className="w-full py-3 px-4 border-2 border-blue-600 text-blue-700 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
+                    >
+                      ✏️ Editar propiedad
+                    </button>
+                  )}
 
                   {property.advisor && property.advisor.id !== user?.id && (
                     <button
