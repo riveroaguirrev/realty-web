@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma'
 
 export class FavoritesService {
-  async addFavorite(userId: string, propertyId: string) {
+  async addFavorite(advisorId: string, propertyId: string) {
     return await prisma.favorite.create({
       data: {
-        userId,
+        buyerId: advisorId,
         propertyId,
       },
       include: {
@@ -29,34 +29,34 @@ export class FavoritesService {
     })
   }
 
-  async removeFavorite(userId: string, propertyId: string) {
+  async removeFavorite(advisorId: string, propertyId: string) {
     return await prisma.favorite.delete({
       where: {
-        userId_propertyId: {
-          userId,
+        buyerId_propertyId: {
+          buyerId: advisorId,
           propertyId,
         },
       },
     })
   }
 
-  async getFavorite(userId: string, propertyId: string) {
+  async getFavorite(advisorId: string, propertyId: string) {
     return await prisma.favorite.findUnique({
       where: {
-        userId_propertyId: {
-          userId,
+        buyerId_propertyId: {
+          buyerId: advisorId,
           propertyId,
         },
       },
     })
   }
 
-  async listFavorites(userId: string, page = 1, pageSize = 10) {
+  async listFavorites(advisorId: string, page = 1, pageSize = 10) {
     const skip = (page - 1) * pageSize
 
     const [favorites, total] = await Promise.all([
       prisma.favorite.findMany({
-        where: { userId },
+        where: { buyerId: advisorId },
         skip,
         take: pageSize,
         include: {
@@ -84,7 +84,7 @@ export class FavoritesService {
           createdAt: 'desc',
         },
       }),
-      prisma.favorite.count({ where: { userId } }),
+      prisma.favorite.count({ where: { buyerId: advisorId } }),
     ])
 
     return {
@@ -95,11 +95,11 @@ export class FavoritesService {
     }
   }
 
-  async isFavorite(userId: string, propertyId: string): Promise<boolean> {
+  async isFavorite(advisorId: string, propertyId: string): Promise<boolean> {
     const favorite = await prisma.favorite.findUnique({
       where: {
-        userId_propertyId: {
-          userId,
+        buyerId_propertyId: {
+          buyerId: advisorId,
           propertyId,
         },
       },

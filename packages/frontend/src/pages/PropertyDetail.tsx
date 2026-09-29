@@ -25,8 +25,12 @@ export const PropertyDetail = () => {
     const loadProperty = async () => {
       try {
         setIsLoading(true)
-        const prop = await propertyAPI.get(accessToken, id)
+        const [prop, favorite] = await Promise.all([
+          propertyAPI.get(accessToken, id),
+          favoritesAPI.isFavorite(accessToken, id),
+        ])
         setProperty(prop)
+        setIsFavorite(favorite)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load property')
       } finally {

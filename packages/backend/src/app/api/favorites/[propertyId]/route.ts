@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { favoritesService } from '@/services/favorites.service'
 import { supabase } from '@/lib/supabase'
 import { ApiResponse } from '@shared/types'
+import { requireUser, sendError } from '@/middleware/auth'
+import { ApiError, Errors } from '@/utils/errors'
+
+export async function GET(request: NextRequest, { params }: { params: { propertyId: string } }) {
+  try {
+    const user = await requireUser(request)
+    const isFavorite = await favoritesService.isFavorite(user.id, params.propertyId)
+    return NextResponse.json({ success: true, data: { isFavorite } })
+  } catch (error) {
+    if (error instanceof ApiError) return sendError(error, error.statusCode)
+    console.error('Check favorite error:', error)
+    return sendError(Errors.INTERNAL_ERROR, 500)
+  }
+}
 
 export async function DELETE(
   request: NextRequest,
