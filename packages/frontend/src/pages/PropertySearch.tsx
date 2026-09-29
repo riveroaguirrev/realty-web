@@ -131,7 +131,7 @@ export const PropertySearch = () => {
                         onClick={() => navigate(`/properties/${property.id}`)}
                         className="cursor-pointer transform transition-all hover:scale-105"
                       >
-                        <PropertyCard property={property} />
+                        <PropertyCard {...property} />
                       </div>
                     ))}
                   </div>

@@ -24,6 +24,27 @@ export const propertyAPI = {
     return res.data
   },
 
+  get: async (token: string, id: string) => {
+    const res = await apiClient.get(`/properties/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    return res.data
+  },
+
+  uploadImage: async (token: string, file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await apiClient.post<{ url: string }>('/properties/images', formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': false,
+      },
+    })
+    return res.data.url
+  },
+
   createProperty: async (token: string, data: any) => {
     const res = await apiClient.post('/properties', data, {
       headers: {

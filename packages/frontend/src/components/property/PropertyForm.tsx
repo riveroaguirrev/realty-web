@@ -1,14 +1,13 @@
 import { FormEvent, useState } from 'react'
 import { propertyAPI } from '@/services/property'
-import { storageService } from '@/services/storage'
+import { getErrorMessage } from '@/utils/errorMessage'
 
 interface PropertyFormProps {
   token: string
-  userId: string
   onSubmit?: () => void
 }
 
-export const PropertyForm = ({ token, userId, onSubmit }: PropertyFormProps) => {
+export const PropertyForm = ({ token, onSubmit }: PropertyFormProps) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -23,7 +22,6 @@ export const PropertyForm = ({ token, userId, onSubmit }: PropertyFormProps) => 
   })
 
   const [images, setImages] = useState<File[]>([])
-  const [imageUrls, setImageUrls] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -32,7 +30,7 @@ export const PropertyForm = ({ token, userId, onSubmit }: PropertyFormProps) => 
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: ['price', 'bedrooms', 'bathrooms', 'areaSquareMeters'].includes(name) ? parseFloat(value) : value,
+      [name]: ['price', 'bedrooms', 'bathrooms', 'areaSquareMeters'].includes(name) ? Number(value) : value,
     }))
   }
 
@@ -50,10 +48,9 @@ export const PropertyForm = ({ token, userId, onSubmit }: PropertyFormProps) => 
     const urls: string[] = []
     for (const file of images) {
       try {
-        const url = await storageService.uploadPropertyImage(file, userId)
-        urls.push(url)
+        urls.push(await propertyAPI.uploadImage(token, file))
       } catch (err) {
-        console.error('Failed to upload image:', err)
+        throw new Error(`Could not upload "${file.name}": ${getErrorMessage(err, 'upload failed')}`)
       }
     }
     return urls
@@ -71,8 +68,11 @@ export const PropertyForm = ({ token, userId, onSubmit }: PropertyFormProps) => 
         uploadedImages = await uploadImages()
       }
 
-      const property = await propertyAPI.createProperty(token, {
+      await propertyAPI.createProperty(token, {
         ...formData,
+        bedrooms: formData.bedrooms || undefined,
+        bathrooms: formData.bathrooms || undefined,
+        areaSquareMeters: formData.areaSquareMeters || undefined,
         images: uploadedImages,
       })
 
@@ -90,13 +90,12 @@ export const PropertyForm = ({ token, userId, onSubmit }: PropertyFormProps) => 
         areaSquareMeters: 0,
       })
       setImages([])
-      setImageUrls([])
 
       if (onSubmit) {
         setTimeout(onSubmit, 1500)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create property')
+      setError(getErrorMessage(err, 'Failed to create property'))
     } finally {
       setIsLoading(false)
     }
@@ -152,9 +151,12 @@ export const PropertyForm = ({ token, userId, onSubmit }: PropertyFormProps) => 
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           >
             <option>RESIDENTIAL</option>
-            <option>COMMERCIAL</option>
-            <option>LAND</option>
+            <option>HOUSE</option>
             <option>APARTMENT</option>
+            <option>COMMERCIAL</option>
+            <option>OFFICE</option>
+            <option>INDUSTRIAL</option>
+            <option>LAND</option>
           </select>
         </div>
 

@@ -40,14 +40,14 @@ export const PropertyCard = ({
         <p className="text-sm text-gray-600 mb-2">{city}</p>
 
         <div className="flex justify-between items-center mb-3">
-          <span className="text-lg font-bold text-blue-600">${price.toLocaleString()}</span>
+          <span className="text-lg font-bold text-blue-600">${Number(price).toLocaleString()}</span>
           <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{type}</span>
         </div>
 
         <div className="flex gap-4 text-sm text-gray-600 border-t pt-2">
-          {bedrooms && <span>🛏️ {bedrooms} bed</span>}
-          {bathrooms && <span>🛁 {bathrooms} bath</span>}
-          {areaSquareMeters && <span>📐 {areaSquareMeters}m²</span>}
+          {bedrooms ? <span>🛏️ {bedrooms} bed</span> : null}
+          {bathrooms ? <span>🛁 {bathrooms} bath</span> : null}
+          {areaSquareMeters ? <span>📐 {areaSquareMeters}m²</span> : null}
         </div>
       </div>
     </div>

@@ -67,7 +67,7 @@ export const SimilarProperties = ({ propertyId }: SimilarPropertiesProps) => {
             onClick={() => navigate(`/properties/${match.propertyId}`)}
           >
             <div className="relative">
-              <PropertyCard property={match.property} />
+              <PropertyCard {...match.property} />
               {/* Match score badge */}
               <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                 {Math.round(match.score)}%

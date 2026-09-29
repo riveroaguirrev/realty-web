@@ -181,7 +181,7 @@ export const PropertyDetail = () => {
                 <div className="border-t-2 border-blue-200 pt-6">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Precio</p>
                   <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
-                    €{property.price.toLocaleString('es-ES')}
+                    €{Number(property.price).toLocaleString('es-ES')}
                   </p>
                 </div>
               </div>

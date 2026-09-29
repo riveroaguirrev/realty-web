@@ -131,7 +131,7 @@ export const Favorites = () => {
                     className="relative cursor-pointer transform transition-all hover:scale-105"
                     onClick={() => navigate(`/properties/${property.id}`)}
                   >
-                    <PropertyCard property={property} />
+                    <PropertyCard {...property} />
                     <button
                       onClick={(e) => handleRemoveFavorite(property.id, e)}
                       disabled={removingId === property.id}

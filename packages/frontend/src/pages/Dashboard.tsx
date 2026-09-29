@@ -1,7 +1,14 @@
 import { useAuth } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { useNavigate } from 'react-router-dom'
-import { UserRole } from '@shared/types'
+
+const QUICK_ACTIONS = [
+  { label: '📋 List a Property', path: '/properties/create' },
+  { label: '📊 My Properties', path: '/properties' },
+  { label: '🔍 Search Properties', path: '/search' },
+  { label: '❤️ Favorites', path: '/favorites' },
+  { label: '💬 Messages', path: '/messages' },
+]
 
 export const Dashboard = () => {
   const { user, logout } = useAuth()
@@ -61,38 +68,18 @@ export const Dashboard = () => {
               <div className="border rounded-lg p-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div className="space-y-2">
-                  {user?.role === UserRole.ADVISOR ? (
-                    <>
-                      <button className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">
-                        📋 List a Property
-                      </button>
-                      <button className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">
-                        📊 My Properties
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">
-                        🏠 Search Properties
-                      </button>
-                      <button className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded">
-                        ❤️ Favorites
-                      </button>
-                    </>
-                  )}
+                  {QUICK_ACTIONS.map(({ label, path }) => (
+                    <button
+                      key={path}
+                      onClick={() => navigate(path)}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-blue-900 mb-2">Phase 1 Status</h3>
-            <ul className="text-sm text-blue-700 space-y-1">
-              <li>✅ User registration and login</li>
-              <li>✅ Profile management</li>
-              <li>✅ Protected routes</li>
-              <li>⏳ Phase 2: Property Management (coming next)</li>
-            </ul>
           </div>
         </div>
       </div>
