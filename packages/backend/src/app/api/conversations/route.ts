@@ -13,7 +13,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       )
     }
 
-    const { data: user, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       )
     }
 
-    const { data: user, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },

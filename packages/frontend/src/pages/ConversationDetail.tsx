@@ -22,27 +22,13 @@ export const ConversationDetail = () => {
   useEffect(() => {
     if (!id || !accessToken) return
     loadConversation()
-
-    // Subscribe to real-time message updates
-    const subscription = useRealtimeMessages({
-      conversationId: id,
-      onMessageReceived: (newMessage) => {
-        setMessages((prev) => [...prev, newMessage])
-      },
-      onMessageDeleted: (messageId) => {
-        setMessages((prev) => prev.filter((m) => m.id !== messageId))
-      },
-      onMessageEdited: (updatedMessage) => {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === updatedMessage.id ? updatedMessage : m))
-        )
-      },
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
   }, [id, accessToken])
+
+  useRealtimeMessages({
+    conversationId: id,
+    accessToken,
+    onChange: () => refreshMessages(),
+  })
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -66,16 +52,27 @@ export const ConversationDetail = () => {
     }
   }
 
+  const refreshMessages = async () => {
+    if (!id || !accessToken) return
+
+    try {
+      const result = await messagesAPI.list(accessToken, id, 1, 50)
+      setMessages(result.messages)
+      await conversationsAPI.markAsRead(accessToken, id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh messages')
+    }
+  }
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputValue.trim() || !id || !accessToken) return
 
     try {
       setSending(true)
-      const message = await messagesAPI.send(accessToken, id, inputValue.trim())
-      setMessages([...messages, message])
+      await messagesAPI.send(accessToken, id, inputValue.trim())
       setInputValue('')
-      await conversationsAPI.markAsRead(accessToken, id)
+      await refreshMessages()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message')
     } finally {
@@ -89,7 +86,7 @@ export const ConversationDetail = () => {
 
     try {
       await messagesAPI.delete(accessToken, id, messageId)
-      setMessages(messages.filter((m) => m.id !== messageId))
+      await refreshMessages()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete message')
     }

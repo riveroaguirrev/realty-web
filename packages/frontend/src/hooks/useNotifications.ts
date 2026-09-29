@@ -1,43 +1,42 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useNotificationStore } from '@/stores/notificationStore'
-import { useRealtimeConversations } from './useRealtimeConversations'
+import { IncomingMessage, useRealtimeInbox } from './useRealtimeInbox'
+
+const PREVIEW_LENGTH = 100
 
 interface UseNotificationsParams {
-  advisorId?: string
+  accessToken?: string | null
+  userId?: string
   currentConversationId?: string
 }
 
 export const useNotifications = ({
-  advisorId,
+  accessToken,
+  userId,
   currentConversationId,
 }: UseNotificationsParams) => {
-  const { addNotification, markConversationAsRead } = useNotificationStore()
+  const addNotification = useNotificationStore((state) => state.addNotification)
+  const markConversationAsRead = useNotificationStore((state) => state.markConversationAsRead)
 
-  const subscription = useRealtimeConversations({
-    advisorId,
-    onNewMessage: (message) => {
-      // Only create notification if:
-      // 1. User is not in this conversation, OR
-      // 2. User is in a different conversation
-      if (!currentConversationId || currentConversationId !== message.conversationId) {
-        addNotification({
-          type: 'unread_message',
-          conversationId: message.conversationId,
-          title: `📬 Nuevo mensaje`,
-          message: message.content.substring(0, 100),
-        })
-      }
+  const handleNewMessage = useCallback(
+    (message: IncomingMessage) => {
+      const isOwnMessage = message.senderId === userId
+      const isViewingConversation = message.conversationId === currentConversationId
+      if (isOwnMessage || isViewingConversation) return
+
+      addNotification({
+        type: 'unread_message',
+        conversationId: message.conversationId,
+        title: '📬 Nuevo mensaje',
+        message: message.content.substring(0, PREVIEW_LENGTH),
+      })
     },
-  })
+    [userId, currentConversationId, addNotification]
+  )
 
-  // Mark conversation as read when user opens it
+  useRealtimeInbox({ accessToken, onNewMessage: handleNewMessage })
+
   useEffect(() => {
-    if (currentConversationId) {
-      markConversationAsRead(currentConversationId)
-    }
+    if (currentConversationId) markConversationAsRead(currentConversationId)
   }, [currentConversationId, markConversationAsRead])
-
-  return {
-    unsubscribe: subscription.unsubscribe,
-  }
 }

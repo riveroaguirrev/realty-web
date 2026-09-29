@@ -1,34 +1,41 @@
+import { useEffect, useMemo } from 'react'
+import { useMatch } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import { useNotifications } from '@/hooks/useNotifications'
 import { useNotificationStore } from '@/stores/notificationStore'
-import { useEffect } from 'react'
+
+const AUTO_DISMISS_MS = 5000
+const MAX_VISIBLE_TOASTS = 3
 
 export const NotificationCenter = () => {
+  const { user, accessToken } = useAuth()
+  const conversationMatch = useMatch('/messages/:id')
   const { notifications, removeNotification, markAsRead } = useNotificationStore()
 
-  // Auto-dismiss notifications after 5 seconds
+  useNotifications({
+    accessToken,
+    userId: user?.id,
+    currentConversationId: conversationMatch?.params.id,
+  })
+
+  const visibleNotifications = useMemo(
+    () => notifications.filter((n) => !n.read).slice(0, MAX_VISIBLE_TOASTS),
+    [notifications]
+  )
+
   useEffect(() => {
-    const timers = notifications
-      .filter((n) => !n.read)
-      .map((n) =>
-        setTimeout(() => {
-          markAsRead(n.id)
-        }, 5000)
-      )
-
-    return () => timers.forEach((t) => clearTimeout(t))
-  }, [notifications, markAsRead])
-
-  const recentNotifications = notifications.slice(0, 3)
+    const timers = visibleNotifications.map((n) =>
+      setTimeout(() => markAsRead(n.id), AUTO_DISMISS_MS)
+    )
+    return () => timers.forEach(clearTimeout)
+  }, [visibleNotifications, markAsRead])
 
   return (
     <div className="fixed top-20 right-4 z-50 space-y-2 max-w-sm">
-      {recentNotifications.map((notification) => (
+      {visibleNotifications.map((notification) => (
         <div
           key={notification.id}
-          className={`p-4 rounded-lg shadow-lg animate-in slide-in-from-right ${
-            notification.type === 'unread_message'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-800 text-white'
-          }`}
+          className="p-4 rounded-lg shadow-lg bg-blue-500 text-white"
         >
           <div className="flex justify-between items-start gap-2">
             <div className="flex-1">
@@ -37,6 +44,7 @@ export const NotificationCenter = () => {
             </div>
             <button
               onClick={() => removeNotification(notification.id)}
+              aria-label="Cerrar notificación"
               className="text-lg hover:opacity-70 transition-opacity flex-shrink-0"
             >
               ✕

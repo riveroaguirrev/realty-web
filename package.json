@@ -12,7 +12,8 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
-    "db:push": "npx prisma db push --schema=./prisma/schema.prisma",
+    "db:push": "sh -c 'set -a; . ./.env.local; set +a; npx prisma db push --schema=./prisma/schema.prisma'",
+    "db:policies": "sh -c 'set -a; . ./.env.local; set +a; npx prisma db execute --file=./prisma/sql/realtime-messaging.sql --schema=./prisma/schema.prisma'",
     "db:migrate": "npx prisma migrate dev --schema=./prisma/schema.prisma",
     "db:studio": "npx prisma studio --schema=./prisma/schema.prisma"
   },

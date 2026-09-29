@@ -16,7 +16,7 @@ export async function DELETE(
       )
     }
 
-    const { data: user, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },

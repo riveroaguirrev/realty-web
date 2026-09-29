@@ -4,18 +4,20 @@ import { useAuth } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { propertyAPI } from '@/services/property'
 import { favoritesAPI } from '@/services/favorites'
+import { conversationsAPI } from '@/services/conversations'
 import { SimilarProperties } from '@/components/property/SimilarProperties'
 
 export const PropertyDetail = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { accessToken } = useAuth()
+  const { accessToken, user } = useAuth()
 
   const [property, setProperty] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFavorite, setIsFavorite] = useState(false)
   const [toggleFavLoading, setToggleFavLoading] = useState(false)
+  const [contactLoading, setContactLoading] = useState(false)
 
   useEffect(() => {
     if (!id || !accessToken) return
@@ -51,6 +53,20 @@ export const PropertyDetail = () => {
       console.error('Error toggling favorite:', err)
     } finally {
       setToggleFavLoading(false)
+    }
+  }
+
+  const handleContactAdvisor = async () => {
+    if (!accessToken || !property?.advisor) return
+
+    try {
+      setContactLoading(true)
+      const conversation = await conversationsAPI.create(accessToken, [property.advisor.id])
+      navigate(`/messages/${conversation.id}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start conversation')
+    } finally {
+      setContactLoading(false)
     }
   }
 
@@ -247,9 +263,15 @@ export const PropertyDetail = () => {
                     {toggleFavLoading ? '...' : isFavorite ? '❤ Favorito' : '🤍 Agregar a Favoritos'}
                   </button>
 
-                  <button className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow">
-                    📞 Contactar Asesor
-                  </button>
+                  {property.advisor && property.advisor.id !== user?.id && (
+                    <button
+                      onClick={handleContactAdvisor}
+                      disabled={contactLoading}
+                      className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow disabled:opacity-50"
+                    >
+                      {contactLoading ? '...' : '💬 Contactar Asesor'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

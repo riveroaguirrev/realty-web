@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { useRealtimeConversations } from '@/hooks/useRealtimeConversations'
-import { useNotifications } from '@/hooks/useNotifications'
+import { useRealtimeInbox } from '@/hooks/useRealtimeInbox'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { UnreadBadge } from '@/components/notifications/UnreadBadge'
 import { conversationsAPI } from '@/services/conversations'
 
 export const Conversations = () => {
   const navigate = useNavigate()
-  const { accessToken } = useAuth()
+  const { accessToken, user } = useAuth()
 
   const [conversations, setConversations] = useState<any[]>([])
   const [pagination, setPagination] = useState<any>(null)
@@ -19,45 +18,20 @@ export const Conversations = () => {
   useEffect(() => {
     if (!accessToken) return
     loadConversations()
-
-    // Subscribe to real-time updates
-    const subscription = useRealtimeConversations({
-      advisorId: accessToken,
-      onConversationUpdated: (updatedConv) => {
-        setConversations((prev) =>
-          prev.map((c) => (c.id === updatedConv.id ? updatedConv : c))
-        )
-      },
-      onNewMessage: (newMessage) => {
-        // Move conversation with new message to top of list
-        setConversations((prev) => {
-          const updated = prev.map((c) =>
-            c.id === newMessage.conversationId
-              ? { ...c, lastMessageAt: newMessage.createdAt }
-              : c
-          )
-          return updated.sort(
-            (a, b) =>
-              new Date(b.lastMessageAt || 0).getTime() -
-              new Date(a.lastMessageAt || 0).getTime()
-          )
-        })
-      },
-    })
-
-    // Setup notifications
-    useNotifications({ advisorId: accessToken })
-
-    return () => {
-      subscription.unsubscribe()
-    }
   }, [accessToken])
 
-  const loadConversations = async (page = 1) => {
+  useRealtimeInbox({
+    accessToken,
+    onNewMessage: () => {
+      loadConversations(pagination?.page ?? 1, { showSpinner: false })
+    },
+  })
+
+  const loadConversations = async (page = 1, { showSpinner = true } = {}) => {
     if (!accessToken) return
 
     try {
-      setIsLoading(true)
+      if (showSpinner) setIsLoading(true)
       setError(null)
       const result = await conversationsAPI.list(accessToken, page, 20)
       setConversations(result.conversations)
@@ -69,10 +43,8 @@ export const Conversations = () => {
     }
   }
 
-  const getOtherParticipant = (conv: any) => {
-    const current = useAuth()
-    return conv.participants?.find((p: any) => p.advisorId !== current.user?.id)
-  }
+  const getOtherParticipant = (conv: any) =>
+    conv.participants?.find((p: any) => p.advisorId !== user?.id)
 
   const formatTime = (date: string) => {
     const d = new Date(date)

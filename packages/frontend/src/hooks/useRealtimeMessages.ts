@@ -1,79 +1,66 @@
-import { useEffect, useRef } from 'react'
-import { supabase } from '@/services/supabase'
-import { RealtimeChannel } from '@supabase/supabase-js'
+import { useEffect } from 'react'
+import type { RealtimeChannel } from '@supabase/supabase-js'
+import { authenticateRealtime, realtimeClient } from '@/services/realtime'
+import { useLatestRef } from './useLatestRef'
 
 interface UseRealtimeMessagesParams {
-  conversationId: string
-  onMessageReceived?: (message: any) => void
-  onMessageDeleted?: (messageId: string) => void
-  onMessageEdited?: (message: any) => void
+  conversationId?: string
+  accessToken?: string | null
+  onChange: () => void
 }
 
 export const useRealtimeMessages = ({
   conversationId,
-  onMessageReceived,
-  onMessageDeleted,
-  onMessageEdited,
+  accessToken,
+  onChange,
 }: UseRealtimeMessagesParams) => {
-  const channelRef = useRef<RealtimeChannel | null>(null)
+  const onChangeRef = useLatestRef(onChange)
 
   useEffect(() => {
-    if (!conversationId) return
+    if (!conversationId || !accessToken) return
 
-    const channel = supabase
-      .channel(`messages:${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'Message',
-          filter: `conversationId=eq.${conversationId}`,
-        },
-        (payload) => {
-          onMessageReceived?.(payload.new)
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'Message',
-          filter: `conversationId=eq.${conversationId}`,
-        },
-        (payload) => {
-          onMessageDeleted?.(payload.old.id)
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'Message',
-          filter: `conversationId=eq.${conversationId}`,
-        },
-        (payload) => {
-          onMessageEdited?.(payload.new)
-        }
-      )
-      .subscribe()
+    const handleChange = (payload: { errors?: unknown }) => {
+      if (!payload.errors) onChangeRef.current()
+    }
 
-    channelRef.current = channel
+    let channel: RealtimeChannel | undefined
+    let isCancelled = false
+
+    authenticateRealtime(accessToken).then(() => {
+      if (isCancelled) return
+      channel = realtimeClient
+        .channel(`messages:${conversationId}:${crypto.randomUUID()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'Message',
+            filter: `conversationId=eq.${conversationId}`,
+          },
+          handleChange
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'Message',
+            filter: `conversationId=eq.${conversationId}`,
+          },
+          handleChange
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'Message' },
+          handleChange
+        )
+        .subscribe()
+    })
 
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-      }
+      isCancelled = true
+      if (channel) realtimeClient.removeChannel(channel)
     }
-  }, [conversationId, onMessageReceived, onMessageDeleted, onMessageEdited])
-
-  return {
-    unsubscribe: () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-      }
-    },
-  }
+  }, [conversationId, accessToken, onChangeRef])
 }

@@ -1,6 +1,28 @@
 import { prisma } from '@/lib/prisma'
 import { Conversation, ConversationType } from '@shared/types'
 
+const CONVERSATION_INCLUDE = {
+  participants: {
+    include: {
+      advisor: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          profileImage: true,
+          organization: { select: { id: true, name: true } },
+        },
+      },
+    },
+  },
+  messages: {
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+    include: { sender: { select: { id: true, firstName: true, lastName: true } } },
+  },
+}
+
 export class ConversationService {
   async createConversation(
     createdBy: string,
@@ -9,9 +31,11 @@ export class ConversationService {
     name?: string,
     description?: string
   ) {
-    // Ensure creator is in participants
-    if (!participantIds.includes(createdBy)) {
-      participantIds.push(createdBy)
+    const uniqueParticipantIds = Array.from(new Set([...participantIds, createdBy]))
+
+    if (type === 'DIRECT' && uniqueParticipantIds.length === 2) {
+      const existing = await this.findDirectConversation(uniqueParticipantIds[0], uniqueParticipantIds[1])
+      if (existing) return existing
     }
 
     return await prisma.conversation.create({
@@ -22,37 +46,26 @@ export class ConversationService {
         createdBy,
         participants: {
           createMany: {
-            data: participantIds.map((advisorId) => ({
+            data: uniqueParticipantIds.map((advisorId) => ({
               advisorId,
             })),
           },
         },
       },
-      include: {
-        participants: {
-          include: {
-            advisor: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                profileImage: true,
-                organization: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
+      include: CONVERSATION_INCLUDE,
+    })
+  }
+
+  private async findDirectConversation(advisorIdA: string, advisorIdB: string) {
+    return await prisma.conversation.findFirst({
+      where: {
+        type: 'DIRECT',
+        AND: [
+          { participants: { some: { advisorId: advisorIdA } } },
+          { participants: { some: { advisorId: advisorIdB } } },
+        ],
       },
+      include: CONVERSATION_INCLUDE,
     })
   }
 
@@ -82,6 +95,7 @@ export class ConversationService {
         messages: {
           orderBy: { createdAt: 'desc' },
           take: 1,
+          include: { sender: { select: { id: true, firstName: true, lastName: true } } },
         },
       },
     })
@@ -124,6 +138,7 @@ export class ConversationService {
           messages: {
             orderBy: { createdAt: 'desc' },
             take: 1,
+            include: { sender: { select: { id: true, firstName: true, lastName: true } } },
           },
         },
         orderBy: {

@@ -17,7 +17,7 @@ export async function GET(
       )
     }
 
-    const { data: user, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
@@ -87,7 +87,7 @@ export async function POST(
       )
     }
 
-    const { data: user, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
