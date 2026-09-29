@@ -1,6 +1,8 @@
 import { useAuth } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { useNavigate } from 'react-router-dom'
+import { UnreadBadge } from '@/components/notifications/UnreadBadge'
+import { useUnreadMessageCount } from '@/hooks/useUnreadMessageCount'
 
 const QUICK_ACTIONS = [
   { label: '📋 List a Property', path: '/properties/create' },
@@ -11,7 +13,8 @@ const QUICK_ACTIONS = [
 ]
 
 export const Dashboard = () => {
-  const { user, logout } = useAuth()
+  const { user, logout, accessToken } = useAuth()
+  const unreadMessages = useUnreadMessageCount(accessToken)
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -72,9 +75,10 @@ export const Dashboard = () => {
                     <button
                       key={path}
                       onClick={() => navigate(path)}
-                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                      className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 rounded"
                     >
                       {label}
+                      {path === '/messages' && <UnreadBadge count={unreadMessages} />}
                     </button>
                   ))}
                 </div>

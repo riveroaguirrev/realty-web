@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
 export interface Notification {
   id: string
@@ -13,118 +12,40 @@ export interface Notification {
 
 interface NotificationStore {
   notifications: Notification[]
-  unreadCount: number
-  unreadByConversation: Record<string, number>
-
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => void
   markAsRead: (notificationId: string) => void
   markConversationAsRead: (conversationId: string) => void
-  clearAll: () => void
   removeNotification: (notificationId: string) => void
-  getUnreadCount: () => number
-  getUnreadByConversation: (conversationId: string) => number
 }
 
-export const useNotificationStore = create<NotificationStore>()(
-  persist(
-    (set, get) => ({
-      notifications: [],
-      unreadCount: 0,
-      unreadByConversation: {},
+// Toast notifications only. Unread counters live on the server (see conversationsAPI).
+export const useNotificationStore = create<NotificationStore>()((set) => ({
+  notifications: [],
 
-      addNotification: (notification) => {
-        const id = `notif-${Date.now()}`
-        const newNotification: Notification = {
-          ...notification,
-          id,
-          read: false,
-          createdAt: new Date(),
-        }
+  addNotification: (notification) =>
+    set((state) => ({
+      notifications: [
+        { ...notification, id: crypto.randomUUID(), read: false, createdAt: new Date() },
+        ...state.notifications,
+      ],
+    })),
 
-        set((state) => {
-          const updated = [newNotification, ...state.notifications]
-          const unreadCount = updated.filter((n) => !n.read).length
-          const unreadByConv = { ...state.unreadByConversation }
+  markAsRead: (notificationId) =>
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === notificationId ? { ...n, read: true } : n
+      ),
+    })),
 
-          if (notification.conversationId) {
-            unreadByConv[notification.conversationId] =
-              (unreadByConv[notification.conversationId] || 0) + 1
-          }
+  markConversationAsRead: (conversationId) =>
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.conversationId === conversationId ? { ...n, read: true } : n
+      ),
+    })),
 
-          return {
-            notifications: updated,
-            unreadCount,
-            unreadByConversation: unreadByConv,
-          }
-        })
-      },
-
-      markAsRead: (notificationId: string) => {
-        set((state) => {
-          const updated = state.notifications.map((n) =>
-            n.id === notificationId ? { ...n, read: true } : n
-          )
-          const unreadCount = updated.filter((n) => !n.read).length
-
-          return {
-            notifications: updated,
-            unreadCount,
-          }
-        })
-      },
-
-      markConversationAsRead: (conversationId: string) => {
-        set((state) => {
-          const updated = state.notifications.map((n) =>
-            n.conversationId === conversationId ? { ...n, read: true } : n
-          )
-          const unreadCount = updated.filter((n) => !n.read).length
-          const unreadByConv = { ...state.unreadByConversation }
-          unreadByConv[conversationId] = 0
-
-          return {
-            notifications: updated,
-            unreadCount,
-            unreadByConversation: unreadByConv,
-          }
-        })
-      },
-
-      clearAll: () => {
-        set({
-          notifications: [],
-          unreadCount: 0,
-          unreadByConversation: {},
-        })
-      },
-
-      removeNotification: (notificationId: string) => {
-        set((state) => {
-          const updated = state.notifications.filter((n) => n.id !== notificationId)
-          const unreadCount = updated.filter((n) => !n.read).length
-
-          return {
-            notifications: updated,
-            unreadCount,
-          }
-        })
-      },
-
-      getUnreadCount: () => {
-        return get().unreadCount
-      },
-
-      getUnreadByConversation: (conversationId: string) => {
-        return get().unreadByConversation[conversationId] || 0
-      },
-    }),
-    {
-      name: 'notification-store',
-      partialize: (state) => ({
-        notifications: state.notifications,
-        unreadCount: state.unreadCount,
-        unreadByConversation: state.unreadByConversation,
-      }),
-    }
-  )
-)
+  removeNotification: (notificationId) =>
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n.id !== notificationId),
+    })),
+}))

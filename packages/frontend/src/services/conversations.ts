@@ -42,6 +42,14 @@ export const conversationsAPI = {
     return response.data.data
   },
 
+  async unreadCount(token: string): Promise<number> {
+    const response = await client.get<ApiResponse<{ count: number }>>('/conversations/unread-count', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!response.data.success) throw new Error(response.data.error?.message)
+    return response.data.data?.count ?? 0
+  },
+
   async markAsRead(token: string, conversationId: string) {
     const response = await client.put<ApiResponse<any>>(
       `/conversations/${conversationId}/mark-read`,

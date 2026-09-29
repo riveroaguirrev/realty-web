@@ -1,5 +1,5 @@
+import { ConversationType, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { Conversation, ConversationType } from '@shared/types'
 
 const CONVERSATION_INCLUDE = {
   participants: {
@@ -156,12 +156,50 @@ export class ConversationService {
       }),
     ])
 
+    const unreadByConversation = await this.countUnreadByConversation(
+      advisorId,
+      conversations.map((conversation) => conversation.id)
+    )
+
     return {
-      conversations,
+      conversations: conversations.map((conversation) => ({
+        ...conversation,
+        unreadCount: unreadByConversation.get(conversation.id) ?? 0,
+      })),
       total,
       page,
       pageSize,
     }
+  }
+
+  async countUnreadTotal(advisorId: string): Promise<number> {
+    const unreadByConversation = await this.countUnreadByConversation(advisorId)
+    return Array.from(unreadByConversation.values()).reduce((sum, count) => sum + count, 0)
+  }
+
+  // Unread = messages from other advisors sent after the advisor's lastReadAt.
+  private async countUnreadByConversation(
+    advisorId: string,
+    conversationIds?: string[]
+  ): Promise<Map<string, number>> {
+    if (conversationIds && conversationIds.length === 0) return new Map()
+
+    const conversationFilter = conversationIds
+      ? Prisma.sql`AND m."conversationId" IN (${Prisma.join(conversationIds)})`
+      : Prisma.empty
+
+    const rows = await prisma.$queryRaw<{ conversationId: string; unread: number }[]>`
+      SELECT m."conversationId" AS "conversationId", COUNT(*)::int AS unread
+      FROM "Message" m
+      JOIN "ConversationParticipant" p
+        ON p."conversationId" = m."conversationId" AND p."advisorId" = ${advisorId}
+      WHERE m."senderId" <> ${advisorId}
+        AND m."createdAt" > p."lastReadAt"
+        ${conversationFilter}
+      GROUP BY m."conversationId"
+    `
+
+    return new Map(rows.map((row) => [row.conversationId, row.unread]))
   }
 
   async markAsRead(conversationId: string, advisorId: string) {

@@ -145,7 +145,7 @@ export const Conversations = () => {
                             {otherParticipant?.advisor?.firstName}{' '}
                             {otherParticipant?.advisor?.lastName}
                           </h3>
-                          <UnreadBadge conversationId={conv.id} />
+                          <UnreadBadge count={conv.unreadCount} />
                         </div>
                         <p className="text-sm text-gray-500">
                           {otherParticipant?.advisor?.organization?.name}
