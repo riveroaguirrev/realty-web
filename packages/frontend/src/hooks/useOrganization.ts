@@ -143,5 +143,6 @@ export const useOrganization = () => {
     removeAdvisor,
     acceptInvite,
     clearOrganization,
+    clearError: () => setError(null),
   }
 }

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages'
-import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { conversationsAPI } from '@/services/conversations'
 import { messagesAPI } from '@/services/messages'
 
@@ -46,7 +45,7 @@ export const ConversationDetail = () => {
       const result = await messagesAPI.list(accessToken, id, 1, 50)
       setMessages(result.messages)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load conversation')
+      setError(err instanceof Error ? err.message : 'No pudimos cargar la conversación.')
     } finally {
       setIsLoading(false)
     }
@@ -60,7 +59,7 @@ export const ConversationDetail = () => {
       setMessages(result.messages)
       await conversationsAPI.markAsRead(accessToken, id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refresh messages')
+      setError(err instanceof Error ? err.message : 'No pudimos actualizar los mensajes.')
     }
   }
 
@@ -74,7 +73,7 @@ export const ConversationDetail = () => {
       setInputValue('')
       await refreshMessages()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send message')
+      setError(err instanceof Error ? err.message : 'No pudimos enviar el mensaje.')
     } finally {
       setSending(false)
     }
@@ -88,7 +87,7 @@ export const ConversationDetail = () => {
       await messagesAPI.delete(accessToken, id, messageId)
       await refreshMessages()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete message')
+      setError(err instanceof Error ? err.message : 'No pudimos eliminar el mensaje.')
     }
   }
 
@@ -98,21 +97,21 @@ export const ConversationDetail = () => {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <>
+        <div className="page-surface flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
             <p className="text-gray-600">Cargando conversación...</p>
           </div>
         </div>
-      </ProtectedRoute>
+      </>
     )
   }
 
   if (!conversation) {
     return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <>
+        <div className="page-surface flex items-center justify-center">
           <div className="text-center">
             <p className="text-gray-600 mb-4">Conversación no encontrada</p>
             <button
@@ -123,39 +122,20 @@ export const ConversationDetail = () => {
             </button>
           </div>
         </div>
-      </ProtectedRoute>
+      </>
     )
   }
 
   const otherAdvisor = getOtherParticipant()
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex flex-col">
-        <nav className="bg-white shadow-md sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                  Realty
-                </h1>
-                <p className="text-sm text-blue-600 font-semibold">
-                  💬 {otherAdvisor?.firstName} {otherAdvisor?.lastName}
-                </p>
-              </div>
-              <button
-                onClick={() => navigate('/messages')}
-                className="px-4 py-2 text-gray-700 hover:text-blue-600 font-semibold transition-colors"
-              >
-                ← Conversaciones
-              </button>
-            </div>
-          </div>
-        </nav>
+    <>
+      <div className="page-surface flex flex-col">
 
-        <div className="flex-1 max-w-3xl mx-auto w-full bg-white shadow-xl flex flex-col rounded-xl">
+        <div className="page-heading"><div><p className="eyebrow">CONVERSACIÓN</p><h1>{otherAdvisor?.firstName} {otherAdvisor?.lastName}</h1><p>{otherAdvisor?.organization?.name || 'Asesor inmobiliario'}</p></div><button className="button button-secondary" onClick={() => navigate('/messages')}>Volver a mensajes</button></div>
+        <div className="chat-panel flex-1 max-w-3xl mx-auto w-full bg-white shadow-xl flex flex-col rounded-xl">
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-8 space-y-4">
+          <div className="flex-1 overflow-y-auto p-8 space-y-4" role="log" aria-label="Mensajes de la conversación" aria-live="polite">
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm mb-4">
                 <p className="font-medium">Error</p>
@@ -197,6 +177,7 @@ export const ConversationDetail = () => {
                       </p>
                       {msg.senderId === user?.id && (
                         <button
+                          aria-label="Eliminar mensaje"
                           onClick={() => handleDeleteMessage(msg.id)}
                           className="text-xs opacity-70 hover:opacity-100"
                         >
@@ -215,6 +196,7 @@ export const ConversationDetail = () => {
           <div className="border-t-2 border-blue-100 p-6 bg-gradient-to-r from-blue-50 to-transparent">
             <form onSubmit={handleSendMessage} className="flex gap-3">
               <input
+                aria-label="Escribe un mensaje"
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -227,12 +209,12 @@ export const ConversationDetail = () => {
                 disabled={!inputValue.trim() || sending}
                 className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg disabled:opacity-50 font-semibold transition-all"
               >
-                {sending ? '...' : '📤 Enviar'}
+                {sending ? '...' : 'Enviar'}
               </button>
             </form>
           </div>
         </div>
       </div>
-    </ProtectedRoute>
+    </>
   )
 }

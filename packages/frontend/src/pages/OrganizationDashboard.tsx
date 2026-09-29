@@ -1,8 +1,8 @@
+import { Permission } from '@shared/types'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
-import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 
 export const OrganizationDashboard = () => {
   const navigate = useNavigate()
@@ -23,12 +23,12 @@ export const OrganizationDashboard = () => {
   const [inviteCode, setInviteCode] = useState('')
   const [removingAdvisor, setRemovingAdvisor] = useState<string | null>(null)
 
-  const isAdmin = user?.permissions?.includes('org:admin')
+  const isAdmin = user?.permissions?.includes(Permission.ORG_ADMIN)
 
   useEffect(() => {
     if (user?.organizationId) {
-      getOrganization(user.organizationId)
-      listAdvisors(user.organizationId)
+      getOrganization(user.organizationId).catch(() => {})
+      listAdvisors(user.organizationId).catch(() => {})
     }
   }, [user?.organizationId])
 
@@ -65,10 +65,12 @@ export const OrganizationDashboard = () => {
     }
   }
 
+  if (isLoading && !organization) return <div className="loading-panel" role="status">Cargando tu inmobiliaria…</div>
+  if (error && !organization) return <div className="empty-panel" role="alert"><h3>No pudimos cargar tu inmobiliaria</h3><p>{error}</p><button className="button button-secondary" onClick={() => user?.organizationId && getOrganization(user.organizationId).catch(() => {})}>Reintentar</button></div>
   if (!organization) {
     return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <>
+        <div className="page-surface flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">No hay organización</h2>
             <p className="text-gray-600 mb-6">
@@ -82,31 +84,16 @@ export const OrganizationDashboard = () => {
             </button>
           </div>
         </div>
-      </ProtectedRoute>
+      </>
     )
   }
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Realty</h1>
-                <p className="text-sm text-gray-600">{organization?.name}</p>
-              </div>
-              <button
-                onClick={() => navigate('/properties')}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                ← Volver a Propiedades
-              </button>
-            </div>
-          </div>
-        </nav>
+    <>
+      <div className="page-surface">
 
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div className="page-content">
+          <div className="page-heading"><div><p className="eyebrow">MEJOR, EN EQUIPO</p><h1>{organization.name}</h1><p>La información y las personas de tu inmobiliaria.</p></div></div>
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
               {error}
@@ -168,6 +155,7 @@ export const OrganizationDashboard = () => {
                   <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                     <form onSubmit={handleSendInvite} className="flex gap-2">
                       <input
+                        aria-label="Correo del nuevo asesor"
                         type="email"
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
@@ -240,6 +228,6 @@ export const OrganizationDashboard = () => {
           </div>
         </div>
       </div>
-    </ProtectedRoute>
+    </>
   )
 }

@@ -1,7 +1,8 @@
+import { formatPrice, PROPERTY_TYPES } from '@/utils/propertyPresentation'
+import { Icon } from '@/components/ui/Icon'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { propertyAPI } from '@/services/property'
 import { favoritesAPI } from '@/services/favorites'
 import { conversationsAPI } from '@/services/conversations'
@@ -16,6 +17,8 @@ export const PropertyDetail = () => {
   const [property, setProperty] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedImage, setSelectedImage] = useState(0)
+  const [actionError, setActionError] = useState('')
   const [isFavorite, setIsFavorite] = useState(false)
   const [toggleFavLoading, setToggleFavLoading] = useState(false)
   const [contactLoading, setContactLoading] = useState(false)
@@ -26,6 +29,8 @@ export const PropertyDetail = () => {
     const loadProperty = async () => {
       try {
         setIsLoading(true)
+        setError(null)
+        setSelectedImage(0)
         const [prop, favorite] = await Promise.all([
           propertyAPI.get(accessToken, id),
           favoritesAPI.isFavorite(accessToken, id),
@@ -33,7 +38,7 @@ export const PropertyDetail = () => {
         setProperty(prop)
         setIsFavorite(favorite)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load property')
+        setError(err instanceof Error ? err.message : 'No pudimos cargar la propiedad')
       } finally {
         setIsLoading(false)
       }
@@ -47,6 +52,7 @@ export const PropertyDetail = () => {
 
     try {
       setToggleFavLoading(true)
+      setActionError('')
       if (isFavorite) {
         await favoritesAPI.remove(accessToken, property.id)
         setIsFavorite(false)
@@ -55,7 +61,7 @@ export const PropertyDetail = () => {
         setIsFavorite(true)
       }
     } catch (err) {
-      console.error('Error toggling favorite:', err)
+      setActionError('No pudimos actualizar tus favoritos. Inténtalo de nuevo.')
     } finally {
       setToggleFavLoading(false)
     }
@@ -66,10 +72,11 @@ export const PropertyDetail = () => {
 
     try {
       setContactLoading(true)
+      setActionError('')
       const conversation = await conversationsAPI.create(accessToken, [property.advisor.id])
       navigate(`/messages/${conversation.id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start conversation')
+      setActionError('No pudimos iniciar la conversación. Inténtalo de nuevo.')
     } finally {
       setContactLoading(false)
     }
@@ -77,24 +84,24 @@ export const PropertyDetail = () => {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <>
+        <div className="page-surface flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
             <p className="text-gray-600">Cargando propiedad...</p>
           </div>
         </div>
-      </ProtectedRoute>
+      </>
     )
   }
 
   if (error || !property) {
     return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <>
+        <div className="page-surface flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
-            <p className="text-gray-600 mb-4">{error || 'Property not found'}</p>
+            <p className="text-gray-600 mb-4">{error || 'Propiedad no encontrada'}</p>
             <button
               onClick={() => navigate('/search')}
               className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
@@ -103,55 +110,25 @@ export const PropertyDetail = () => {
             </button>
           </div>
         </div>
-      </ProtectedRoute>
+      </>
     )
   }
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-        <nav className="bg-white shadow-md sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                Realty
-              </h1>
-              <button
-                onClick={() => navigate('/search')}
-                className="px-4 py-2 text-gray-700 hover:text-blue-600 font-semibold transition-colors"
-              >
-                ← Volver a Búsqueda
-              </button>
-            </div>
-          </div>
-        </nav>
+    <>
+      <div className="page-surface">
 
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div className="page-content">
+          <button onClick={() => navigate(-1)} className="text-link mb-4">← Volver</button>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
-              {/* Images */}
-              {property.images && property.images.length > 0 && (
-                <div className="mb-8">
-                  <img
-                    src={property.images[0]}
-                    alt={property.title}
-                    className="w-full h-96 object-cover rounded-lg shadow"
-                  />
-                  {property.images.length > 1 && (
-                    <div className="grid grid-cols-3 gap-2 mt-2">
-                      {property.images.slice(1, 4).map((img: string, idx: number) => (
-                        <img
-                          key={idx}
-                          src={img}
-                          alt={`${property.title} ${idx + 2}`}
-                          className="h-24 object-cover rounded"
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="mb-6">
+                {property.images?.length > 0 ? <>
+                  <img src={property.images[selectedImage]} alt={`${property.title}, fotografía ${selectedImage+1}`} className="gallery-main" />
+                  {property.images.length > 1 && <div className="gallery-thumbs" aria-label="Fotografías de la propiedad">{property.images.map((img: string,index: number) => <button key={index} aria-label={`Ver fotografía ${index+1}`} aria-pressed={selectedImage===index} onClick={() => setSelectedImage(index)}><img src={img} alt="" /></button>)}</div>}
+                </> : <div className="property-placeholder rounded-xl" style={{ minHeight: 230 }}><Icon name="home" width="42" height="42" /><span>Esta propiedad aún no tiene fotografías</span></div>}
+              </div>
 
               {/* Details */}
               <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
@@ -159,27 +136,27 @@ export const PropertyDetail = () => {
                 <p className="text-lg text-gray-600 mb-6">{property.city}, {property.region}</p>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 p-6 bg-gradient-to-r from-blue-50 to-slate-50 rounded-lg">
-                  {property.bedrooms !== null && (
+                  {property.bedrooms != null && (
                     <div className="text-center">
-                      <p className="text-4xl font-bold text-blue-600 mb-1">🛏️ {property.bedrooms}</p>
+                      <p className="text-4xl font-bold text-blue-600 mb-1">{property.bedrooms}</p>
                       <p className="text-xs font-semibold text-gray-600 uppercase">Dormitorios</p>
                     </div>
                   )}
-                  {property.bathrooms !== null && (
+                  {property.bathrooms != null && (
                     <div className="text-center">
-                      <p className="text-4xl font-bold text-blue-600 mb-1">🚿 {property.bathrooms}</p>
+                      <p className="text-4xl font-bold text-blue-600 mb-1">{property.bathrooms}</p>
                       <p className="text-xs font-semibold text-gray-600 uppercase">Baños</p>
                     </div>
                   )}
                   {property.areaSquareMeters && (
                     <div className="text-center">
-                      <p className="text-4xl font-bold text-blue-600 mb-1">📏 {property.areaSquareMeters}</p>
+                      <p className="text-4xl font-bold text-blue-600 mb-1">{property.areaSquareMeters}</p>
                       <p className="text-xs font-semibold text-gray-600 uppercase">m²</p>
                     </div>
                   )}
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600 mb-1">🏠</p>
-                    <p className="text-xs font-semibold text-gray-600 uppercase">{property.type}</p>
+                    <p className="text-2xl font-bold text-blue-600 mb-1"><Icon name="home" className="mx-auto" /></p>
+                    <p className="text-xs font-semibold text-gray-600 uppercase">{PROPERTY_TYPES[property.type] || property.type}</p>
                   </div>
                 </div>
 
@@ -202,7 +179,7 @@ export const PropertyDetail = () => {
                 <div className="border-t-2 border-blue-200 pt-6">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Precio</p>
                   <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
-                    €{Number(property.price).toLocaleString('es-ES')}
+                    {formatPrice(property.price, property.currency)}
                   </p>
                 </div>
               </div>
@@ -212,7 +189,7 @@ export const PropertyDetail = () => {
             <div className="lg:col-span-1">
               <div className="bg-white rounded-xl shadow-lg p-8 sticky top-20">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 pb-4 border-b-2 border-blue-100">
-                  👤 Asesor
+                  Tu asesor
                 </h2>
 
                 {property.advisor && (
@@ -256,7 +233,9 @@ export const PropertyDetail = () => {
                 )}
 
                 <div className="mt-8 space-y-3">
+                  {actionError && <p role="alert" className="form-error">{actionError}</p>}
                   <button
+                    aria-pressed={isFavorite}
                     onClick={handleToggleFavorite}
                     disabled={toggleFavLoading}
                     className={`w-full py-3 px-4 rounded-lg font-semibold transition-all disabled:opacity-50 ${
@@ -265,7 +244,7 @@ export const PropertyDetail = () => {
                         : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                     }`}
                   >
-                    {toggleFavLoading ? '...' : isFavorite ? '❤ Favorito' : '🤍 Agregar a Favoritos'}
+                    {toggleFavLoading ? '...' : isFavorite ? 'Guardado en favoritos' : 'Guardar en favoritos'}
                   </button>
 
                   {canManageProperty(user, property) && (
@@ -273,7 +252,7 @@ export const PropertyDetail = () => {
                       onClick={() => navigate(`/properties/${property.id}/edit`)}
                       className="w-full py-3 px-4 border-2 border-blue-600 text-blue-700 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
                     >
-                      ✏️ Editar propiedad
+                      Editar propiedad
                     </button>
                   )}
 
@@ -283,7 +262,7 @@ export const PropertyDetail = () => {
                       disabled={contactLoading}
                       className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow disabled:opacity-50"
                     >
-                      {contactLoading ? '...' : '💬 Contactar Asesor'}
+                      {contactLoading ? '...' : 'Contactar al asesor'}
                     </button>
                   )}
                 </div>
@@ -297,6 +276,6 @@ export const PropertyDetail = () => {
           </div>
         </div>
       </div>
-    </ProtectedRoute>
+    </>
   )
 }

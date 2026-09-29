@@ -1,3 +1,4 @@
+import { AuthLayout } from '@/components/layout/AuthLayout'
 import { FormEvent, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
@@ -11,6 +12,7 @@ export const Login = () => {
     password: '',
   })
 
+  const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,7 +28,7 @@ export const Login = () => {
     setFormError(null)
 
     if (!formData.email || !formData.password) {
-      setFormError('Email and password are required')
+      setFormError('Escribe tu correo y contraseña para continuar')
       return
     }
 
@@ -34,27 +36,15 @@ export const Login = () => {
       await login(formData)
       navigate('/dashboard')
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Login failed')
+      setFormError(err instanceof Error ? err.message : 'No pudimos iniciar sesión. Revisa tus datos.')
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
-        <div className="text-center">
-          <h1 className="text-center text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-4">
-            Realty
-          </h1>
-          <h2 className="text-center text-2xl font-bold text-gray-900">Inicia sesión</h2>
-          <p className="text-center text-gray-600 mt-2">Accede a tu cuenta para continuar</p>
-        </div>
-      </div>
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-12 px-8 shadow-2xl rounded-2xl">
+    <AuthLayout title="Inicia sesión" description="Qué bueno verte de nuevo. Continúa donde lo dejaste.">
           <form onSubmit={handleSubmit} className="space-y-6">
             {(error || formError) && (
-              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm">
+              <div role="alert" className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm">
                 <p className="font-semibold">Error de inicio de sesión</p>
                 <p className="text-sm">{error || formError}</p>
               </div>
@@ -62,10 +52,11 @@ export const Login = () => {
 
             <div>
               <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                📧 Correo electrónico
+                Correo electrónico
               </label>
               <input
                 id="email"
+                autoComplete="email" required
                 name="email"
                 type="email"
                 placeholder="tu@email.com"
@@ -78,18 +69,22 @@ export const Login = () => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
-                🔐 Contraseña
+                Contraseña
               </label>
+              <div className="password-wrap">
               <input
                 id="password"
+                autoComplete="current-password" required
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-50"
                 disabled={isLoading}
               />
+                <button type="button" className="password-toggle" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Ocultar' : 'Mostrar'}</button>
+              </div>
             </div>
 
             <button
@@ -97,7 +92,7 @@ export const Login = () => {
               disabled={isLoading}
               className="w-full py-3 px-4 rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? '⏳ Iniciando sesión...' : '🚀 Iniciar sesión'}
+              {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </button>
           </form>
 
@@ -109,8 +104,6 @@ export const Login = () => {
               </Link>
             </p>
           </div>
-        </div>
-      </div>
-    </div>
+    </AuthLayout>
   )
 }

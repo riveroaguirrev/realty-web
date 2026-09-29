@@ -1,3 +1,5 @@
+import { AppShell } from '@/components/layout/AppShell'
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
@@ -31,6 +33,7 @@ function App() {
           {/* Auth Routes */}
           <Route path="/auth/login" element={<Login />} />
           <Route path="/auth/register" element={<Register />} />
+          <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
           <Route path="/auth/profile" element={<Profile />} />
 
           {/* Dashboard */}
@@ -53,6 +56,7 @@ function App() {
           {/* Organization Routes */}
           <Route path="/organization/setup" element={<OrganizationSetup />} />
           <Route path="/organization/dashboard" element={<OrganizationDashboard />} />
+          </Route>
           <Route path="/invite" element={<InviteAccept />} />
 
           {/* Catch-all */}

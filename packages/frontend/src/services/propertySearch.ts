@@ -53,7 +53,7 @@ export const propertySearchAPI = {
     if (!response.data.success) throw new Error(response.data.error?.message)
     return {
       properties: response.data.data || [],
-      pagination: response.data.meta,
+      pagination: { ...response.data.meta, totalPages: Math.ceil((response.data.meta?.total || 0) / (response.data.meta?.pageSize || filters?.pageSize || 20)) },
     }
   },
 }

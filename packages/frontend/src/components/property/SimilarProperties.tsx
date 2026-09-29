@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { matchingAPI, PropertyMatch } from '@/services/matching'
 import { PropertyCard } from './PropertyCard'
 
@@ -8,7 +7,6 @@ interface SimilarPropertiesProps {
 }
 
 export const SimilarProperties = ({ propertyId }: SimilarPropertiesProps) => {
-  const navigate = useNavigate()
   const [matches, setMatches] = useState<PropertyMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,7 +19,7 @@ export const SimilarProperties = ({ propertyId }: SimilarPropertiesProps) => {
         const data = await matchingAPI.getSimilarProperties(propertyId, 6)
         setMatches(data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load similar properties')
+        setError(err instanceof Error ? err.message : 'No pudimos cargar propiedades similares.')
       } finally {
         setIsLoading(false)
       }
@@ -58,13 +56,12 @@ export const SimilarProperties = ({ propertyId }: SimilarPropertiesProps) => {
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">🔍 Propiedades Similares</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">También te puede interesar</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {matches.map((match) => (
           <div
             key={match.propertyId}
             className="cursor-pointer transform transition-all hover:scale-105"
-            onClick={() => navigate(`/properties/${match.propertyId}`)}
           >
             <div className="relative">
               <PropertyCard {...match.property} />

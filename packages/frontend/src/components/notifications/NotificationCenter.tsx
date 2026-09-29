@@ -31,7 +31,7 @@ export const NotificationCenter = () => {
   }, [visibleNotifications, markAsRead])
 
   return (
-    <div className="fixed top-20 right-4 z-50 space-y-2 max-w-sm">
+    <div aria-live="polite" aria-label="Notificaciones" className="fixed top-20 right-4 z-50 space-y-2 max-w-sm">
       {visibleNotifications.map((notification) => (
         <div
           key={notification.id}

@@ -7,7 +7,7 @@ export const InviteAccept = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { accessToken } = useAuth()
-  const { acceptInvite, isLoading, error } = useOrganization()
+  const { acceptInvite, error } = useOrganization()
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [orgName, setOrgName] = useState('')
@@ -28,7 +28,7 @@ export const InviteAccept = () => {
     const acceptInvitation = async () => {
       try {
         const result = await acceptInvite(inviteCode)
-        setOrgName(result.organizationName || 'Organization')
+        setOrgName(result.organizationName || 'Inmobiliaria')
         setStatus('success')
         setTimeout(() => {
           navigate('/organization/dashboard')
@@ -42,7 +42,7 @@ export const InviteAccept = () => {
   }, [inviteCode, accessToken])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Realty</h1>

@@ -29,6 +29,7 @@ export interface User {
   lastName: string
   profileImage?: string
   bio?: string
+  phone?: string
   organizationId?: string
   organizationName?: string
   roleInOrganization?: AdvisorRole

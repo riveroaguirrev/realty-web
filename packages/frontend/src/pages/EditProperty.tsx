@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { EditableProperty, PropertyForm } from '@/components/property/PropertyForm'
-import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { propertyAPI } from '@/services/property'
 import { canManageProperty } from '@/utils/propertyPermissions'
 import { getErrorMessage } from '@/utils/errorMessage'
@@ -21,15 +20,15 @@ export const EditProperty = () => {
     propertyAPI
       .get(accessToken, id)
       .then(setProperty)
-      .catch((err) => setError(getErrorMessage(err, 'Failed to load property')))
+      .catch((err) => setError(getErrorMessage(err, 'No pudimos cargar la propiedad')))
   }, [id, accessToken])
 
   const isAllowed = property ? canManageProperty(user, property) : false
 
   const renderContent = () => {
     if (error) return <p className="text-red-700">{error}</p>
-    if (!property) return <p className="text-gray-600">Loading property...</p>
-    if (!isAllowed) return <p className="text-red-700">You do not have permission to edit this property.</p>
+    if (!property) return <p className="text-gray-600">Cargando propiedad…</p>
+    if (!isAllowed) return <p className="text-red-700">No tienes permiso para editar esta propiedad.</p>
     if (!accessToken) return null
 
     return (
@@ -38,21 +37,11 @@ export const EditProperty = () => {
   }
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <h1 className="text-2xl font-bold text-gray-900">Realty</h1>
-              <button onClick={() => navigate('/properties')} className="text-gray-600 hover:text-gray-900">
-                ← Back to Properties
-              </button>
-            </div>
-          </div>
-        </nav>
+    <>
+      <div className="page-surface">
 
-        <div className="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8">{renderContent()}</div>
+        <div className="form-container">{renderContent()}</div>
       </div>
-    </ProtectedRoute>
+    </>
   )
 }

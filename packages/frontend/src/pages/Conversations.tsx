@@ -1,8 +1,9 @@
+import { Link } from 'react-router-dom'
+import { Pagination } from '@/components/ui/Pagination'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useRealtimeInbox } from '@/hooks/useRealtimeInbox'
-import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { UnreadBadge } from '@/components/notifications/UnreadBadge'
 import { conversationsAPI } from '@/services/conversations'
 
@@ -37,7 +38,7 @@ export const Conversations = () => {
       setConversations(result.conversations)
       setPagination(result.pagination)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load conversations')
+      setError(err instanceof Error ? err.message : 'No pudimos cargar tus conversaciones.')
     } finally {
       setIsLoading(false)
     }
@@ -63,48 +64,25 @@ export const Conversations = () => {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <>
+        <div className="page-surface flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
             <p className="text-gray-600">Cargando conversaciones...</p>
           </div>
         </div>
-      </ProtectedRoute>
+      </>
     )
   }
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-slate-100">
-        <nav className="bg-white shadow-md sticky top-0 z-50">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                Realty
-              </h1>
-              <div className="flex gap-6">
-                <button
-                  onClick={() => navigate('/search')}
-                  className="px-4 py-2 text-gray-700 hover:text-blue-600 font-semibold transition-colors"
-                >
-                  🔍 Búsqueda
-                </button>
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="px-4 py-2 text-gray-700 hover:text-blue-600 font-semibold transition-colors"
-                >
-                  ← Dashboard
-                </button>
-              </div>
-            </div>
-          </div>
-        </nav>
+    <>
+      <div className="page-surface">
 
-        <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h2 className="text-4xl font-bold text-gray-900 mb-2">💬 Conversaciones</h2>
-            <p className="text-gray-600">Chat con otros asesores</p>
+        <div className="page-content">
+          <div className="page-heading"><div><p className="eyebrow">CONEXIONES QUE ABREN PUERTAS</p>
+            <h2 className="text-4xl font-bold text-gray-900 mb-2">Mensajes</h2>
+            <p className="text-gray-600">Todas tus conversaciones con asesores, en un solo lugar.</p></div>
           </div>
 
           {error && (
@@ -114,16 +92,16 @@ export const Conversations = () => {
             </div>
           )}
 
-          {conversations.length === 0 ? (
+          {error ? <button className="button button-secondary" onClick={() => loadConversations()}>Reintentar</button> : conversations.length === 0 ? (
             <div className="bg-white rounded-xl shadow-lg p-16 text-center">
               <div className="text-6xl mb-4">🗨️</div>
               <p className="text-gray-600 text-lg mb-2">Sin conversaciones aún</p>
-              <p className="text-gray-500 text-sm mb-6">Comienza a charlar con otros asesores</p>
+              <p className="text-gray-500 text-sm mb-6">Abre una propiedad y pulsa “Contactar al asesor” para iniciar una conversación.</p>
               <button
                 onClick={() => navigate('/search')}
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-shadow"
               >
-                🔍 Encontrar Asesores
+                Explorar propiedades
               </button>
             </div>
           ) : (
@@ -133,10 +111,10 @@ export const Conversations = () => {
                 const lastMsg = conv.messages?.[0]
 
                 return (
-                  <div
+                  <Link
                     key={conv.id}
-                    onClick={() => navigate(`/messages/${conv.id}`)}
-                    className="p-4 hover:bg-gray-50 cursor-pointer transition relative"
+                    to={`/messages/${conv.id}`}
+                    className="block p-6 hover:bg-gray-50 cursor-pointer transition relative"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -162,32 +140,15 @@ export const Conversations = () => {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
             </div>
           )}
 
-          {pagination && pagination.totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-8">
-              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => loadConversations(page)}
-                  disabled={isLoading}
-                  className={`px-4 py-2 rounded ${
-                    page === pagination.page
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                  } disabled:opacity-50`}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-          )}
+          <Pagination page={pagination?.page || 1} totalPages={Math.ceil((pagination?.total || 0) / (pagination?.pageSize || 20))} onChange={loadConversations} disabled={isLoading} />
         </div>
       </div>
-    </ProtectedRoute>
+    </>
   )
 }

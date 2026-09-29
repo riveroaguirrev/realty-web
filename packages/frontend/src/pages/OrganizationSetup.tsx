@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
 
 export const OrganizationSetup = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
   const { createOrganization, acceptInvite, isLoading, error, clearError } = useOrganization()
 
   const [tab, setTab] = useState<'create' | 'join'>('create')
@@ -32,7 +30,7 @@ export const OrganizationSetup = () => {
       })
       navigate('/organization/dashboard')
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Failed to create organization')
+      setLocalError(err instanceof Error ? err.message : 'No pudimos crear la inmobiliaria.')
     }
   }
 
@@ -49,7 +47,7 @@ export const OrganizationSetup = () => {
       await acceptInvite(inviteCode)
       navigate('/organization/dashboard')
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Failed to accept invite')
+      setLocalError(err instanceof Error ? err.message : 'No pudimos aceptar la invitación.')
     }
   }
 
@@ -61,17 +59,9 @@ export const OrganizationSetup = () => {
   const displayError = localError || error
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900">Realty</h1>
-            <span className="text-sm text-gray-600">{user?.firstName}</span>
-          </div>
-        </div>
-      </nav>
+    <div className="page-surface">
 
-      <div className="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+      <div className="form-container">
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-xl font-bold text-gray-900">Organización</h2>
@@ -92,6 +82,7 @@ export const OrganizationSetup = () => {
                 onClick={() => {
                   setTab('create')
                   setLocalError(null)
+                  clearError()
                 }}
                 className={`px-4 py-2 font-medium text-sm border-b-2 ${
                   tab === 'create'
@@ -105,6 +96,7 @@ export const OrganizationSetup = () => {
                 onClick={() => {
                   setTab('join')
                   setLocalError(null)
+                  clearError()
                 }}
                 className={`px-4 py-2 font-medium text-sm border-b-2 ${
                   tab === 'join'

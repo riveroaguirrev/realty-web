@@ -24,6 +24,13 @@ export const propertyAPI = {
     return res.data
   },
 
+  getMyPropertiesPage: async (token: string, page = 1, pageSize = 12) => {
+    const res = await apiClient.get('/properties/my-properties', {
+      params: { page, pageSize }, headers: { Authorization: `Bearer ${token}` },
+    })
+    return { properties: res.data, total: res.meta?.total || 0, totalPages: Math.ceil((res.meta?.total || 0) / pageSize) }
+  },
+
   get: async (token: string, id: string) => {
     const res = await apiClient.get(`/properties/${id}`, {
       headers: {

@@ -24,10 +24,10 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [isAuthenticated, isLoading, isRestoringSession, navigate])
 
-  if (isLoading || isRestoringSession) {
+  if ((isLoading && !user) || isRestoringSession) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-gray-600">Loading...</div>
+        <div className="text-xl text-gray-600">Preparando tu espacio...</div>
       </div>
     )
   }

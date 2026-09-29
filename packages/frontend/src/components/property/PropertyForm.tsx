@@ -1,10 +1,11 @@
-import { FormEvent, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { PROPERTY_TYPES } from '@/utils/propertyPresentation'
+import { FormEvent, useState, useEffect } from 'react'
 import { propertyAPI } from '@/services/property'
 import { getErrorMessage } from '@/utils/errorMessage'
 import { PROPERTY_STATUS_OPTIONS } from '@/utils/propertyStatus'
 
 const NUMERIC_FIELDS = ['price', 'bedrooms', 'bathrooms', 'areaSquareMeters']
-const REDIRECT_DELAY_MS = 1500
 const INPUT_CLASS = 'w-full px-3 py-2 border border-gray-300 rounded-md'
 const LABEL_CLASS = 'block text-sm font-medium text-gray-700 mb-1'
 
@@ -67,6 +68,12 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
   const [formData, setFormData] = useState(() => toFormData(property))
   const [existingImages, setExistingImages] = useState<string[]>(property?.images ?? [])
   const [images, setImages] = useState<File[]>([])
+  const [previews, setPreviews] = useState<string[]>([])
+  useEffect(() => {
+    const urls = images.map(file => URL.createObjectURL(file))
+    setPreviews(urls)
+    return () => urls.forEach(url => URL.revokeObjectURL(url))
+  }, [images])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -83,7 +90,15 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setImages(Array.from(e.target.files))
+      const files = Array.from(e.target.files)
+      if (files.some(file => !file.type.startsWith('image/') || file.size > 5 * 1024 * 1024)) {
+        setError('Selecciona imágenes de hasta 5 MB cada una.')
+        e.target.value = ''
+        return
+      }
+      setError(null)
+      setImages(prev => [...prev, ...files])
+      e.target.value = ''
     }
   }
 
@@ -101,7 +116,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
       try {
         urls.push(await propertyAPI.uploadImage(token, file))
       } catch (err) {
-        throw new Error(`Could not upload "${file.name}": ${getErrorMessage(err, 'upload failed')}`)
+        throw new Error(`No pudimos subir "${file.name}": ${getErrorMessage(err, 'Inténtalo de nuevo')}`)
       }
     }
     return urls
@@ -117,6 +132,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (isLoading || success) return
     setIsLoading(true)
     setError(null)
     setSuccess(false)
@@ -135,228 +151,43 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
 
       setSuccess(true)
       if (onSubmit) {
-        setTimeout(onSubmit, REDIRECT_DELAY_MS)
+        onSubmit()
       }
     } catch (err) {
-      setError(getErrorMessage(err, `Failed to ${isEditing ? 'update' : 'create'} property`))
+      setError(getErrorMessage(err, 'No pudimos guardar la propiedad. Revisa los datos e inténtalo de nuevo.'))
     } finally {
       setIsLoading(false)
     }
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        {isEditing ? 'Edit Property' : 'List a Property'}
-      </h2>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-          {isEditing ? 'Property updated!' : 'Property listed successfully!'} Redirecting...
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className={LABEL_CLASS}>Title</label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            className={INPUT_CLASS}
-            required
-          />
-        </div>
-
-        <div>
-          <label className={LABEL_CLASS}>Price</label>
-          <input
-            type="number"
-            name="price"
-            value={formData.price}
-            onChange={handleChange}
-            className={INPUT_CLASS}
-            required
-          />
-        </div>
-
-        <div>
-          <label className={LABEL_CLASS}>Type</label>
-          <select name="type" value={formData.type} onChange={handleChange} className={INPUT_CLASS}>
-            <option>RESIDENTIAL</option>
-            <option>HOUSE</option>
-            <option>APARTMENT</option>
-            <option>COMMERCIAL</option>
-            <option>OFFICE</option>
-            <option>INDUSTRIAL</option>
-            <option>LAND</option>
-          </select>
-        </div>
-
-        {isEditing && (
-          <div>
-            <label className={LABEL_CLASS}>Status</label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              className={INPUT_CLASS}
-            >
-              {PROPERTY_STATUS_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div>
-          <label className={LABEL_CLASS}>Address</label>
-          <input
-            type="text"
-            name="address"
-            value={formData.address}
-            onChange={handleChange}
-            className={INPUT_CLASS}
-            required
-          />
-        </div>
-
-        <div>
-          <label className={LABEL_CLASS}>City</label>
-          <input
-            type="text"
-            name="city"
-            value={formData.city}
-            onChange={handleChange}
-            className={INPUT_CLASS}
-            required
-          />
-        </div>
-
-        <div>
-          <label className={LABEL_CLASS}>Region</label>
-          <input
-            type="text"
-            name="region"
-            value={formData.region}
-            onChange={handleChange}
-            className={INPUT_CLASS}
-            required
-          />
-        </div>
-
-        <div>
-          <label className={LABEL_CLASS}>Bedrooms</label>
-          <input
-            type="number"
-            name="bedrooms"
-            value={formData.bedrooms}
-            onChange={handleChange}
-            className={INPUT_CLASS}
-          />
-        </div>
-
-        <div>
-          <label className={LABEL_CLASS}>Bathrooms</label>
-          <input
-            type="number"
-            name="bathrooms"
-            value={formData.bathrooms}
-            onChange={handleChange}
-            className={INPUT_CLASS}
-          />
-        </div>
-
-        <div>
-          <label className={LABEL_CLASS}>Area (m²)</label>
-          <input
-            type="number"
-            name="areaSquareMeters"
-            value={formData.areaSquareMeters}
-            onChange={handleChange}
-            className={INPUT_CLASS}
-          />
-        </div>
-      </div>
-
-      <div className="mt-6">
-        <label className={LABEL_CLASS}>Description</label>
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          rows={4}
-          className={INPUT_CLASS}
-        />
-      </div>
-
-      <div className="mt-6">
-        <label className={LABEL_CLASS}>Images</label>
-
-        {existingImages.length > 0 && (
-          <div className="mb-4 grid grid-cols-4 gap-4">
-            {existingImages.map((url) => (
-              <div key={url} className="relative">
-                <img src={url} alt="current" className="w-full h-24 object-cover rounded" />
-                <button
-                  type="button"
-                  onClick={() => handleRemoveExistingImage(url)}
-                  aria-label="Remove image"
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <input
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleImageSelect}
-          className={INPUT_CLASS}
-        />
-        {images.length > 0 && (
-          <div className="mt-4 grid grid-cols-4 gap-4">
-            {images.map((file, index) => (
-              <div key={index} className="relative">
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt={`preview-${index}`}
-                  className="w-full h-24 object-cover rounded"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemoveImage(index)}
-                  aria-label="Remove new image"
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="mt-6 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-      >
-        {isLoading ? 'Saving...' : isEditing ? 'Save Changes' : 'List Property'}
-      </button>
-    </form>
-  )
+  const field = (name: keyof typeof formData, label: string, required = false, placeholder?: string) => <div>
+    <label htmlFor={`property-${name}`} className={LABEL_CLASS}>{label}{required ? ' *' : ''}</label>
+    <input id={`property-${name}`} name={name} type={NUMERIC_FIELDS.includes(name) ? 'number' : 'text'} value={formData[name]} onChange={handleChange} className={INPUT_CLASS} required={required} placeholder={placeholder} min={NUMERIC_FIELDS.includes(name) ? 0 : undefined} step={name === 'price' || name === 'areaSquareMeters' ? '0.01' : undefined} />
+  </div>
+  return <form onSubmit={handleSubmit} className="bg-white shadow rounded-xl p-8">
+    <div className="page-heading"><div><p className="eyebrow">{isEditing ? 'ACTUALIZA TU PUBLICACIÓN' : 'UNA NUEVA OPORTUNIDAD'}</p><h1>{isEditing ? 'Editar propiedad' : 'Publicar propiedad'}</h1><p>Completa los datos del inmueble. Los campos con * son obligatorios.</p></div></div>
+    {error && <div role="alert" className="form-error">{error}</div>}
+    {success && <p role="status" className="text-green-700 mb-4">Propiedad guardada correctamente.</p>}
+    <fieldset disabled={isLoading || success}>
+      <section className="form-section"><div className="form-section-heading"><span className="step-number">01</span><div><h3>Información principal</h3><p>Un título claro ayuda a encontrar tu propiedad.</p></div></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{field('title','Título de la publicación',true,'Ej. Departamento luminoso en Sopocachi')}{field('price','Precio',true)}
+          <div><label htmlFor="property-type" className={LABEL_CLASS}>Tipo de propiedad *</label><select id="property-type" name="type" value={formData.type} onChange={handleChange} className={INPUT_CLASS}>{Object.entries(PROPERTY_TYPES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+          {isEditing && <div><label htmlFor="property-status" className={LABEL_CLASS}>Estado de la publicación</label><select id="property-status" name="status" value={formData.status} onChange={handleChange} className={INPUT_CLASS}>{PROPERTY_STATUS_OPTIONS.map(({value,label}) => <option key={value} value={value}>{label}</option>)}</select></div>}
+        </div><p>Los precios de las nuevas publicaciones se registran en USD.</p>
+      </section>
+      <section className="form-section"><div className="form-section-heading"><span className="step-number">02</span><div><h3>Ubicación y características</h3><p>Ayuda a los interesados a saber si este es su próximo espacio.</p></div></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{field('address','Dirección',true)}{field('city','Ciudad',true)}{field('region','Región o departamento',true)}{field('areaSquareMeters','Superficie (m²)')}{field('bedrooms','Habitaciones')}{field('bathrooms','Baños')}</div>
+        <div className="mt-6"><label htmlFor="property-description" className={LABEL_CLASS}>Descripción</label><textarea id="property-description" name="description" value={formData.description} onChange={handleChange} rows={4} className={INPUT_CLASS} placeholder="Cuéntanos qué hace especial a esta propiedad: distribución, servicios y lugares cercanos." /></div>
+      </section>
+      <section className="form-section"><div className="form-section-heading"><span className="step-number">03</span><div><h3>Fotografías</h3><p>La primera imagen será la portada. Puedes agregar más de una.</p></div></div>
+        <div className="upload-zone"><label htmlFor="property-images" className={LABEL_CLASS}>Agregar fotografías</label><input id="property-images" type="file" multiple accept="image/*" onChange={handleImageSelect} className="w-full text-sm" /><p>Imágenes de hasta 5 MB cada una.</p></div>
+        {(existingImages.length > 0 || images.length > 0) && <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+          {existingImages.map((url,index) => <div key={url} className="relative"><img src={url} alt={`Fotografía ${index+1}`} className="w-full h-24 object-cover rounded" /><button type="button" onClick={() => handleRemoveExistingImage(url)} aria-label={`Quitar fotografía ${index+1}`} className="absolute top-1 right-1 bg-white text-red-700 rounded-full w-10 h-10">×</button></div>)}
+          {images.map((file,index) => <div key={index} className="relative"><img src={previews[index]} alt={file.name} className="w-full h-24 object-cover rounded" /><button type="button" onClick={() => handleRemoveImage(index)} aria-label={`Quitar ${file.name}`} className="absolute top-1 right-1 bg-white text-red-700 rounded-full w-10 h-10">×</button></div>)}
+        </div>}
+      </section>
+      <div className="form-actions"><p>{isLoading ? 'Estamos guardando los datos y las fotografías…' : 'Revisa la información antes de guardar.'}</p><button type="submit" disabled={isLoading || success} className="button button-primary">{isLoading ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Publicar propiedad'}</button></div>
+    </fieldset>
+    {!isLoading && <Link to="/properties" className="text-link mt-4">Volver a mis propiedades</Link>}
+  </form>
 }

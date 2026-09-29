@@ -1,7 +1,6 @@
 import { FormEvent, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 
 export const Profile = () => {
   const navigate = useNavigate()
@@ -44,9 +43,8 @@ export const Profile = () => {
     try {
       await updateProfile(formData)
       setSuccess(true)
-      setTimeout(() => navigate('/dashboard'), 2000)
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to update profile')
+      setFormError(err instanceof Error ? err.message : 'No pudimos actualizar tu perfil')
     }
   }
 
@@ -56,16 +54,16 @@ export const Profile = () => {
   }
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md mx-auto bg-white shadow rounded-lg p-6">
+    <>
+      <div className="page-surface">
+        <div className="max-w-2xl mx-auto bg-white shadow rounded-lg p-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Mi perfil</h1>
             <button
               onClick={handleLogout}
               className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700"
             >
-              Sign out
+              Cerrar sesión
             </button>
           </div>
 
@@ -74,26 +72,26 @@ export const Profile = () => {
               <strong>Email:</strong> {user?.email}
             </p>
             <p className="text-sm text-gray-600 mt-2">
-              <strong>Role:</strong> {user?.role}
+              <strong>Rol:</strong> {user?.role === 'BUYER' ? 'Comprador' : 'Asesor inmobiliario'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {(error || formError) && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              <div role="alert" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                 {error || formError}
               </div>
             )}
 
             {success && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-                Profile updated successfully! Redirecting...
+              <div role="status" className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                Tu perfil se ha actualizado.
               </div>
             )}
 
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                First Name
+                Nombre
               </label>
               <input
                 id="firstName"
@@ -108,7 +106,7 @@ export const Profile = () => {
 
             <div>
               <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                Last Name
+                Apellido
               </label>
               <input
                 id="lastName"
@@ -123,7 +121,7 @@ export const Profile = () => {
 
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                Phone
+                Teléfono
               </label>
               <input
                 id="phone"
@@ -138,7 +136,7 @@ export const Profile = () => {
 
             <div>
               <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
-                Bio
+                Acerca de ti
               </label>
               <textarea
                 id="bio"
@@ -156,11 +154,11 @@ export const Profile = () => {
               disabled={isLoading}
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Updating...' : 'Update Profile'}
+              {isLoading ? 'Guardando…' : 'Guardar cambios'}
             </button>
           </form>
         </div>
       </div>
-    </ProtectedRoute>
+    </>
   )
 }

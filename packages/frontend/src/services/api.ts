@@ -20,7 +20,7 @@ class ApiClient {
         if (!data.success) {
           throw new Error(data.error?.message || 'Request failed')
         }
-        return { data: data.data, meta: data.meta }
+        return response
       },
       (error) => {
         console.error('API error:', error)
@@ -29,20 +29,24 @@ class ApiClient {
     )
   }
 
-  async get<T>(url: string, config?: AxiosRequestConfig) {
-    return this.client.get<T>(url, config)
+  async get<T = any>(url: string, config?: AxiosRequestConfig) {
+    const response = await this.client.get<ApiResponse<T>>(url, config)
+    return { data: response.data.data as T, meta: response.data.meta }
   }
 
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig) {
-    return this.client.post<T>(url, data, config)
+  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig) {
+    const response = await this.client.post<ApiResponse<T>>(url, data, config)
+    return { data: response.data.data as T, meta: response.data.meta }
   }
 
-  async put<T>(url: string, data?: any, config?: AxiosRequestConfig) {
-    return this.client.put<T>(url, data, config)
+  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig) {
+    const response = await this.client.put<ApiResponse<T>>(url, data, config)
+    return { data: response.data.data as T, meta: response.data.meta }
   }
 
-  async delete<T>(url: string, config?: AxiosRequestConfig) {
-    return this.client.delete<T>(url, config)
+  async delete<T = any>(url: string, config?: AxiosRequestConfig) {
+    const response = await this.client.delete<ApiResponse<T>>(url, config)
+    return { data: response.data.data as T, meta: response.data.meta }
   }
 }
 

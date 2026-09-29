@@ -1,9 +1,9 @@
 export const PROPERTY_STATUS_OPTIONS = [
-  { value: 'AVAILABLE', label: 'Available' },
-  { value: 'UNDER_OFFER', label: 'Under offer' },
-  { value: 'SOLD', label: 'Sold' },
-  { value: 'RENT', label: 'For rent' },
-  { value: 'ARCHIVED', label: 'Archived' },
+  { value: 'AVAILABLE', label: 'Disponible' },
+  { value: 'UNDER_OFFER', label: 'En negociación' },
+  { value: 'SOLD', label: 'Vendida' },
+  { value: 'RENT', label: 'En alquiler' },
+  { value: 'ARCHIVED', label: 'Archivada' },
 ] as const
 
 export const getPropertyStatusLabel = (status: string): string =>

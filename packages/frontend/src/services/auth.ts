@@ -3,17 +3,17 @@ import { apiClient } from './api'
 
 export const authAPI = {
   register: async (payload: SignUpPayload): Promise<AuthResponse> => {
-    const res = await apiClient.post('/auth/register', payload)
+    const res = await apiClient.post<AuthResponse>('/auth/register', payload)
     return res.data
   },
 
   login: async (payload: AuthPayload): Promise<AuthResponse> => {
-    const res = await apiClient.post('/auth/login', payload)
+    const res = await apiClient.post<AuthResponse>('/auth/login', payload)
     return res.data
   },
 
   getProfile: async (token: string): Promise<User> => {
-    const res = await apiClient.get('/auth/profile', {
+    const res = await apiClient.get<User>('/auth/profile', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -31,7 +31,7 @@ export const authAPI = {
       phone: string
     }>
   ): Promise<User> => {
-    const res = await apiClient.put('/auth/profile', data, {
+    const res = await apiClient.put<User>('/auth/profile', data, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
