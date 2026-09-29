@@ -1,28 +1,16 @@
 import { prisma } from '@/lib/prisma'
-import { Property, PropertyStatus } from '@shared/types'
+import { PropertyStatus } from '@shared/types'
+import { generateUniqueSlug } from '@/utils/slug'
+import { PropertyInput } from '@/utils/validators'
 
 export class PropertyService {
   async createProperty(
-    data: {
-      title: string
-      description?: string
-      type: string
-      price: number
-      address: string
-      city: string
-      region: string
-      bedrooms?: number
-      bathrooms?: number
-      areaSquareMeters?: number
-      images?: string[]
-      advisorId: string
-      organizationId?: string
-    }
+    data: PropertyInput & { advisorId: string; organizationId?: string }
   ) {
     return await prisma.property.create({
       data: {
         ...data,
-        slug: data.title.toLowerCase().replace(/\s+/g, '-'),
+        slug: generateUniqueSlug(data.title),
         status: 'AVAILABLE',
       },
       include: {
@@ -50,6 +38,7 @@ export class PropertyService {
             email: true,
             phone: true,
             profileImage: true,
+            organization: { select: { id: true, name: true } },
           },
         },
       },

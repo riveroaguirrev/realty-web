@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ApiResponse } from '@shared/types'
-import { verifyAuth } from '@/middleware/auth'
+import { requireUser } from '@/middleware/auth'
 import { advisorService } from '@/services/advisor.service'
 import { requireOrgAccess, requirePermission } from '@/lib/permissions'
 import { Errors } from '@/utils/errors'
@@ -10,7 +10,7 @@ export async function DELETE(
   { params }: { params: { id: string; advisorId: string } }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const user = await verifyAuth(request)
+    const user = await requireUser(request)
     const { id: orgId, advisorId } = params
 
     // Check if user is member of this organization

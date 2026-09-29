@@ -28,6 +28,12 @@ export async function verifyAuth(req: NextRequest) {
   }
 }
 
+export async function requireUser(req: NextRequest) {
+  const { user } = await verifyAuth(req)
+  if (!user) throw Errors.UNAUTHORIZED
+  return user
+}
+
 export function sendError(error: any, statusCode: number) {
   return NextResponse.json(
     {

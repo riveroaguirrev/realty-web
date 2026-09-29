@@ -26,29 +26,31 @@ export class OrganizationService {
       throw new Error('Organization slug already exists')
     }
 
-    const organization = await prisma.organization.create({
-      data: {
-        name: data.name,
-        slug,
-        city: data.city || '',
-        region: data.region || '',
-        phone: data.phone,
-        email: data.email,
-        website: data.website,
-        logo: data.logo,
-      },
-    })
+    return await prisma.$transaction(async (tx) => {
+      const organization = await tx.organization.create({
+        data: {
+          name: data.name,
+          slug,
+          city: data.city || '',
+          region: data.region || '',
+          phone: data.phone,
+          email: data.email,
+          website: data.website,
+          logo: data.logo,
+          createdById: advisorId,
+        },
+      })
 
-    // Add creator as DIRECTOR
-    await prisma.advisor.update({
-      where: { id: advisorId },
-      data: {
-        organizationId: organization.id,
-        role: 'DIRECTOR',
-      },
-    })
+      await tx.advisor.update({
+        where: { id: advisorId },
+        data: {
+          organizationId: organization.id,
+          role: 'DIRECTOR',
+        },
+      })
 
-    return organization
+      return organization
+    })
   }
 
   async getOrganization(orgId: string) {

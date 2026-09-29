@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { propertyService } from '@/services/property.service'
 import { verifyAuth, sendError } from '@/middleware/auth'
 import { Errors } from '@/utils/errors'
+import { validatePropertyInput } from '@/utils/validators'
 
 export async function GET(req: NextRequest) {
   try {
@@ -50,11 +51,18 @@ export async function POST(req: NextRequest) {
       return response
     }
 
-    const body = await req.json()
+    const validation = validatePropertyInput(await req.json())
+    if (!validation.isValid) {
+      return NextResponse.json(
+        { success: false, error: { message: validation.errors.join(', '), code: 'VALIDATION_ERROR' } },
+        { status: 400 }
+      )
+    }
 
     const property = await propertyService.createProperty({
-      ...body,
+      ...validation.data,
       advisorId: auth.user.id,
+      organizationId: auth.user.organizationId,
     })
 
     const response = NextResponse.json({

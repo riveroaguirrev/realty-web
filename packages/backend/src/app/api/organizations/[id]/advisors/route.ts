@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ApiResponse } from '@shared/types'
-import { verifyAuth } from '@/middleware/auth'
+import { requireUser } from '@/middleware/auth'
 import { organizationService } from '@/services/organization.service'
 import { advisorService } from '@/services/advisor.service'
 import { requireOrgAccess, requirePermission } from '@/lib/permissions'
@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const user = await verifyAuth(request)
+    const user = await requireUser(request)
     const { id: orgId } = params
 
     // Check if user is member of this organization
@@ -61,7 +61,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const user = await verifyAuth(request)
+    const user = await requireUser(request)
     const { id: orgId } = params
 
     // Check if user is member of this organization
