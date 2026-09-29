@@ -3,11 +3,6 @@ import { authService } from '@/services/auth.service'
 import { validateSignUp } from '@/utils/validators'
 import { Errors } from '@/utils/errors'
 import { sendError } from '@/middleware/auth'
-import { handleCORS, addCORSHeaders } from '@/middleware/cors'
-
-export async function OPTIONS(req: NextRequest) {
-  return handleCORS(req)
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,7 +20,7 @@ export async function POST(req: NextRequest) {
         },
         { status: 400 }
       )
-      return addCORSHeaders(response, req)
+      return response
     }
 
     const result = await authService.signUp(body)
@@ -37,7 +32,7 @@ export async function POST(req: NextRequest) {
         accessToken: result.accessToken,
       },
     })
-    return addCORSHeaders(response, req)
+    return response
   } catch (error) {
     console.error('Registration error:', error)
 
@@ -52,6 +47,6 @@ export async function POST(req: NextRequest) {
       response = sendError(Errors.INTERNAL_ERROR, 500)
     }
 
-    return addCORSHeaders(response, req)
+    return response
   }
 }

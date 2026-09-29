@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { propertyService } from '@/services/property.service'
 import { verifyAuth, sendError } from '@/middleware/auth'
 import { Errors } from '@/utils/errors'
-import { handleCORS, addCORSHeaders } from '@/middleware/cors'
-
-export async function OPTIONS(req: NextRequest) {
-  return handleCORS(req)
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,11 +33,11 @@ export async function GET(req: NextRequest) {
         total: result.total,
       },
     })
-    return addCORSHeaders(response, req)
+    return response
   } catch (error) {
     console.error('Error fetching properties:', error)
     const response = sendError(Errors.INTERNAL_ERROR, 500)
-    return addCORSHeaders(response, req)
+    return response
   }
 }
 
@@ -52,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     if (!auth.user) {
       const response = sendError(Errors.UNAUTHORIZED, 401)
-      return addCORSHeaders(response, req)
+      return response
     }
 
     const body = await req.json()
@@ -66,10 +61,10 @@ export async function POST(req: NextRequest) {
       success: true,
       data: property,
     })
-    return addCORSHeaders(response, req)
+    return response
   } catch (error) {
     console.error('Error creating property:', error)
     const response = sendError(error || Errors.INTERNAL_ERROR, 400)
-    return addCORSHeaders(response, req)
+    return response
   }
 }
