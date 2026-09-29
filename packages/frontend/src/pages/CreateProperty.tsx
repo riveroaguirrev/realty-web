@@ -5,11 +5,7 @@ import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 
 export const CreateProperty = () => {
   const navigate = useNavigate()
-  const { accessToken, user } = useAuth()
-
-  if (!accessToken || !user) {
-    return null
-  }
+  const { accessToken } = useAuth()
 
   return (
     <ProtectedRoute>
@@ -31,10 +27,9 @@ export const CreateProperty = () => {
         </nav>
 
         <div className="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <PropertyForm
-            token={accessToken}
-            onSubmit={() => navigate('/properties')}
-          />
+          {accessToken && (
+            <PropertyForm token={accessToken} onSubmit={() => navigate('/properties')} />
+          )}
         </div>
       </div>
     </ProtectedRoute>

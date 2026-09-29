@@ -33,6 +33,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   setError: (error) => set({ error }),
   logout: () => {
     localStorage.removeItem('accessToken')
-    set({ user: null, accessToken: null })
+    set({ user: null, accessToken: null, error: null })
   },
 }))

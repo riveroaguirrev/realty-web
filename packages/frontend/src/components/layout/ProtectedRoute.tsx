@@ -7,16 +7,24 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, user } = useAuth()
+  const { isAuthenticated, isLoading, user, accessToken, getProfile, logout } = useAuth()
   const navigate = useNavigate()
 
+  // The token survives a page reload (localStorage) but the user profile does not.
+  const isRestoringSession = Boolean(accessToken) && !user
+
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isRestoringSession) return
+    getProfile().catch(() => logout())
+  }, [isRestoringSession])
+
+  useEffect(() => {
+    if (!isLoading && !isRestoringSession && !isAuthenticated) {
       navigate('/auth/login')
     }
-  }, [isAuthenticated, isLoading, navigate])
+  }, [isAuthenticated, isLoading, isRestoringSession, navigate])
 
-  if (isLoading) {
+  if (isLoading || isRestoringSession) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-xl text-gray-600">Loading...</div>
