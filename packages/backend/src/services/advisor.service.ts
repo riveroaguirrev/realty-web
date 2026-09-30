@@ -32,7 +32,7 @@ export class AdvisorService {
       email: invite.email,
       organizationId: invite.organizationId,
       expiresAt: invite.expiresAt,
-      inviteLink: `${process.env.VITE_APP_URL}/invite?code=${invite.code}`,
+      inviteLink: `${process.env.NEXT_PUBLIC_APP_URL}/invite?code=${invite.code}`,
     }
   }
 

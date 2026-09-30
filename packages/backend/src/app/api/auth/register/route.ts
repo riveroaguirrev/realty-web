@@ -3,10 +3,11 @@ import { authService } from '@/services/auth.service'
 import { validateSignUp } from '@/utils/validators'
 import { Errors } from '@/utils/errors'
 import { sendError } from '@/middleware/auth'
+import type { SignUpPayload } from '@shared/types'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body = await req.json() as SignUpPayload
 
     const validation = validateSignUp(body)
     if (!validation.isValid) {

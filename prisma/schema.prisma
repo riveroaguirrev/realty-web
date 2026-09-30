@@ -56,10 +56,24 @@ model Organization {
   properties          Property[]
   commissions         CommissionStructure[]
   transactions        Transaction[]
+  inviteCodes         InviteCode[]
 
   @@index([city, region])
   @@index([status])
   @@index([verified])
+}
+
+model InviteCode {
+  id             String       @id @default(cuid())
+  code           String       @unique
+  email          String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime     @default(dbgenerated("now() + interval '7 days'"))
+  usedAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
 }
 
 // ============================================================================

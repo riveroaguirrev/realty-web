@@ -21,7 +21,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       )
     }
 
-    const body = await request.json()
+    const body = await request.json() as { propertyId?: string }
     const { propertyId } = body
 
     if (!propertyId) {

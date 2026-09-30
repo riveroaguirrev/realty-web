@@ -8,7 +8,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
   try {
     const user = await requireUser(request)
 
-    const body = await request.json()
+    const body = await request.json() as {
+      name: string; slug?: string; city?: string; region?: string
+      phone?: string; email?: string; website?: string; logo?: string
+    }
     const { name, slug, city, region, phone, email, website, logo } = body
 
     if (!name) {

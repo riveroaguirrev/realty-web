@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { MatchingService } from '@/services/matching.service'
-import { ApiResponse } from '@shared/types'
 
 export async function GET(
   request: NextRequest,
@@ -15,7 +14,7 @@ export async function GET(
       Math.min(limit, 20)
     )
 
-    const response: ApiResponse = {
+    const response = {
       success: true,
       data: matches,
       meta: {
@@ -29,7 +28,7 @@ export async function GET(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to find similar properties',
-      } as ApiResponse,
+      },
       { status: 500 }
     )
   }

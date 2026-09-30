@@ -70,7 +70,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       )
     }
 
-    const body = await request.json()
+    const body = await request.json() as {
+      participantIds?: string[]
+      type?: 'DIRECT' | 'GROUP'
+      name?: string
+      description?: string
+    }
     const { participantIds, type = 'DIRECT', name, description } = body
 
     if (!participantIds || !Array.isArray(participantIds) || participantIds.length === 0) {

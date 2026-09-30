@@ -1,51 +1,47 @@
 import { getSupabaseClient } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
-import { User, UserRole, SignUpPayload, AuthPayload, AdvisorRole, Permission } from '@shared/types'
+import { User, SignUpPayload, AuthPayload, AdvisorRole, Permission } from '@shared/types'
 import { Errors } from '@/utils/errors'
 
 export class AuthService {
   async signUp(payload: SignUpPayload): Promise<{ user: User; accessToken: string }> {
     const { email, password, firstName, lastName } = payload
 
-    try {
-      const { data: authData, error: authError } = await getSupabaseClient().auth.signUp({
+    const { data: authData, error: authError } = await getSupabaseClient().auth.signUp({
+      email,
+      password,
+    })
+
+    if (authError || !authData.user) {
+      throw new Error(authError?.message || 'Failed to create user')
+    }
+
+    const userId = authData.user.id
+
+    const user = await prisma.advisor.create({
+      data: {
+        id: userId,
         email,
-        password,
-      })
+        firstName,
+        lastName,
+        role: AdvisorRole.AGENT,
+        status: 'ACTIVE',
+        isVerified: false,
+        specializations: [],
+        rating: 0,
+        reviewCount: 0,
+      },
+      include: { organization: true },
+    })
 
-      if (authError || !authData.user) {
-        throw new Error(authError?.message || 'Failed to create user')
-      }
+    const session = authData.session
+    if (!session?.access_token) {
+      throw new Error('No access token returned')
+    }
 
-      const userId = authData.user.id
-
-      const user = await prisma.advisor.create({
-        data: {
-          id: userId,
-          email,
-          firstName,
-          lastName,
-          role: AdvisorRole.AGENT,
-          status: 'ACTIVE',
-          isVerified: false,
-          specializations: [],
-          rating: 0,
-          reviewCount: 0,
-        },
-        include: { organization: true },
-      })
-
-      const session = authData.session
-      if (!session?.access_token) {
-        throw new Error('No access token returned')
-      }
-
-      return {
-        user: this.mapAdvisorToUser(user),
-        accessToken: session.access_token,
-      }
-    } catch (error) {
-      throw error
+    return {
+      user: this.mapAdvisorToUser(user),
+      accessToken: session.access_token,
     }
   }
 

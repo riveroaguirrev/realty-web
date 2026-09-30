@@ -8,14 +8,14 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
-    "db:push": "sh -c 'set -a; . ./.env.local; set +a; npx prisma db push --schema=./prisma/schema.prisma'",
-    "db:policies": "sh -c 'set -a; . ./.env.local; set +a; npx prisma db execute --file=./prisma/sql/realtime-messaging.sql --schema=./prisma/schema.prisma'",
-    "db:migrate": "npx prisma migrate dev --schema=./prisma/schema.prisma",
-    "db:studio": "npx prisma studio --schema=./prisma/schema.prisma"
+    "db:push": "node --env-file=.env.local ./node_modules/prisma/build/index.js db push --schema=./prisma/schema.prisma",
+    "db:policies": "node --env-file=.env.local ./node_modules/prisma/build/index.js db execute --file=./prisma/sql/realtime-messaging.sql --schema=./prisma/schema.prisma",
+    "db:migrate": "node --env-file=.env.local ./node_modules/prisma/build/index.js migrate dev --schema=./prisma/schema.prisma",
+    "db:studio": "node --env-file=.env.local ./node_modules/prisma/build/index.js studio --schema=./prisma/schema.prisma"
   },
   "keywords": [
     "real-estate",
@@ -27,9 +27,11 @@
     "turbo": "^2.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.6.0"
   },
   "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.6"
   }
 }

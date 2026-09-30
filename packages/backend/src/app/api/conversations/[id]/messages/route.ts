@@ -96,7 +96,7 @@ export async function POST(
     }
 
     const { id } = params
-    const body = await request.json()
+    const body = await request.json() as { content?: string }
     const { content } = body
 
     if (!content || typeof content !== 'string' || !content.trim()) {

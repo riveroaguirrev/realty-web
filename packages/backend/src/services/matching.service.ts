@@ -47,7 +47,7 @@ export class MatchingService {
       }
 
       // 2. Price match - within 50-150% (25 points)
-      const priceRatio = prop.price / refProperty.price
+      const priceRatio = prop.price.toNumber() / refProperty.price.toNumber()
       if (priceRatio >= 0.5 && priceRatio <= 1.5) {
         score += 25
         reason += 'Precio compatible. '
@@ -83,9 +83,10 @@ export class MatchingService {
       }
 
       // 6. Features bonus
-      if (refProperty.features && prop.features) {
-        const commonFeatures = refProperty.features.filter((f) =>
-          prop.features?.includes(f)
+      if (Array.isArray(refProperty.features) && Array.isArray(prop.features)) {
+        const propertyFeatures = prop.features.filter((feature): feature is string => typeof feature === 'string')
+        const commonFeatures = refProperty.features.filter((feature) =>
+          typeof feature === 'string' && propertyFeatures.includes(feature)
         ).length
         score += commonFeatures * 5
         if (commonFeatures > 0) {

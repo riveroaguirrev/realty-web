@@ -3,10 +3,11 @@ import { authService } from '@/services/auth.service'
 import { validateLogin } from '@/utils/validators'
 import { Errors } from '@/utils/errors'
 import { sendError } from '@/middleware/auth'
+import type { AuthPayload } from '@shared/types'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body = await req.json() as AuthPayload
 
     const validation = validateLogin(body)
     if (!validation.isValid) {

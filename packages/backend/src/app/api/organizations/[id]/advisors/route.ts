@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ApiResponse } from '@shared/types'
+import { ApiResponse, Permission } from '@shared/types'
 import { requireUser } from '@/middleware/auth'
 import { organizationService } from '@/services/organization.service'
 import { advisorService } from '@/services/advisor.service'
@@ -68,9 +68,9 @@ export async function POST(
     requireOrgAccess(user.organizationId, orgId)
 
     // Check if user has permission to manage advisors
-    requirePermission(user.permissions, 'advisor:manage')
+    requirePermission(user.permissions, Permission.ADVISOR_MANAGE)
 
-    const body = await request.json()
+    const body = await request.json() as { email?: string }
     const { email } = body
 
     if (!email) {

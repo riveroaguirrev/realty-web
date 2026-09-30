@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ApiResponse } from '@shared/types'
+import { ApiResponse, Permission } from '@shared/types'
 import { requireUser } from '@/middleware/auth'
 import { organizationService } from '@/services/organization.service'
 import { requireOrgAccess } from '@/lib/permissions'
@@ -67,11 +67,14 @@ export async function PUT(
     requireOrgAccess(user.organizationId, orgId)
 
     // Check if user is org admin
-    if (!user.permissions?.includes('org:admin')) {
+    if (!user.permissions?.includes(Permission.ORG_ADMIN)) {
       throw Errors.FORBIDDEN
     }
 
-    const body = await request.json()
+    const body = await request.json() as {
+      name?: string; city?: string; region?: string; phone?: string
+      email?: string; website?: string; logo?: string
+    }
     const { name, city, region, phone, email, website, logo } = body
 
     const organization = await organizationService.updateOrganization(orgId, {

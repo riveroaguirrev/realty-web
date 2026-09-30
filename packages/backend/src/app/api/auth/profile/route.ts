@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest) {
       return response
     }
 
-    const body = await req.json()
+    const body = await req.json() as Parameters<typeof authService.updateProfile>[1]
 
     const updatedUser = await authService.updateProfile(auth.user.id, body)
 
