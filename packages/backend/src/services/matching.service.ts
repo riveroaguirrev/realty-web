@@ -1,9 +1,40 @@
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
 export interface MatchScore {
   propertyId: string
   score: number
   matchReason: string
+}
+
+type SimilarProperty = Prisma.PropertyGetPayload<{
+  include: {
+    advisor: {
+      include: {
+        organization: true
+      }
+    }
+  }
+}>
+
+export interface PropertyMatch extends MatchScore {
+  property: SimilarProperty
+}
+
+const normalizeFeatures = (features: Prisma.JsonValue | null): string[] => {
+  if (!features) return []
+
+  if (Array.isArray(features)) {
+    return features.filter((feature): feature is string => typeof feature === 'string')
+  }
+
+  if (typeof features === 'object') {
+    return Object.entries(features)
+      .filter(([, value]) => value === true || value === 'true')
+      .map(([feature]) => feature)
+  }
+
+  return []
 }
 
 export class MatchingService {
@@ -35,7 +66,6 @@ export class MatchingService {
       },
     })
 
-    // Calculate match scores
     const scores = allProperties.map((prop) => {
       let score = 0
       let reason = ''
@@ -47,7 +77,9 @@ export class MatchingService {
       }
 
       // 2. Price match - within 50-150% (25 points)
-      const priceRatio = prop.price.toNumber() / refProperty.price.toNumber()
+      const refPrice = Number(refProperty.price)
+      const propertyPrice = Number(prop.price)
+      const priceRatio = refPrice > 0 ? propertyPrice / refPrice : 0
       if (priceRatio >= 0.5 && priceRatio <= 1.5) {
         score += 25
         reason += 'Precio compatible. '
@@ -83,11 +115,10 @@ export class MatchingService {
       }
 
       // 6. Features bonus
-      if (Array.isArray(refProperty.features) && Array.isArray(prop.features)) {
-        const propertyFeatures = prop.features.filter((feature): feature is string => typeof feature === 'string')
-        const commonFeatures = refProperty.features.filter((feature) =>
-          typeof feature === 'string' && propertyFeatures.includes(feature)
-        ).length
+      const refFeatures = normalizeFeatures(refProperty.features)
+      const propertyFeatures = new Set(normalizeFeatures(prop.features))
+      if (refFeatures.length > 0 && propertyFeatures.size > 0) {
+        const commonFeatures = refFeatures.filter((feature) => propertyFeatures.has(feature)).length
         score += commonFeatures * 5
         if (commonFeatures > 0) {
           reason += `${commonFeatures} característica(s) en común. `
@@ -108,14 +139,9 @@ export class MatchingService {
   static async getSimilarPropertiesWithDetails(
     propertyId: string,
     limit = 6
-  ): Promise<
-    (MatchScore & {
-      property: any
-    })[]
-  > {
+  ): Promise<PropertyMatch[]> {
     const matchScores = await this.findSimilarProperties(propertyId, limit)
 
-    // Get full property details
     const properties = await Promise.all(
       matchScores.map(async (match) => {
         const property = await prisma.property.findUnique({
@@ -136,6 +162,6 @@ export class MatchingService {
       })
     )
 
-    return properties.filter((p) => p.property !== null)
+    return properties.filter((match): match is PropertyMatch => match.property !== null)
   }
 }

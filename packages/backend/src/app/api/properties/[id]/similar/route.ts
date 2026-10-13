@@ -1,24 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { MatchingService } from '@/services/matching.service'
+import { MatchingService, PropertyMatch } from '@/services/matching.service'
+import { ApiResponse } from '@shared/types'
+
+const parseLimit = (value: string | null): number => {
+  const parsed = Number(value ?? 6)
+  if (!Number.isInteger(parsed) || parsed < 1) return 6
+  return Math.min(parsed, 20)
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse<ApiResponse<PropertyMatch[]>>> {
   try {
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '6')
+    const limit = parseLimit(searchParams.get('limit'))
 
     const matches = await MatchingService.getSimilarPropertiesWithDetails(
       params.id,
-      Math.min(limit, 20)
+      limit
     )
 
-    const response = {
+    const response: ApiResponse<PropertyMatch[]> = {
       success: true,
       data: matches,
       meta: {
-        count: matches.length,
+        total: matches.length,
       },
     }
 
@@ -27,8 +34,11 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to find similar properties',
-      },
+        error: {
+          message: error instanceof Error ? error.message : 'Failed to find similar properties',
+          code: 'SIMILAR_PROPERTIES_ERROR',
+        },
+      } as ApiResponse<PropertyMatch[]>,
       { status: 500 }
     )
   }

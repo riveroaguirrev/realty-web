@@ -1,16 +1,65 @@
 import { prisma } from '@/lib/prisma'
 import { PropertyStatus } from '@shared/types'
-import { generateUniqueSlug } from '@/utils/slug'
+import { slugify } from '@/utils/slug'
 import { PropertyInput } from '@/utils/validators'
+import { Prisma } from '@prisma/client'
+
+const UNIQUE_CONSTRAINT_ERROR = 'P2002'
+
+const normalizeTextFilter = (value?: string): string | undefined => {
+  const normalized = value?.trim()
+  return normalized ? normalized : undefined
+}
+
+const normalizePagination = (page?: number, pageSize?: number) => {
+  const normalizedPage = Number.isFinite(page) && page && page > 0 ? Math.floor(page) : 1
+  const normalizedPageSize = Number.isFinite(pageSize) && pageSize && pageSize > 0
+    ? Math.min(Math.floor(pageSize), 100)
+    : 10
+
+  return { page: normalizedPage, pageSize: normalizedPageSize }
+}
+
+const isSlugUniqueConstraintError = (error: unknown): error is Prisma.PrismaClientKnownRequestError => {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false
+  if (error.code !== UNIQUE_CONSTRAINT_ERROR) return false
+
+  const target = error.meta?.target
+  return Array.isArray(target) ? target.includes('slug') : target === 'slug'
+}
 
 export class PropertyService {
+  private async generateAvailableSlug(title: string) {
+    const base = slugify(title) || 'property'
+    const existingProperties = await prisma.property.findMany({
+      where: {
+        OR: [
+          { slug: base },
+          { slug: { startsWith: `${base}-` } },
+        ],
+      },
+      select: { slug: true },
+    })
+
+    const existingSlugs = new Set(existingProperties.map((property) => property.slug))
+    if (!existingSlugs.has(base)) return base
+
+    let suffix = 2
+    while (existingSlugs.has(`${base}-${suffix}`)) {
+      suffix += 1
+    }
+    return `${base}-${suffix}`
+  }
+
   async createProperty(
     data: PropertyInput & { advisorId: string; organizationId?: string }
   ) {
-    return await prisma.property.create({
+    const slug = await this.generateAvailableSlug(data.title)
+
+    const createWithSlug = (propertySlug: string) => prisma.property.create({
       data: {
         ...data,
-        slug: generateUniqueSlug(data.title),
+        slug: propertySlug,
         status: 'AVAILABLE',
       },
       include: {
@@ -24,6 +73,13 @@ export class PropertyService {
         },
       },
     })
+
+    try {
+      return await createWithSlug(slug)
+    } catch (error) {
+      if (!isSlugUniqueConstraintError(error)) throw error
+      return await createWithSlug(`${slug}-${Date.now().toString(36)}`)
+    }
   }
 
   async getProperty(id: string) {
@@ -56,19 +112,21 @@ export class PropertyService {
       pageSize?: number
     }
   ) {
-    const page = filters?.page || 1
-    const pageSize = filters?.pageSize || 10
+    const { page, pageSize } = normalizePagination(filters?.page, filters?.pageSize)
     const skip = (page - 1) * pageSize
+    const city = normalizeTextFilter(filters?.city)
+    const region = normalizeTextFilter(filters?.region)
+    const type = normalizeTextFilter(filters?.type)
 
     const where: any = { status: 'AVAILABLE' }
 
-    if (filters?.city) where.city = filters.city
-    if (filters?.region) where.region = filters.region
-    if (filters?.type) where.type = filters.type
-    if (filters?.priceMin || filters?.priceMax) {
+    if (city) where.city = { contains: city, mode: 'insensitive' }
+    if (region) where.region = { contains: region, mode: 'insensitive' }
+    if (type) where.type = type
+    if (filters?.priceMin !== undefined || filters?.priceMax !== undefined) {
       where.price = {}
-      if (filters.priceMin) where.price.gte = filters.priceMin
-      if (filters.priceMax) where.price.lte = filters.priceMax
+      if (filters.priceMin !== undefined) where.price.gte = filters.priceMin
+      if (filters.priceMax !== undefined) where.price.lte = filters.priceMax
     }
 
     const [properties, total] = await Promise.all([
@@ -116,21 +174,24 @@ export class PropertyService {
     page?: number
     pageSize?: number
   }) {
-    const page = filters?.page || 1
-    const pageSize = filters?.pageSize || 10
+    const { page, pageSize } = normalizePagination(filters?.page, filters?.pageSize)
     const skip = (page - 1) * pageSize
+    const city = normalizeTextFilter(filters?.city)
+    const region = normalizeTextFilter(filters?.region)
+    const type = normalizeTextFilter(filters?.type)
+    const organizationId = normalizeTextFilter(filters?.organizationId)
 
     const where: any = { status: 'AVAILABLE' }
 
-    if (filters?.city) where.city = filters.city
-    if (filters?.region) where.region = filters.region
-    if (filters?.type) where.type = filters.type
-    if (filters?.organizationId) where.advisor = { organizationId: filters.organizationId }
+    if (city) where.city = { contains: city, mode: 'insensitive' }
+    if (region) where.region = { contains: region, mode: 'insensitive' }
+    if (type) where.type = type
+    if (organizationId) where.advisor = { organizationId }
 
-    if (filters?.priceMin || filters?.priceMax) {
+    if (filters?.priceMin !== undefined || filters?.priceMax !== undefined) {
       where.price = {}
-      if (filters.priceMin) where.price.gte = filters.priceMin
-      if (filters.priceMax) where.price.lte = filters.priceMax
+      if (filters.priceMin !== undefined) where.price.gte = filters.priceMin
+      if (filters.priceMax !== undefined) where.price.lte = filters.priceMax
     }
 
     if (filters?.bedroomsMin !== undefined || filters?.bedroomsMax !== undefined) {
