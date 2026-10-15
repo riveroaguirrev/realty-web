@@ -81,13 +81,22 @@ export interface Property {
   title: string
   description?: string
   type: PropertyType
+  operation?: 'SALE' | 'RENTAL' | 'ANTICRETIC'
   price: number
   currency: string
+  furnished?: string
+  petsAllowed?: boolean
+  expensesIncluded?: boolean
+  wifiIncluded?: boolean
+  commissionPercentage?: number
   address: string
   city: string
   region: string
   latitude?: number
   longitude?: number
+  isExclusive: boolean
+  locationMode: 'EXACT' | 'RADIUS'
+  locationRadiusMeters: number
   bedrooms?: number
   bathrooms?: number
   areaSquareMeters?: number

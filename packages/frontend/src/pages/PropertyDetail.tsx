@@ -1,3 +1,4 @@
+import { PropertyLocationMap } from '@/components/map/PropertyLocationMap'
 import { formatPrice, PROPERTY_TYPES } from '@/utils/propertyPresentation'
 import { Icon } from '@/components/ui/Icon'
 import { useEffect, useState } from 'react'
@@ -170,17 +171,22 @@ export const PropertyDetail = () => {
                 <div className="mb-6">
                   <h2 className="text-lg font-bold text-gray-900 mb-2">Ubicación</h2>
                   <p className="text-gray-700">
-                    {property.address}
+                    {property.locationMode === 'EXACT' && property.isExclusive ? property.address : 'Zona aproximada'}
                     <br />
                     {property.city}, {property.region}
                   </p>
                 </div>
 
+                {property.latitude != null && property.longitude != null && <PropertyLocationMap value={{ latitude: property.latitude, longitude: property.longitude, locationMode: property.isExclusive && property.locationMode === 'EXACT' ? 'EXACT' : 'RADIUS', locationRadiusMeters: property.locationRadiusMeters ?? 500 }} />}
+
                 <div className="border-t-2 border-blue-200 pt-6">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Operación</p>
+                  <p className="text-lg font-bold text-gray-900 mb-4">{property.operation === 'RENTAL' ? 'Alquiler' : property.operation === 'ANTICRETIC' ? 'Anticrético' : 'Venta'}</p>
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Precio</p>
                   <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
                     {formatPrice(property.price, property.currency)}
                   </p>
+                  {(property.operation === 'RENTAL' || property.operation === 'ANTICRETIC') && <div className="property-conditions mt-5"><span>{property.furnished && property.furnished !== 'UNFURNISHED' ? 'Amoblado' : 'Sin amoblar'}</span><span>{property.petsAllowed ? 'Mascotas permitidas' : 'Sin mascotas'}</span><span>{property.expensesIncluded ? 'Expensas incluidas' : 'Expensas aparte'}</span><span>{property.wifiIncluded ? 'Wifi incluido' : 'Wifi aparte'}</span>{property.commissionPercentage > 0 && <span>Comisión: {property.commissionPercentage}%</span>}</div>}
                 </div>
               </div>
             </div>

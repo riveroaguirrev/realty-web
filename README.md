@@ -228,3 +228,18 @@ MIT
 ## 👤 Author
 
 Created with ❤️ for real estate professionals.
+
+## Mapbox y privacidad de ubicación
+
+Configura `VITE_MAPBOX_ACCESS_TOKEN` con un token público `pk.` en `.env.local` de la raíz. Usa un token separado para Realty con permisos públicos de lectura de estilos y fuentes; si restringes las URLs, permite `http://localhost:5173` y el dominio de despliegue. Reinicia Vite al cambiar la configuración.
+
+Después de actualizar el código, ejecuta `npm run db:push` y `npm run db:generate --workspace=@realty/backend` para agregar los campos de ubicación y regenerar Prisma. Reinicia el backend.
+
+- Con exclusiva: marcador exacto o zona circular.
+- Sin exclusiva: solo zona circular, validado también en la API.
+- El radio se mide en metros (100–5000). En modo radio las coordenadas representan un centro de zona elegido por el asesor, no un punto privado que deba ocultarse. Elige un área que contenga el inmueble.
+- Al cambiar de modalidad se limpia la selección para evitar reutilizar un punto exacto como centro de zona por accidente.
+- La dirección escrita y los enlaces de mapa quedan fuera de las respuestas para otros usuarios cuando la publicación usa radio; el propietario y los directores autorizados conservan la dirección para editar. El texto libre y las fotografías deben evitar revelar la dirección por separado.
+- Los inmuebles anteriores sin coordenadas siguen disponibles; al editarlos en el formulario se debe elegir una ubicación.
+
+Validación de reglas: `node --test packages/backend/tests/property-location.test.cjs`.

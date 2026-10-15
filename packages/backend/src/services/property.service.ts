@@ -1,3 +1,4 @@
+import { publicPropertyLocation } from '@/utils/propertyLocation'
 import { prisma } from '@/lib/prisma'
 import { PropertyStatus } from '@shared/types'
 import { slugify } from '@/utils/slug'
@@ -151,7 +152,7 @@ export class PropertyService {
     ])
 
     return {
-      properties,
+      properties: properties.map(publicPropertyLocation),
       total,
       page,
       pageSize,
@@ -242,7 +243,7 @@ export class PropertyService {
     ])
 
     return {
-      properties,
+      properties: properties.map(publicPropertyLocation),
       total,
       page,
       pageSize,
@@ -277,10 +278,22 @@ export class PropertyService {
         title: data.title,
         description: data.description ?? null,
         type: data.type,
+        operation: data.operation,
         price: data.price,
+        currency: data.currency,
+        furnished: data.furnished,
+        petsAllowed: data.petsAllowed,
+        expensesIncluded: data.expensesIncluded,
+        wifiIncluded: data.wifiIncluded,
+        commissionPercentage: data.commissionPercentage,
         address: data.address,
         city: data.city,
         region: data.region,
+        isExclusive: data.isExclusive,
+        locationMode: data.locationMode,
+        locationRadiusMeters: data.locationRadiusMeters,
+        latitude: data.latitude,
+        longitude: data.longitude,
         bedrooms: data.bedrooms ?? null,
         bathrooms: data.bathrooms ?? null,
         areaSquareMeters: data.areaSquareMeters ?? null,

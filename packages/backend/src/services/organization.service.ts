@@ -1,3 +1,4 @@
+import { publicPropertyLocation } from '@/utils/propertyLocation'
 import { prisma } from '@/lib/prisma'
 import { Errors } from '@/utils/errors'
 
@@ -152,7 +153,7 @@ export class OrganizationService {
     ])
 
     return {
-      properties,
+      properties: properties.map(publicPropertyLocation),
       pagination: {
         page,
         pageSize,

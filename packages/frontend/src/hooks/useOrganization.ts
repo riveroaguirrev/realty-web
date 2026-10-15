@@ -1,6 +1,19 @@
+import { useCallback } from 'react'
+import axios from 'axios'
 import { useAuth } from './useAuth'
 import { useOrganizationStore } from '@/stores/organizationStore'
 import { organizationAPI } from '@/services/organization'
+
+function organizationError(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    if (!error.response) {
+      return 'No pudimos conectar con el servidor. Comprueba tu conexión y vuelve a intentar.'
+    }
+    if (error.response.status === 401) return 'Tu sesión expiró. Vuelve a iniciar sesión.'
+    return error.response.data?.error?.message || fallback
+  }
+  return error instanceof Error ? error.message : fallback
+}
 
 export const useOrganization = () => {
   const { accessToken } = useAuth()
@@ -32,24 +45,22 @@ export const useOrganization = () => {
     }
   }
 
-  const getOrganization = async (orgId: string) => {
+  const getOrganization = useCallback(async (orgId: string) => {
     setIsLoading(true)
     setError(null)
     try {
       const org = await organizationAPI.get(accessToken!, orgId)
       setOrganization(org)
-      if (org.advisors) {
-        setAdvisors(org.advisors)
-      }
+      setAdvisors(org.advisors || [])
       return org
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch organization'
+      const message = organizationError(err, 'No pudimos cargar tu inmobiliaria. Vuelve a intentar.')
       setError(message)
       throw err
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [accessToken, setIsLoading, setError, setOrganization, setAdvisors])
 
   const updateOrganization = async (orgId: string, data: any) => {
     setIsLoading(true)

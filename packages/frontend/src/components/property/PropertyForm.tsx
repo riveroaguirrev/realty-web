@@ -1,3 +1,4 @@
+import { PropertyLocationMap } from '@/components/map/PropertyLocationMap'
 import { Link } from 'react-router-dom'
 import { PROPERTY_TYPES } from '@/utils/propertyPresentation'
 import { FormEvent, useState, useEffect } from 'react'
@@ -6,8 +7,8 @@ import { getErrorMessage } from '@/utils/errorMessage'
 import { PROPERTY_STATUS_OPTIONS } from '@/utils/propertyStatus'
 
 const NUMERIC_FIELDS = ['price', 'bedrooms', 'bathrooms', 'areaSquareMeters']
-const INPUT_CLASS = 'w-full px-3 py-2 border border-gray-300 rounded-md'
-const LABEL_CLASS = 'block text-sm font-medium text-gray-700 mb-1'
+const INPUT_CLASS = 'property-control'
+const LABEL_CLASS = 'property-label'
 
 export interface EditableProperty {
   id: string
@@ -23,6 +24,18 @@ export interface EditableProperty {
   areaSquareMeters?: number | string | null
   images?: string[]
   status?: string
+  operation?: 'SALE' | 'RENTAL' | 'ANTICRETIC'
+  currency?: 'USD' | 'BOB'
+  furnished?: 'UNFURNISHED' | 'PARTIALLY_FURNISHED' | 'FULLY_FURNISHED'
+  petsAllowed?: boolean
+  expensesIncluded?: boolean
+  wifiIncluded?: boolean
+  commissionPercentage?: number
+  isExclusive?: boolean
+  locationMode?: 'EXACT' | 'RADIUS'
+  locationRadiusMeters?: number
+  latitude?: number | null
+  longitude?: number | null
 }
 
 interface PropertyFormProps {
@@ -33,9 +46,16 @@ interface PropertyFormProps {
 
 const EMPTY_FORM = {
   title: '',
+  operation: 'SALE' as 'SALE' | 'RENTAL' | 'ANTICRETIC',
   description: '',
   type: 'RESIDENTIAL',
   price: 0,
+  currency: 'USD' as 'USD' | 'BOB',
+  furnished: 'UNFURNISHED' as 'UNFURNISHED' | 'PARTIALLY_FURNISHED' | 'FULLY_FURNISHED',
+  petsAllowed: false,
+  expensesIncluded: false,
+  wifiIncluded: false,
+  commissionPercentage: 0,
   address: '',
   city: '',
   region: '',
@@ -43,15 +63,27 @@ const EMPTY_FORM = {
   bathrooms: 0,
   areaSquareMeters: 0,
   status: 'AVAILABLE',
+  isExclusive: false,
+  locationMode: 'RADIUS' as 'EXACT' | 'RADIUS',
+  locationRadiusMeters: 500,
+  latitude: null as number | null,
+  longitude: null as number | null,
 }
 
 const toFormData = (property?: EditableProperty) =>
   property
     ? {
         title: property.title,
+        operation: property.operation ?? 'SALE',
         description: property.description ?? '',
         type: property.type,
         price: Number(property.price),
+        currency: property.currency === 'BOB' ? 'BOB' : 'USD',
+        furnished: property.furnished === 'FULLY_FURNISHED' || property.furnished === 'PARTIALLY_FURNISHED' ? property.furnished : 'UNFURNISHED',
+        petsAllowed: property.petsAllowed ?? false,
+        expensesIncluded: property.expensesIncluded ?? false,
+        wifiIncluded: property.wifiIncluded ?? false,
+        commissionPercentage: property.commissionPercentage ?? 0,
         address: property.address,
         city: property.city,
         region: property.region,
@@ -59,6 +91,11 @@ const toFormData = (property?: EditableProperty) =>
         bathrooms: property.bathrooms ?? 0,
         areaSquareMeters: Number(property.areaSquareMeters ?? 0),
         status: property.status ?? 'AVAILABLE',
+        isExclusive: property.isExclusive ?? false,
+        locationMode: property.isExclusive && property.locationMode === 'EXACT' ? 'EXACT' as const : 'RADIUS' as const,
+        locationRadiusMeters: property.locationRadiusMeters ?? 500,
+        latitude: property.latitude ?? null,
+        longitude: property.longitude ?? null,
       }
     : EMPTY_FORM
 
@@ -133,6 +170,10 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isLoading || success) return
+    if (formData.latitude == null || formData.longitude == null) {
+      setError('Selecciona la ubicación o el centro de la zona en el mapa antes de publicar.')
+      return
+    }
     setIsLoading(true)
     setError(null)
     setSuccess(false)
@@ -162,21 +203,65 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
 
   const field = (name: keyof typeof formData, label: string, required = false, placeholder?: string) => <div>
     <label htmlFor={`property-${name}`} className={LABEL_CLASS}>{label}{required ? ' *' : ''}</label>
-    <input id={`property-${name}`} name={name} type={NUMERIC_FIELDS.includes(name) ? 'number' : 'text'} value={formData[name]} onChange={handleChange} className={INPUT_CLASS} required={required} placeholder={placeholder} min={NUMERIC_FIELDS.includes(name) ? 0 : undefined} step={name === 'price' || name === 'areaSquareMeters' ? '0.01' : undefined} />
+    <input id={`property-${name}`} name={name} type={NUMERIC_FIELDS.includes(name) ? 'number' : 'text'} value={String(formData[name] ?? '')} onChange={handleChange} className={INPUT_CLASS} required={required} placeholder={placeholder} min={NUMERIC_FIELDS.includes(name) ? 0 : undefined} step={name === 'price' || name === 'areaSquareMeters' ? '0.01' : undefined} />
   </div>
-  return <form onSubmit={handleSubmit} className="bg-white shadow rounded-xl p-8">
+  return <form onSubmit={handleSubmit} className="property-form bg-white shadow rounded-xl p-8">
     <div className="page-heading"><div><p className="eyebrow">{isEditing ? 'ACTUALIZA TU PUBLICACIÓN' : 'UNA NUEVA OPORTUNIDAD'}</p><h1>{isEditing ? 'Editar propiedad' : 'Publicar propiedad'}</h1><p>Completa los datos del inmueble. Los campos con * son obligatorios.</p></div></div>
     {error && <div role="alert" className="form-error">{error}</div>}
     {success && <p role="status" className="text-green-700 mb-4">Propiedad guardada correctamente.</p>}
     <fieldset disabled={isLoading || success}>
       <section className="form-section"><div className="form-section-heading"><span className="step-number">01</span><div><h3>Información principal</h3><p>Un título claro ayuda a encontrar tu propiedad.</p></div></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{field('title','Título de la publicación',true,'Ej. Departamento luminoso en Sopocachi')}{field('price','Precio',true)}
-          <div><label htmlFor="property-type" className={LABEL_CLASS}>Tipo de propiedad *</label><select id="property-type" name="type" value={formData.type} onChange={handleChange} className={INPUT_CLASS}>{Object.entries(PROPERTY_TYPES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className="property-fields">
+          <div className="property-title-field">{field('title', 'Título de la publicación', true, 'Ej. Departamento luminoso en Sopocachi')}</div>
+          <div>
+            <label htmlFor="property-operation" className={LABEL_CLASS}>Tipo de operación *</label>
+            <select id="property-operation" name="operation" value={formData.operation} onChange={handleChange} className={INPUT_CLASS} required>
+              <option value="SALE">Venta</option><option value="RENTAL">Alquiler</option><option value="ANTICRETIC">Anticrético</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="property-type" className={LABEL_CLASS}>Tipo de propiedad *</label>
+            <select id="property-type" name="type" value={formData.type} onChange={handleChange} className={INPUT_CLASS} required>
+              {Object.entries(PROPERTY_TYPES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="property-price" className={LABEL_CLASS}>Precio *</label>
+            <input id="property-price" name="price" type="number" value={formData.price} onChange={handleChange} className={INPUT_CLASS} required min="0.01" step="0.01" />
+          </div>
+          <div>
+            <label htmlFor="property-currency" className={LABEL_CLASS}>Moneda *</label>
+            <select id="property-currency" name="currency" value={formData.currency} onChange={handleChange} className={INPUT_CLASS} required>
+              <option value="USD">Dólares (USD)</option><option value="BOB">Bolivianos (Bs)</option>
+            </select>
+          </div>
           {isEditing && <div><label htmlFor="property-status" className={LABEL_CLASS}>Estado de la publicación</label><select id="property-status" name="status" value={formData.status} onChange={handleChange} className={INPUT_CLASS}>{PROPERTY_STATUS_OPTIONS.map(({value,label}) => <option key={value} value={value}>{label}</option>)}</select></div>}
-        </div><p>Los precios de las nuevas publicaciones se registran en USD.</p>
+        </div>
+        {(formData.operation === 'RENTAL' || formData.operation === 'ANTICRETIC') && <div className="operation-options"><h4>{formData.operation === 'RENTAL' ? 'Condiciones del alquiler' : 'Condiciones del anticrético'}</h4><div className="options-grid"><label><input type="checkbox" checked={formData.furnished !== 'UNFURNISHED'} onChange={e => setFormData(prev => ({ ...prev, furnished: e.target.checked ? 'FULLY_FURNISHED' : 'UNFURNISHED' }))} /> Amoblado</label><label><input type="checkbox" checked={formData.petsAllowed} onChange={e => setFormData(prev => ({ ...prev, petsAllowed: e.target.checked }))} /> Se permiten mascotas</label><label><input type="checkbox" checked={formData.expensesIncluded} onChange={e => setFormData(prev => ({ ...prev, expensesIncluded: e.target.checked }))} /> Expensas incluidas</label><label><input type="checkbox" checked={formData.wifiIncluded} onChange={e => setFormData(prev => ({ ...prev, wifiIncluded: e.target.checked }))} /> Wifi incluido</label><label className="commission-field">Comisión a pagar (%)<input type="number" min="0" max="100" step="0.1" value={formData.commissionPercentage} onChange={e => setFormData(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))} /></label></div></div>}
       </section>
       <section className="form-section"><div className="form-section-heading"><span className="step-number">02</span><div><h3>Ubicación y características</h3><p>Ayuda a los interesados a saber si este es su próximo espacio.</p></div></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{field('address','Dirección',true)}{field('city','Ciudad',true)}{field('region','Región o departamento',true)}{field('areaSquareMeters','Superficie (m²)')}{field('bedrooms','Habitaciones')}{field('bathrooms','Baños')}</div>
+        <div className="property-fields">{field('address','Dirección',true)}{field('city','Ciudad',true)}{field('region','Región o departamento',true)}{field('areaSquareMeters','Superficie (m²)')}{field('bedrooms','Habitaciones')}{field('bathrooms','Baños')}</div>
+        <div className="location-settings">
+          <label className="exclusive-toggle"><input type="checkbox" checked={formData.isExclusive} onChange={e => {
+            const isExclusive = e.target.checked
+            setFormData(prev => ({ ...prev, isExclusive, locationMode: 'RADIUS', latitude: null, longitude: null }))
+          }} /> Tengo la exclusiva de esta propiedad</label>
+          <p>{formData.isExclusive ? 'Puedes publicar la ubicación exacta o mantenerla dentro de una zona.' : 'Sin exclusiva se publica únicamente una zona aproximada.'}</p>
+          <div className="property-fields mt-4">
+            <div><label htmlFor="location-mode" className={LABEL_CLASS}>Mostrar ubicación como</label>
+              <select id="location-mode" className={INPUT_CLASS} value={formData.locationMode} disabled={!formData.isExclusive} onChange={e => setFormData(prev => ({ ...prev, locationMode: e.target.value as 'EXACT' | 'RADIUS', latitude: null, longitude: null }))}>
+                <option value="RADIUS">Zona con radio</option>{formData.isExclusive && <option value="EXACT">Marcador exacto</option>}
+              </select>
+            </div>
+            {formData.locationMode === 'RADIUS' && <div><label htmlFor="location-radius" className={LABEL_CLASS}>Radio de la zona (metros)</label>
+              <select id="location-radius" className={INPUT_CLASS} value={formData.locationRadiusMeters} onChange={e => setFormData(prev => ({ ...prev, locationRadiusMeters: Number(e.target.value) }))}>
+                {Array.from(new Set([100, 200, 300, 500, 1000, 2000, 5000, formData.locationRadiusMeters])).sort((a,b) => a-b).map(radius => <option key={radius} value={radius}>{radius} m</option>)}
+              </select>
+            </div>}
+          </div>
+          <PropertyLocationMap value={formData} city={formData.city} onChange={coordinates => setFormData(prev => ({ ...prev, ...coordinates }))} />
+          {formData.locationMode === 'RADIUS' && <p>La dirección escrita queda disponible para gestionar tu publicación. Los demás usuarios verán la zona. Evita incluir la dirección exacta en el título, la descripción o las fotografías.</p>}
+        </div>
         <div className="mt-6"><label htmlFor="property-description" className={LABEL_CLASS}>Descripción</label><textarea id="property-description" name="description" value={formData.description} onChange={handleChange} rows={4} className={INPUT_CLASS} placeholder="Cuéntanos qué hace especial a esta propiedad: distribución, servicios y lugares cercanos." /></div>
       </section>
       <section className="form-section"><div className="form-section-heading"><span className="step-number">03</span><div><h3>Fotografías</h3><p>La primera imagen será la portada. Puedes agregar más de una.</p></div></div>

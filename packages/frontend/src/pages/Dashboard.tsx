@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { propertySearchAPI } from '@/services/propertySearch'
@@ -10,11 +11,22 @@ const shortcuts: { to: string; title: string; description: string; icon: IconNam
   { to: '/messages', title: 'Conversaciones', description: 'Conecta con otros asesores', icon: 'message', tone: 'sand' },
 ]
 export const Dashboard = () => {
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
   const { user, accessToken } = useAuth()
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['dashboard-discovery', accessToken], queryFn: () => propertySearchAPI.search(accessToken!, { pageSize: 3 }), enabled: !!accessToken })
   return <div className="dashboard-page">
     <div className="page-heading"><div><p className="eyebrow">TU DÍA, MÁS SIMPLE</p><h1>Hola, {user?.firstName || 'bienvenido'}<span className="greeting-dot">.</span></h1><p>Tus propiedades, contactos y próximas oportunidades. Todo en un lugar.</p></div><span className="date-label">{new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
-    <section className="welcome-banner"><div className="welcome-copy"><span className="banner-label"><span />CONECTA. DESCUBRE. CRECE.</span><h2>El próximo lugar.<br />La próxima oportunidad.</h2><p>Encuentra la propiedad ideal y conecta con las personas que te ayudan a dar el siguiente paso.</p><Link className="button button-light" to="/search"><Icon name="search" />Explorar propiedades<Icon name="arrow" /></Link></div><div className="architectural-art" aria-hidden="true"><div className="art-sun" /><div className="art-building building-back" /><div className="art-building building-front"><i /><i /><i /><i /><i /><i /></div><div className="art-plant" /><span>ESPACIOS QUE CONECTAN</span></div></section>
+    <section className="welcome-banner">
+      <img className="hero-photo" src="https://images.unsplash.com/photo-1741764014072-68953e93cd48?auto=format&fit=crop&w=1800&q=85" alt="Interior de una vivienda contemporánea" />
+      <div className="hero-overlay" />
+      <div className="welcome-copy"><span className="banner-label">TU PRÓXIMO LUGAR EMPIEZA AQUÍ</span><h2>Espacios que encajan<br />con nuevas historias.</h2><p>Explora propiedades y conecta con las personas que hacen posible el siguiente paso.</p>
+        <form className="hero-search" onSubmit={event => { event.preventDefault(); navigate(query.trim() ? `/search?${new URLSearchParams({ city: query.trim() })}` : '/search') }}>
+          <Icon name="search" /><input aria-label="Buscar propiedades por ciudad" placeholder="¿En qué ciudad buscas?" value={query} onChange={event => setQuery(event.target.value)} />
+          <button type="submit" aria-label="Buscar propiedades">Buscar <Icon name="arrow" /></button>
+        </form>
+      </div>
+    </section>
     <section className="shortcut-grid" aria-label="Accesos rápidos">{shortcuts.map(({ to, title, description, icon, tone }) => <Link to={to} className="shortcut" key={to}><span className={`shortcut-icon ${tone}`}><Icon name={icon} /></span><div><h2>{title}</h2><p>{description}</p></div><Icon name="arrow" /></Link>)}</section>
     <section><div className="section-heading"><div><p className="eyebrow">DESCUBRE TU PRÓXIMO ESPACIO</p><h2>Propiedades para explorar</h2></div><Link to="/search" className="text-link">Ver todas <Icon name="arrow" /></Link></div>
       {isLoading ? <div className="loading-panel" role="status">Cargando propiedades…</div> : isError ? <div className="empty-panel" role="alert"><h3>No pudimos cargar las propiedades</h3><p>Comprueba tu conexión e inténtalo de nuevo.</p><button className="button button-secondary" onClick={() => refetch()}>Reintentar</button></div> : data?.properties.length ? <div className="property-grid">{data.properties.map((property: PropertyCardProps) => <PropertyCard key={property.id} {...property} />)}</div> : <div className="empty-panel"><Icon name="home" width="32" height="32" /><h3>Las oportunidades empiezan contigo</h3><p>Publica la primera propiedad para que otros puedan descubrirla.</p><Link to="/properties/create" className="button button-primary"><Icon name="plus" />Publicar propiedad</Link></div>}

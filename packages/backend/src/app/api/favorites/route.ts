@@ -1,3 +1,4 @@
+import { publicPropertyLocation } from '@/utils/propertyLocation'
 import { NextRequest, NextResponse } from 'next/server'
 import { favoritesService } from '@/services/favorites.service'
 import { supabase } from '@/lib/supabase'
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     return NextResponse.json(
       {
         success: true,
-        data: favorite,
+        data: { ...favorite, property: publicPropertyLocation(favorite.property) },
       },
       { status: 201 }
     )
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     return NextResponse.json(
       {
         success: true,
-        data: result.favorites.map((f) => f.property),
+        data: result.favorites.map((f) => publicPropertyLocation(f.property)),
         meta: {
           page: result.page,
           pageSize: result.pageSize,

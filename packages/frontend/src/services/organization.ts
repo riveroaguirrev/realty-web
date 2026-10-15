@@ -1,10 +1,12 @@
 import axios from 'axios'
 import { ApiResponse } from '@shared/types'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+// In development Vite forwards /api to the backend on the same origin.
+const API_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || '/api'
 
 const client = axios.create({
   baseURL: API_URL,
+  timeout: 15000,
 })
 
 export const organizationAPI = {

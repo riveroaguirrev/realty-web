@@ -1,3 +1,5 @@
+import { publicPropertyLocation } from '@/utils/propertyLocation'
+import { canManageProperty } from '@/lib/permissions'
 import { NextRequest, NextResponse } from 'next/server'
 import { propertyService } from '@/services/property.service'
 import { propertyImageService } from '@/services/propertyImage.service'
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const property = await propertyService.getProperty(params.id)
     if (!property) return sendError(PROPERTY_NOT_FOUND, 404)
 
-    return NextResponse.json({ success: true, data: property })
+    return NextResponse.json({ success: true, data: canManageProperty(auth.user, property) ? property : publicPropertyLocation(property) })
   } catch (error) {
     return handleError(error, 'fetching')
   }

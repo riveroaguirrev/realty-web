@@ -6,14 +6,13 @@ import { useOrganization } from '@/hooks/useOrganization'
 
 export const OrganizationDashboard = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, accessToken } = useAuth()
   const {
     organization,
     advisors,
     isLoading,
     error,
     getOrganization,
-    listAdvisors,
     sendInvite,
     removeAdvisor,
   } = useOrganization()
@@ -26,11 +25,10 @@ export const OrganizationDashboard = () => {
   const isAdmin = user?.permissions?.includes(Permission.ORG_ADMIN)
 
   useEffect(() => {
-    if (user?.organizationId) {
+    if (user?.organizationId && accessToken) {
       getOrganization(user.organizationId).catch(() => {})
-      listAdvisors(user.organizationId).catch(() => {})
     }
-  }, [user?.organizationId])
+  }, [user?.organizationId, accessToken, getOrganization])
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault()
