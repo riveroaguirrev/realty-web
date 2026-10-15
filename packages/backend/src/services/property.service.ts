@@ -163,6 +163,9 @@ export class PropertyService {
     city?: string
     region?: string
     type?: string
+    operation?: string
+    currency?: string
+    mapView?: boolean
     priceMin?: number
     priceMax?: number
     bedroomsMin?: number
@@ -187,6 +190,8 @@ export class PropertyService {
     if (city) where.city = { contains: city, mode: 'insensitive' }
     if (region) where.region = { contains: region, mode: 'insensitive' }
     if (type) where.type = type
+    if (filters?.operation) where.operation = filters.operation
+    if (filters?.currency) where.currency = filters.currency
     if (organizationId) where.advisor = { organizationId }
 
     if (filters?.priceMin !== undefined || filters?.priceMax !== undefined) {
@@ -211,6 +216,24 @@ export class PropertyService {
       where.areaSquareMeters = {}
       if (filters.areaMin !== undefined) where.areaSquareMeters.gte = filters.areaMin
       if (filters.areaMax !== undefined) where.areaSquareMeters.lte = filters.areaMax
+    }
+
+    if (filters?.mapView) {
+      // A map must cover the search, independently of the list's pagination.
+      const locatedWhere = { ...where, latitude: { not: null, gte: -85, lte: 85 }, longitude: { not: null, gte: -180, lte: 180 } }
+      const limit = 2000
+      const [properties, total, locatedTotal] = await Promise.all([
+        prisma.property.findMany({
+          where: locatedWhere, take: limit, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+          select: { id: true, title: true, price: true, currency: true, type: true, operation: true,
+            city: true, region: true, bedrooms: true, bathrooms: true, areaSquareMeters: true,
+            images: true, latitude: true, longitude: true, isExclusive: true, locationMode: true,
+            locationRadiusMeters: true, address: true },
+        }),
+        prisma.property.count({ where }),
+        prisma.property.count({ where: locatedWhere }),
+      ])
+      return { properties: properties.map(publicPropertyLocation), total, locatedTotal, limit, page: 1, pageSize: limit }
     }
 
     const [properties, total] = await Promise.all([

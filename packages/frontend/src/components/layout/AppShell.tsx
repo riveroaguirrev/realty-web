@@ -7,6 +7,7 @@ import { Icon, IconName } from '@/components/ui/Icon'
 const links: { to: string; label: string; icon: IconName }[] = [
   { to: '/dashboard', label: 'Inicio', icon: 'grid' },
   { to: '/search', label: 'Explorar propiedades', icon: 'search' },
+  { to: '/map', label: 'Mapa', icon: 'map' },
   { to: '/properties', label: 'Mis propiedades', icon: 'home' },
   { to: '/favorites', label: 'Favoritos', icon: 'heart' },
   { to: '/messages', label: 'Mensajes', icon: 'message' },
@@ -42,8 +43,8 @@ export const AppShell = () => {
       </aside>
       <div className="workspace">
         <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-controls="workspace-navigation" aria-label="Abrir menú"><Icon name="menu" /></button><div className="breadcrumb">Mi espacio <span>/</span> <strong>{pathname === '/auth/profile' ? 'Mi perfil' : current?.label || 'Propiedades'}</strong></div><div className="topbar-actions"><Link to="/properties/create" className="button button-primary button-small"><Icon name="plus" />Publicar propiedad</Link><Link to="/auth/profile" className="profile-link" aria-label="Ir a mi perfil"><span className="avatar">{user?.firstName?.[0]}{user?.lastName?.[0]}</span><span className="profile-label"><strong>{user?.firstName} {user?.lastName}</strong><small>Mi perfil</small></span></Link></div></header>
-        <main id="main-content" className="workspace-content" tabIndex={-1}><Outlet /></main>
-        <footer className="workspace-footer"><span>realty. · Tu próxima oportunidad empieza aquí.</span><span>Un espacio para conectar.</span></footer>
+        <main id="main-content" className={`workspace-content ${pathname === '/map' ? 'map-content' : ''}`} tabIndex={-1}><Outlet /></main>
+        <footer className={`workspace-footer ${pathname === '/map' ? 'map-footer-hidden' : ''}`}><span>realty. · Tu próxima oportunidad empieza aquí.</span><span>Un espacio para conectar.</span></footer>
       </div>
     </div>
   )

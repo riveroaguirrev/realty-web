@@ -1,3 +1,4 @@
+import { PropertyMap } from '@/pages/PropertyMap'
 import { AppShell } from '@/components/layout/AppShell'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -46,6 +47,7 @@ function App() {
           <Route path="/properties/:id" element={<PropertyDetail />} />
 
           {/* Search & Discovery */}
+          <Route path="/map" element={<PropertyMap />} />
           <Route path="/search" element={<PropertySearch />} />
           <Route path="/favorites" element={<Favorites />} />
 

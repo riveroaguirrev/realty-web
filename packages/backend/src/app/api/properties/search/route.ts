@@ -10,18 +10,21 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const region = searchParams.get('region') || undefined
     const type = searchParams.get('type') || undefined
     const organizationId = searchParams.get('organizationId') || undefined
-    const priceMin = searchParams.get('priceMin') ? parseInt(searchParams.get('priceMin')!) : undefined
-    const priceMax = searchParams.get('priceMax') ? parseInt(searchParams.get('priceMax')!) : undefined
+    const priceMin = searchParams.get('priceMin') ? Number(searchParams.get('priceMin')) : undefined
+    const priceMax = searchParams.get('priceMax') ? Number(searchParams.get('priceMax')) : undefined
     const bedroomsMin = searchParams.get('bedroomsMin') ? parseInt(searchParams.get('bedroomsMin')!) : undefined
     const bedroomsMax = searchParams.get('bedroomsMax') ? parseInt(searchParams.get('bedroomsMax')!) : undefined
     const bathroomsMin = searchParams.get('bathroomsMin') ? parseInt(searchParams.get('bathroomsMin')!) : undefined
     const bathroomsMax = searchParams.get('bathroomsMax') ? parseInt(searchParams.get('bathroomsMax')!) : undefined
-    const areaMin = searchParams.get('areaMin') ? parseInt(searchParams.get('areaMin')!) : undefined
-    const areaMax = searchParams.get('areaMax') ? parseInt(searchParams.get('areaMax')!) : undefined
+    const areaMin = searchParams.get('areaMin') ? Number(searchParams.get('areaMin')) : undefined
+    const areaMax = searchParams.get('areaMax') ? Number(searchParams.get('areaMax')) : undefined
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1
     const pageSize = searchParams.get('pageSize') ? parseInt(searchParams.get('pageSize')!) : 20
 
     const result = await propertyService.searchProperties({
+      mapView: searchParams.get('view') === 'map',
+      operation: searchParams.get('operation') || undefined,
+      currency: searchParams.get('currency') || undefined,
       city,
       region,
       type,
@@ -43,6 +46,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         success: true,
         data: result.properties,
         meta: {
+          ...('locatedTotal' in result ? { locatedTotal: result.locatedTotal, limit: result.limit } : {}),
           page: result.page,
           pageSize: result.pageSize,
           total: result.total,

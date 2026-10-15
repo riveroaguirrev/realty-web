@@ -11,6 +11,8 @@ export const propertySearchAPI = {
   async search(
     token: string,
     filters?: {
+      operation?: string
+      currency?: string
       city?: string
       region?: string
       type?: string
@@ -29,6 +31,8 @@ export const propertySearchAPI = {
   ) {
     const params = new URLSearchParams()
 
+    if (filters?.operation) params.append('operation', filters.operation)
+    if (filters?.currency) params.append('currency', filters.currency)
     if (filters?.city) params.append('city', filters.city)
     if (filters?.region) params.append('region', filters.region)
     if (filters?.type) params.append('type', filters.type)
