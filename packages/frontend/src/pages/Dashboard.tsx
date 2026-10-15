@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { propertySearchAPI } from '@/services/propertySearch'
@@ -12,6 +12,7 @@ const shortcuts: { to: string; title: string; description: string; icon: IconNam
 export const Dashboard = () => {
   const { user, accessToken } = useAuth()
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['dashboard-discovery', accessToken], queryFn: () => propertySearchAPI.search(accessToken!, { pageSize: 3 }), enabled: !!accessToken })
+  if (user?.role === 'BUYER') return <Navigate to='/search' replace />
   return <div className="dashboard-page">
     <div className="page-heading"><div><p className="eyebrow">TU DÍA, MÁS SIMPLE</p><h1>Hola, {user?.firstName || 'bienvenido'}<span className="greeting-dot">.</span></h1><p>Tus propiedades, contactos y próximas oportunidades. Todo en un lugar.</p></div><span className="date-label">{new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
     <section className="welcome-banner"><div className="welcome-copy"><span className="banner-label"><span />CONECTA. DESCUBRE. CRECE.</span><h2>El próximo lugar.<br />La próxima oportunidad.</h2><p>Encuentra la propiedad ideal y conecta con las personas que te ayudan a dar el siguiente paso.</p><Link className="button button-light" to="/search"><Icon name="search" />Explorar propiedades<Icon name="arrow" /></Link></div><div className="architectural-art" aria-hidden="true"><div className="art-sun" /><div className="art-building building-back" /><div className="art-building building-front"><i /><i /><i /><i /><i /><i /></div><div className="art-plant" /><span>ESPACIOS QUE CONECTAN</span></div></section>

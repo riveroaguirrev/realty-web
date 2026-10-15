@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { messageService } from '@/services/message.service'
 import { conversationService } from '@/services/conversation.service'
@@ -63,6 +65,7 @@ export async function GET(
       { status: 200 }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('List messages error:', error)
     return NextResponse.json(
       {
@@ -134,6 +137,7 @@ export async function POST(
       { status: 201 }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Send message error:', error)
     return NextResponse.json(
       {

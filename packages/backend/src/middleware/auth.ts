@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authService } from '@/services/auth.service'
-import { Errors } from '@/utils/errors'
+import { ApiError, Errors } from '@/utils/errors'
+import { bearerToken, browserHashFromRequest } from '@/lib/auth-route'
 
 export async function verifyAuth(req: NextRequest) {
   const authHeader = req.headers.get('Authorization')
@@ -12,10 +13,11 @@ export async function verifyAuth(req: NextRequest) {
     }
   }
 
-  const token = authHeader.replace('Bearer ', '')
+  const token = bearerToken(req)
+  if (!token) return { user: null, error: Errors.INVALID_TOKEN }
 
   try {
-    const user = await authService.getUserFromToken(token)
+    const user = await authService.getUserFromToken(token, browserHashFromRequest(req))
     return {
       user,
       error: null,
@@ -23,26 +25,27 @@ export async function verifyAuth(req: NextRequest) {
   } catch (error) {
     return {
       user: null,
-      error: Errors.INVALID_TOKEN,
+      error: error instanceof ApiError ? error : Errors.INVALID_TOKEN,
     }
   }
 }
 
 export async function requireUser(req: NextRequest) {
-  const { user } = await verifyAuth(req)
-  if (!user) throw Errors.UNAUTHORIZED
+  const { user, error } = await verifyAuth(req)
+  if (!user) throw error ?? Errors.UNAUTHORIZED
   return user
 }
 
 export function sendError(error: any, statusCode: number) {
+  const safe = error instanceof ApiError ? error : new ApiError(statusCode, 'REQUEST_FAILED', 'No pudimos completar la solicitud.')
   return NextResponse.json(
     {
       success: false,
       error: {
-        message: error.message || 'An error occurred',
-        code: error.code,
+        message: safe.message,
+        code: safe.code,
       },
     },
-    { status: statusCode }
+    { status: safe.statusCode }
   )
 }

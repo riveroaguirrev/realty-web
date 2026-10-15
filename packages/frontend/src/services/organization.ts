@@ -1,13 +1,14 @@
-import axios from 'axios'
+import { httpClient as client } from './api'
 import { ApiResponse } from '@shared/types'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-
-const client = axios.create({
-  baseURL: API_URL,
-})
-
 export const organizationAPI = {
+  async listInvites(token: string, orgId: string) {
+    const response = await client.get<ApiResponse<OrganizationInvite[]>>('/organizations/' + orgId + '/invites', { headers: { Authorization: 'Bearer ' + token } })
+    return response.data.data ?? []
+  },
+  async cancelInvite(token: string, orgId: string, inviteId: string) {
+    await client.delete('/organizations/' + orgId + '/invites/' + inviteId, { headers: { Authorization: 'Bearer ' + token } })
+  },
   async create(
     token: string,
     data: {
@@ -113,3 +114,5 @@ export const organizationAPI = {
     }
   },
 }
+
+export interface OrganizationInvite { id: string; email: string; code: string; expiresAt: string }

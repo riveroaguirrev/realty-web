@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
+import { organizationAPI, OrganizationInvite } from '@/services/organization'
+import { formErrors } from '@/utils/authFlow'
 
 export const OrganizationDashboard = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, accessToken } = useAuth()
   const {
     organization,
     advisors,
@@ -22,6 +24,13 @@ export const OrganizationDashboard = () => {
   const [inviteSent, setInviteSent] = useState(false)
   const [inviteCode, setInviteCode] = useState('')
   const [removingAdvisor, setRemovingAdvisor] = useState<string | null>(null)
+  const [invites, setInvites] = useState<OrganizationInvite[]>([])
+  const [localError, setLocalError] = useState('')
+  const refresh = async () => {
+    if (!user?.organizationId || !accessToken) return
+    await getOrganization(user.organizationId)
+    if (user.permissions?.includes(Permission.ORG_ADMIN)) setInvites(await organizationAPI.listInvites(accessToken, user.organizationId))
+  }
 
   const isAdmin = user?.permissions?.includes(Permission.ORG_ADMIN)
 
@@ -29,6 +38,7 @@ export const OrganizationDashboard = () => {
     if (user?.organizationId) {
       getOrganization(user.organizationId).catch(() => {})
       listAdvisors(user.organizationId).catch(() => {})
+      refresh().catch(() => {})
     }
   }, [user?.organizationId])
 
@@ -40,13 +50,15 @@ export const OrganizationDashboard = () => {
     }
 
     try {
+      setLocalError('')
       const result = await sendInvite(organization.id, inviteEmail)
       setInviteCode(result.inviteCode || '')
       setInviteEmail('')
       setInviteSent(true)
+      await refresh()
       setTimeout(() => setInviteSent(false), 5000)
     } catch (err) {
-      console.error('Error sending invite:', err)
+      setLocalError(Object.values(formErrors(err)).flat().join(' '))
     }
   }
 
@@ -58,8 +70,9 @@ export const OrganizationDashboard = () => {
     setRemovingAdvisor(advisorId)
     try {
       await removeAdvisor(organization.id, advisorId)
+      await refresh()
     } catch (err) {
-      console.error('Error removing advisor:', err)
+      setLocalError(Object.values(formErrors(err)).flat().join(' '))
     } finally {
       setRemovingAdvisor(null)
     }
@@ -94,6 +107,12 @@ export const OrganizationDashboard = () => {
 
         <div className="page-content">
           <div className="page-heading"><div><p className="eyebrow">MEJOR, EN EQUIPO</p><h1>{organization.name}</h1><p>La información y las personas de tu inmobiliaria.</p></div></div>
+          {localError && <p role="alert" className="text-red-700 mb-4">{localError}</p>}
+          {organization.seats && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" aria-label="Cupos de la sucursal">
+            {[['Cupo total', organization.seats.limit], ['Cuentas', organization.seats.occupied], ['Reservados', organization.seats.reserved], ['Disponibles', organization.seats.available]].map(([label, count]) =>
+              <div key={label} className="bg-white rounded-lg p-4 shadow"><p className="text-gray-600">{label}</p><strong className="text-2xl">{count}</strong></div>)}
+          </div>}
+          <button className="button button-secondary mb-5" onClick={() => { void refresh().catch((err) => setLocalError(Object.values(formErrors(err)).flat().join(' '))) }}>Actualizar cupos</button>
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
               {error}
@@ -164,7 +183,7 @@ export const OrganizationDashboard = () => {
                       />
                       <button
                         type="submit"
-                        disabled={!inviteEmail || isLoading}
+                        disabled={!inviteEmail || isLoading || organization.seats?.available === 0}
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
                       >
                         Invitar
@@ -173,7 +192,7 @@ export const OrganizationDashboard = () => {
 
                     {inviteSent && inviteCode && (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-                        <p className="text-blue-900 font-medium">Invitación enviada!</p>
+                        <p className="text-blue-900 font-medium">Invitación creada. Comparte este código con el asesor.</p>
                         <p className="text-blue-700 text-xs mt-1">
                           Código: <code className="bg-white px-2 py-1 rounded">{inviteCode}</code>
                         </p>
@@ -226,6 +245,18 @@ export const OrganizationDashboard = () => {
               </div>
             </div>
           </div>
+          {isAdmin && <section className="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 className="text-lg font-bold mb-3">Invitaciones pendientes ({invites.length})</h2>
+            <p className="text-sm text-gray-600 mb-4">Cada invitación reserva un cupo hasta que se acepta, vence o se cancela.</p>
+            {invites.map((invite) => <div key={invite.id} className="py-3 border-t flex flex-wrap justify-between gap-3">
+              <div><p>{invite.email}</p><p className="text-xs text-gray-500">Vence: {new Date(invite.expiresAt).toLocaleDateString()}</p><code className="text-xs break-all">{invite.code}</code></div>
+              <button className="button button-secondary" onClick={async () => {
+                if (!accessToken) return
+                try { await organizationAPI.cancelInvite(accessToken, organization.id, invite.id); await refresh() }
+                catch (err) { setLocalError(Object.values(formErrors(err)).flat().join(' ')) }
+              }}>Cancelar invitación</button>
+            </div>)}
+          </section>}
         </div>
       </div>
     </>

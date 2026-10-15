@@ -6,7 +6,7 @@ import { useOrganization } from '@/hooks/useOrganization'
 export const InviteAccept = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { accessToken } = useAuth()
+  const { accessToken, isReady, user } = useAuth()
   const { acceptInvite, error } = useOrganization()
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -15,11 +15,13 @@ export const InviteAccept = () => {
   const inviteCode = searchParams.get('code')
 
   useEffect(() => {
+    if (!isReady) return
     if (!accessToken) {
-      navigate('/auth/login')
+      navigate('/auth/login?next=' + encodeURIComponent('/invite?code=' + (inviteCode ?? '')), { replace: true })
       return
     }
 
+    if (!user) return
     if (!inviteCode) {
       setStatus('error')
       return
@@ -39,7 +41,7 @@ export const InviteAccept = () => {
     }
 
     acceptInvitation()
-  }, [inviteCode, accessToken])
+  }, [inviteCode, isReady, user?.id])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">

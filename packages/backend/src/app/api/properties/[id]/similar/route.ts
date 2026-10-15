@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { MatchingService, PropertyMatch } from '@/services/matching.service'
 import { ApiResponse } from '@shared/types'
@@ -31,6 +33,7 @@ export async function GET(
 
     return NextResponse.json(response)
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     return NextResponse.json(
       {
         success: false,

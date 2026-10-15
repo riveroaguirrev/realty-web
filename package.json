@@ -8,6 +8,10 @@
     "packages/*"
   ],
   "scripts": {
+    "test:auth": "tsx --tsconfig packages/backend/tsconfig.json --test tests/*.test.ts",
+    "test:auth:integration": "node scripts/test-account-integration.cjs",
+    "test:auth:e2e": "node scripts/test-account-integration.cjs --e2e",
+    "accounts:seats": "node --env-file=.env.local scripts/set-seat-limit.cjs",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
@@ -24,6 +28,8 @@
     "advisors"
   ],
   "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "tsx": "^4.20.0",
     "turbo": "^2.0.0"
   },
   "engines": {

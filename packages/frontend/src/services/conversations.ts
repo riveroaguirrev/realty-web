@@ -1,11 +1,5 @@
-import axios from 'axios'
+import { httpClient as client } from './api'
 import { ApiResponse } from '@shared/types'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-
-const client = axios.create({
-  baseURL: API_URL,
-})
 
 export const conversationsAPI = {
   async list(token: string, page = 1, pageSize = 20) {

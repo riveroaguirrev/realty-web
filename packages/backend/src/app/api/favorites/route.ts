@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { favoritesService } from '@/services/favorites.service'
 import { supabase } from '@/lib/supabase'
@@ -97,6 +99,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       { status: 200 }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Get favorites error:', error)
     return NextResponse.json(
       {

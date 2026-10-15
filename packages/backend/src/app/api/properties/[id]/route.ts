@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { propertyService } from '@/services/property.service'
 import { propertyImageService } from '@/services/propertyImage.service'
@@ -25,13 +27,14 @@ const handleError = (error: unknown, action: string) => {
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const auth = await verifyAuth(req)
-    if (!auth.user) return sendError(Errors.UNAUTHORIZED, 401)
+    if (!auth.user) return sendError(auth.error ?? Errors.UNAUTHORIZED, 401)
 
     const property = await propertyService.getProperty(params.id)
     if (!property) return sendError(PROPERTY_NOT_FOUND, 404)
 
     return NextResponse.json({ success: true, data: property })
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     return handleError(error, 'fetching')
   }
 }
@@ -59,6 +62,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, data: updated })
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     return handleError(error, 'updating')
   }
 }
@@ -81,6 +85,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, data: { deleted: true } })
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     return handleError(error, 'deleting')
   }
 }

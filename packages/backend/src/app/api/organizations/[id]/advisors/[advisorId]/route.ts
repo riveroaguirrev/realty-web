@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { ApiResponse, Permission } from '@shared/types'
 import { requireUser } from '@/middleware/auth'
@@ -40,13 +42,13 @@ export async function DELETE(
       {
         status: 200,
         headers: {
-          'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Remove advisor error:', error)
 
     if (error instanceof Error && error.message.includes('last director')) {
@@ -85,7 +87,6 @@ export async function OPTIONS(): Promise<NextResponse> {
     {
       status: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },

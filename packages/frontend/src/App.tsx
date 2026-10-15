@@ -19,12 +19,16 @@ import { Favorites } from '@/pages/Favorites'
 import { Conversations } from '@/pages/Conversations'
 import { ConversationDetail } from '@/pages/ConversationDetail'
 import { NotificationCenter } from '@/components/notifications/NotificationCenter'
+import { AuthSessionLifecycle } from '@/components/layout/AuthSessionLifecycle'
+import { Verify } from '@/pages/auth/Verify'
+import { ForgotPassword } from '@/pages/auth/ForgotPassword'
 
 const queryClient = new QueryClient()
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthSessionLifecycle />
       <BrowserRouter>
         <NotificationCenter />
         <Routes>
@@ -33,6 +37,8 @@ function App() {
           {/* Auth Routes */}
           <Route path="/auth/login" element={<Login />} />
           <Route path="/auth/register" element={<Register />} />
+          <Route path="/auth/verify" element={<Verify />} />
+          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
           <Route path="/auth/profile" element={<Profile />} />
 
@@ -40,9 +46,9 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
 
           {/* Properties */}
-          <Route path="/properties" element={<Properties />} />
-          <Route path="/properties/create" element={<CreateProperty />} />
-          <Route path="/properties/:id/edit" element={<EditProperty />} />
+          <Route path="/properties" element={<ProtectedRoute advisorsOnly><Properties /></ProtectedRoute>} />
+          <Route path="/properties/create" element={<ProtectedRoute advisorsOnly><CreateProperty /></ProtectedRoute>} />
+          <Route path="/properties/:id/edit" element={<ProtectedRoute advisorsOnly><EditProperty /></ProtectedRoute>} />
           <Route path="/properties/:id" element={<PropertyDetail />} />
 
           {/* Search & Discovery */}
@@ -54,8 +60,8 @@ function App() {
           <Route path="/messages/:id" element={<ConversationDetail />} />
 
           {/* Organization Routes */}
-          <Route path="/organization/setup" element={<OrganizationSetup />} />
-          <Route path="/organization/dashboard" element={<OrganizationDashboard />} />
+          <Route path="/organization/setup" element={<ProtectedRoute advisorsOnly><OrganizationSetup /></ProtectedRoute>} />
+          <Route path="/organization/dashboard" element={<ProtectedRoute advisorsOnly><OrganizationDashboard /></ProtectedRoute>} />
           </Route>
           <Route path="/invite" element={<InviteAccept />} />
 

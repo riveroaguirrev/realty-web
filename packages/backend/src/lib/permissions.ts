@@ -1,4 +1,4 @@
-import { Permission } from '@shared/types'
+import { Permission, UserRole } from '@shared/types'
 import { Errors } from '@/utils/errors'
 
 export const isOrgAdmin = (permissions?: Permission[]): boolean => {
@@ -40,9 +40,11 @@ interface PropertyActor {
   id: string
   organizationId?: string
   permissions?: Permission[]
+  role?: UserRole
 }
 
 export const canManageProperty = (actor: PropertyActor, property: PropertyOwnership): boolean => {
+  if (actor.role === UserRole.BUYER) return false
   if (property.advisorId === actor.id) return true
 
   const isDirectorOfSameOrganization =

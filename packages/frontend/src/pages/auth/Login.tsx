@@ -1,109 +1,42 @@
-import { AuthLayout } from '@/components/layout/AuthLayout'
 import { FormEvent, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { loginSchema } from '@shared/validation/auth'
+import { AuthLayout } from '@/components/layout/AuthLayout'
+import { AuthField, FormError } from '@/components/ui/AuthField'
 import { useAuth } from '@/hooks/useAuth'
-
-export const Login = () => {
+import { authLink, formErrors, safeNext, savePending } from '@/utils/authFlow'
+export function Login() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const next = safeNext(params.get('next'))
   const { login, isLoading, error } = useAuth()
-
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  })
-
-  const [showPassword, setShowPassword] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setFormError(null)
-
-    if (!formData.email || !formData.password) {
-      setFormError('Escribe tu correo y contraseña para continuar')
-      return
-    }
-
+  const [data, setData] = useState({ email: '', password: '' })
+  const [errors, setErrors] = useState<Record<string, string[]>>({})
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
     try {
-      await login(formData)
-      navigate('/dashboard')
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'No pudimos iniciar sesión. Revisa tus datos.')
-    }
+      const result = await login(loginSchema.parse(data))
+      if (result.status === 'AUTHENTICATED') navigate(next, { replace: true })
+      else {
+        savePending(result, next)
+        if (result.status === 'EMAIL_VERIFICATION_REQUIRED') {
+          const pending = JSON.parse(sessionStorage.getItem('auth-pending')!)
+          sessionStorage.setItem('auth-pending', JSON.stringify({ ...pending, sentAt: 0 }))
+        }
+        navigate(authLink('/auth/verify', next))
+      }
+    } catch (failure) { setErrors(formErrors(failure)) }
   }
-
-  return (
-    <AuthLayout title="Inicia sesión" description="Qué bueno verte de nuevo. Continúa donde lo dejaste.">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {(error || formError) && (
-              <div role="alert" className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm">
-                <p className="font-semibold">Error de inicio de sesión</p>
-                <p className="text-sm">{error || formError}</p>
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                Correo electrónico
-              </label>
-              <input
-                id="email"
-                autoComplete="email" required
-                name="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-50"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
-                Contraseña
-              </label>
-              <div className="password-wrap">
-              <input
-                id="password"
-                autoComplete="current-password" required
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-50"
-                disabled={isLoading}
-              />
-                <button type="button" className="password-toggle" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Ocultar' : 'Mostrar'}</button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 px-4 rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-            </button>
-          </form>
-
-          <div className="mt-8 pt-8 border-t-2 border-gray-100">
-            <p className="text-center text-gray-600">
-              ¿No tienes cuenta?{' '}
-              <Link to="/auth/register" className="text-blue-600 hover:text-blue-700 font-bold transition-colors">
-                Crea una ahora
-              </Link>
-            </p>
-          </div>
-    </AuthLayout>
-  )
+  const change = (event: React.ChangeEvent<HTMLInputElement>) => { setData({ ...data, [event.target.name]: event.target.value }); setErrors({ ...errors, [event.target.name]: [], _form: [] }) }
+  return <AuthLayout title="Inicia sesión" description="Continúa en tu espacio inmobiliario.">
+    {params.get('reset') === '1' && <p role="status" className="bg-green-50 p-4 mb-4">Contraseña actualizada. Inicia sesión con tu nueva contraseña.</p>}
+    <form noValidate onSubmit={submit} className="space-y-5">
+      <FormError errors={errors._form?.length ? errors : { ...errors, _form: error ? [error] : [] }} />
+      <AuthField label="Correo electrónico" name="email" type="email" autoComplete="email" required value={data.email} onChange={change} error={errors.email} disabled={isLoading} />
+      <AuthField label="Contraseña" name="password" type="password" autoComplete="current-password" required value={data.password} onChange={change} error={errors.password} disabled={isLoading} />
+      <Link to={authLink('/auth/forgot-password', next)} className="block text-green-700">Olvidé mi contraseña</Link>
+      <button className="button button-primary w-full" disabled={isLoading}>{isLoading ? 'Iniciando sesión…' : 'Iniciar sesión'}</button>
+    </form>
+    <p className="mt-6 text-center">¿No tienes cuenta? <Link to={authLink('/auth/register', next)} className="text-green-700 font-semibold">Crear cuenta</Link></p>
+  </AuthLayout>
 }

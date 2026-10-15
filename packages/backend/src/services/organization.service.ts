@@ -1,5 +1,8 @@
 import { prisma } from '@/lib/prisma'
-import { Errors } from '@/utils/errors'
+import { ApiError, Errors } from '@/utils/errors'
+import { serializable } from '@/lib/transactions'
+import { organizationSchema } from '@shared/validation/auth'
+import { seatUsage } from './seats.service'
 
 export class OrganizationService {
   async createOrganization(
@@ -15,6 +18,7 @@ export class OrganizationService {
       logo?: string
     }
   ) {
+    data = organizationSchema.parse(data)
     const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-')
 
     // Check if slug already exists
@@ -23,10 +27,12 @@ export class OrganizationService {
     })
 
     if (existing) {
-      throw new Error('Organization slug already exists')
+      throw new ApiError(409, 'ORGANIZATION_EXISTS', 'Ya existe una sucursal con ese nombre.')
     }
 
-    return await prisma.$transaction(async (tx) => {
+    return await serializable(async (tx) => {
+      const member = await tx.advisor.findUniqueOrThrow({ where: { id: advisorId } })
+      if (member.userRole !== 'ADVISOR' || member.organizationId) throw Errors.FORBIDDEN
       const organization = await tx.organization.create({
         data: {
           name: data.name,
@@ -74,7 +80,8 @@ export class OrganizationService {
       throw Errors.USER_NOT_FOUND
     }
 
-    return org
+    const seats = await serializable((tx) => seatUsage(tx, orgId))
+    return { ...org, seats }
   }
 
   async updateOrganization(
@@ -89,6 +96,7 @@ export class OrganizationService {
       logo?: string
     }
   ) {
+    data = organizationSchema.partial().parse(data)
     const organization = await prisma.organization.update({
       where: { id: orgId },
       data: {
