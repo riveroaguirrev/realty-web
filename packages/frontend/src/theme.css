@@ -391,3 +391,44 @@ input::placeholder, textarea::placeholder { color: #808b95; }
 .property-form .form-actions > .button-primary { margin-left: auto; }
 
 .property-form .location-privacy-note { margin: 16px 0 0; padding: 12px 16px; border: 1px solid #dce3eb; border-radius: 9px; background: #f1f5f9; color: var(--swiss-ink-soft); font-size: 13px; font-weight: 500; line-height: 1.65; }
+
+/* Property cards: integrated photography and a compact management footer. */
+.property-card, .managed-property { background: white; border-color: #dfe3e8; border-radius: 18px; box-shadow: 0 3px 12px #14243b05; }
+.property-card:hover, .managed-property:hover { transform: translateY(-2px); border-color: #c4cdd8; box-shadow: 0 12px 28px #14243b12; }
+.managed-property { display: flex; flex-direction: column; }
+.managed-property .property-card { flex: 1; background: transparent; box-shadow: none; }
+.managed-property .property-card:hover { transform: none; box-shadow: none; }
+.property-card-link { display: flex; flex-direction: column; }
+.property-card-link:focus-visible { outline-offset: -4px; border-radius: inherit; }
+.property-card .property-cover { height: auto; aspect-ratio: 16 / 10; margin: 0; border-radius: 0; isolation: isolate; }
+.property-card .property-cover::after { content: ''; position: absolute; inset: 45% 0 0; z-index: 0; background: linear-gradient(transparent, #10213955); pointer-events: none; }
+.property-card .property-cover img { transition: transform .3s; }
+.property-card:hover .property-cover img { transform: scale(1.025); }
+.property-operation-badge { position: absolute; top: 14px; left: 14px; z-index: 1; padding: 6px 11px; border-radius: 7px; background: var(--swiss-ink); color: white; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.property-card .property-type { bottom: 14px; left: 14px; z-index: 1; padding: 6px 11px; border: 1px solid #ffffff70; border-radius: 7px; background: #ffffffed; color: var(--swiss-ink-soft); font-size: 11px; }
+.property-photo-count { position: absolute; bottom: 14px; right: 14px; z-index: 1; padding: 5px 8px; border-radius: 6px; background: #14243b99; color: white; font-size: 10px; }
+.property-card .property-body { display: flex; flex: 1; flex-direction: column; padding: 20px 20px 0; }
+.property-card .property-price { margin-bottom: 8px; color: var(--swiss-ink); font-size: 26px; font-weight: 750; line-height: 1.2; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.property-card .property-body h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; min-height: 46px; color: var(--swiss-ink-soft); font-size: 16px; font-weight: 600; line-height: 1.45; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.property-card .property-location { gap: 6px; margin-top: 7px; margin-bottom: 18px; color: var(--swiss-muted); font-size: 12px; line-height: 1.5; }
+.property-location svg { flex-shrink: 0; }
+.property-card .property-specs { flex-wrap: wrap; gap: 10px 16px; margin-top: auto; padding: 15px 0; border-top: 1px solid #e9edf1; color: var(--swiss-muted); font-size: 11px; }
+.property-specs > span { display: inline-flex; align-items: center; gap: 6px; }
+.property-specs svg { flex-shrink: 0; color: #7b8b9e; }
+.property-specs strong { color: var(--swiss-ink-soft); font-weight: 600; }
+.property-card-cta { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-top: 1px solid #e9edf1; color: var(--swiss-ink); font-size: 12px; font-weight: 600; }
+.property-card-cta svg { transition: transform .2s; }
+.property-card-link:hover .property-card-cta svg { transform: translateX(3px); }
+.property-management { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 12px 16px; border-top: 1px solid #e9edf1; background: #f9fafb; }
+.property-management .status-pill { display: inline-flex; align-items: center; justify-self: start; gap: 6px; padding: 5px 8px; border: 0; border-radius: 6px; background: #edf0f4; color: #566579; font-size: 10px; font-weight: 600; line-height: 1.5; letter-spacing: 0; text-transform: none; }
+.property-management .status-pill::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
+.property-management .status-pill[data-status=AVAILABLE] { background: #e8f3ec; color: #39734e; }
+.property-management .status-pill[data-status=UNDER_OFFER] { background: #fcf1df; color: #946320; }
+.property-management .status-pill[data-status=RENT] { background: #e9f0fa; color: #46668e; }
+.property-management > div { align-items: center; gap: 7px; }
+.property-management-edit, .property-management-delete { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border: 1px solid #dce2e9; border-radius: 8px; background: white; font-size: 12px; font-weight: 600; }
+.property-management-edit { padding: 0 10px; color: var(--swiss-ink-soft); }
+.property-management-edit:hover { background: #edf2f7; border-color: #bfcbd8; }
+.property-management-delete { width: 40px; color: #9a6457; background: transparent; border-color: transparent; }
+.property-management-delete:hover { background: #fff0ec; color: #b42318; }
+.property-delete-pending { font-size: 20px; }

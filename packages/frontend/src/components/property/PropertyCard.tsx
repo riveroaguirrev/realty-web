@@ -8,10 +8,26 @@ export interface PropertyCardProps {
 }
 export const PropertyCard = ({ id, title, price, currency, type, city, operation, bedrooms, bathrooms, areaSquareMeters, images, onClick }: PropertyCardProps) => {
   const [failedImage, setFailedImage] = useState(false)
+  const operationLabel = operation === 'RENTAL' ? 'Alquiler' : operation === 'ANTICRETIC' ? 'Anticrético' : 'Venta'
   return <article className="property-card">
     <Link to={`/properties/${id}`} onClick={onClick} className="property-card-link">
-      <div className="property-cover">{images?.[0] && !failedImage ? <img src={images[0]} alt={title} loading="lazy" onError={() => setFailedImage(true)} /> : <div className="property-placeholder"><Icon name="home" width="42" height="42" /><span>Fotografías próximamente</span></div>}<span className="property-type">{PROPERTY_TYPES[type] || type}</span></div>
-      <div className="property-body"><span className="property-operation">{operation === 'RENTAL' ? 'Alquiler' : operation === 'ANTICRETIC' ? 'Anticrético' : 'Venta'}</span><p className="property-price">{formatPrice(price, currency)}</p><h3>{title}</h3><p className="property-location"><Icon name="pin" width="14" height="14" />{city}</p><div className="property-specs">{bedrooms != null && <span>{bedrooms} hab.</span>}{bathrooms != null && <span>{bathrooms} baños</span>}{areaSquareMeters != null && <span>{Number(areaSquareMeters)} m²</span>}<span className="property-open"><Icon name="arrow" width="16" /></span></div></div>
+      <div className="property-cover">
+        {images?.[0] && !failedImage ? <img src={images[0]} alt={title} loading="lazy" onError={() => setFailedImage(true)} /> : <div className="property-placeholder"><Icon name="home" width="42" height="42" /><span>Fotografías próximamente</span></div>}
+        <span className="property-operation-badge">{operationLabel}</span>
+        <span className="property-type">{PROPERTY_TYPES[type] || type}</span>
+        {images && images.length > 1 && <span className="property-photo-count">{images.length} fotos</span>}
+      </div>
+      <div className="property-body">
+        <p className="property-price">{formatPrice(price, currency)}</p>
+        <h3>{title}</h3>
+        <p className="property-location"><Icon name="pin" width="15" height="15" />{city}</p>
+        {(bedrooms != null || bathrooms != null || areaSquareMeters != null) && <div className="property-specs">
+          {bedrooms != null && <span><Icon name="bed" width="17" height="17" /><span><strong>{bedrooms}</strong> hab.</span></span>}
+          {bathrooms != null && <span><Icon name="bath" width="17" height="17" /><span><strong>{bathrooms}</strong> baños</span></span>}
+          {areaSquareMeters != null && <span><Icon name="area" width="17" height="17" /><span><strong>{Number(areaSquareMeters).toLocaleString('es-BO', { maximumFractionDigits: 2 })}</strong> m²</span></span>}
+        </div>}
+        <div className="property-card-cta"><span>Ver propiedad</span><Icon name="arrow" width="18" height="18" /></div>
+      </div>
     </Link>
   </article>
 }

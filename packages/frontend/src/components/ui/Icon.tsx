@@ -1,5 +1,10 @@
 import { SVGProps } from 'react'
 const paths = {
+  bed: 'M3 18V7 M21 18V11H3 M3 15h18 M6 11V7h5v4 M11 7h7a3 3 0 0 1 3 3v1',
+  bath: 'M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-3Z M6 12V5a2 2 0 0 1 4 0 M7 20v1 M17 20v1',
+  area: 'M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5 M8 16l8-8 M10 8h6v6',
+  edit: 'm16 3 5 5 M4 20l5-1L21 7l-5-5L4 14v6Z',
+  trash: 'M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7',
   home: 'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
   grid: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
   search: 'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
