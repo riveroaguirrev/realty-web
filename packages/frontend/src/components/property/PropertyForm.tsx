@@ -1,3 +1,6 @@
+import { CityAutocomplete } from './CityAutocomplete'
+import { Icon } from '@/components/ui/Icon'
+import { PropertyImageEditor } from './PropertyImageEditor'
 import { PropertyLocationMap } from '@/components/map/PropertyLocationMap'
 import { Link } from 'react-router-dom'
 import { PROPERTY_TYPES } from '@/utils/propertyPresentation'
@@ -93,7 +96,7 @@ const toFormData = (property?: EditableProperty) =>
         status: property.status ?? 'AVAILABLE',
         isExclusive: property.isExclusive ?? false,
         locationMode: property.isExclusive && property.locationMode === 'EXACT' ? 'EXACT' as const : 'RADIUS' as const,
-        locationRadiusMeters: property.locationRadiusMeters ?? 500,
+        locationRadiusMeters: Math.max(100, Math.min(1000, property.locationRadiusMeters ?? 500)),
         latitude: property.latitude ?? null,
         longitude: property.longitude ?? null,
       }
@@ -105,6 +108,14 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
   const [formData, setFormData] = useState(() => toFormData(property))
   const [existingImages, setExistingImages] = useState<string[]>(property?.images ?? [])
   const [images, setImages] = useState<File[]>([])
+  const [existingImageEdits, setExistingImageEdits] = useState<Record<string, File>>({})
+  const [existingPreviews, setExistingPreviews] = useState<Record<string, string>>({})
+  const [editingImage, setEditingImage] = useState<{ kind: 'new'; index: number } | { kind: 'existing'; url: string } | null>(null)
+  useEffect(() => {
+    const urls = Object.fromEntries(Object.entries(existingImageEdits).map(([url, file]) => [url, URL.createObjectURL(file)]))
+    setExistingPreviews(urls)
+    return () => Object.values(urls).forEach(url => URL.revokeObjectURL(url))
+  }, [existingImageEdits])
   const [previews, setPreviews] = useState<string[]>([])
   useEffect(() => {
     const urls = images.map(file => URL.createObjectURL(file))
@@ -145,10 +156,21 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
 
   const handleRemoveExistingImage = (url: string) => {
     setExistingImages((prev) => prev.filter((existingUrl) => existingUrl !== url))
+    setExistingImageEdits(previous => {
+      const updated = { ...previous }
+      delete updated[url]
+      return updated
+    })
   }
 
   const uploadImages = async (): Promise<string[]> => {
     const urls: string[] = []
+    for (const url of existingImages) {
+      const edited = existingImageEdits[url]
+      if (!edited) { urls.push(url); continue }
+      try { urls.push(await propertyAPI.uploadImage(token, edited)) }
+      catch (err) { throw new Error(`No pudimos subir el recorte: ${getErrorMessage(err, 'Inténtalo de nuevo')}`) }
+    }
     for (const file of images) {
       try {
         urls.push(await propertyAPI.uploadImage(token, file))
@@ -179,7 +201,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
     setSuccess(false)
 
     try {
-      const imageUrls = [...existingImages, ...(await uploadImages())]
+      const imageUrls = await uploadImages()
       const payload = buildPayload(imageUrls)
 
       if (property) {
@@ -203,7 +225,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
 
   const field = (name: keyof typeof formData, label: string, required = false, placeholder?: string) => <div>
     <label htmlFor={`property-${name}`} className={LABEL_CLASS}>{label}{required ? ' *' : ''}</label>
-    <input id={`property-${name}`} name={name} type={NUMERIC_FIELDS.includes(name) ? 'number' : 'text'} value={String(formData[name] ?? '')} onChange={handleChange} className={INPUT_CLASS} required={required} placeholder={placeholder} min={NUMERIC_FIELDS.includes(name) ? 0 : undefined} step={name === 'price' || name === 'areaSquareMeters' ? '0.01' : undefined} />
+    <input id={`property-${name}`} name={name} type={NUMERIC_FIELDS.includes(name) ? 'number' : 'text'} value={String(formData[name] ?? '')} onChange={handleChange} className={INPUT_CLASS} required={required} placeholder={placeholder} min={NUMERIC_FIELDS.includes(name) ? 0 : undefined} step={NUMERIC_FIELDS.includes(name) ? name === 'areaSquareMeters' ? '0.01' : '1' : undefined} />
   </div>
   return <form onSubmit={handleSubmit} className="property-form bg-white shadow rounded-xl p-8">
     <div className="page-heading"><div><p className="eyebrow">{isEditing ? 'ACTUALIZA TU PUBLICACIÓN' : 'UNA NUEVA OPORTUNIDAD'}</p><h1>{isEditing ? 'Editar propiedad' : 'Publicar propiedad'}</h1><p>Completa los datos del inmueble. Los campos con * son obligatorios.</p></div></div>
@@ -227,7 +249,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
           </div>
           <div>
             <label htmlFor="property-price" className={LABEL_CLASS}>Precio *</label>
-            <input id="property-price" name="price" type="number" value={formData.price} onChange={handleChange} className={INPUT_CLASS} required min="0.01" step="0.01" />
+            <input id="property-price" name="price" type="number" value={formData.price} onChange={handleChange} className={INPUT_CLASS} required min="1" step="1" />
           </div>
           <div>
             <label htmlFor="property-currency" className={LABEL_CLASS}>Moneda *</label>
@@ -235,44 +257,95 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
               <option value="USD">Dólares (USD)</option><option value="BOB">Bolivianos (Bs)</option>
             </select>
           </div>
+          {formData.operation === 'SALE' && <div>
+            <label htmlFor="property-sale-commission" className={LABEL_CLASS}>Comisión a cobrar (%)</label>
+            <input id="property-sale-commission" name="commissionPercentage" type="number" min="0" max="100" step="1" value={formData.commissionPercentage} onChange={e => setFormData(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))} className={INPUT_CLASS} />
+          </div>}
           {isEditing && <div><label htmlFor="property-status" className={LABEL_CLASS}>Estado de la publicación</label><select id="property-status" name="status" value={formData.status} onChange={handleChange} className={INPUT_CLASS}>{PROPERTY_STATUS_OPTIONS.map(({value,label}) => <option key={value} value={value}>{label}</option>)}</select></div>}
         </div>
-        {(formData.operation === 'RENTAL' || formData.operation === 'ANTICRETIC') && <div className="operation-options"><h4>{formData.operation === 'RENTAL' ? 'Condiciones del alquiler' : 'Condiciones del anticrético'}</h4><div className="options-grid"><label><input type="checkbox" checked={formData.furnished !== 'UNFURNISHED'} onChange={e => setFormData(prev => ({ ...prev, furnished: e.target.checked ? 'FULLY_FURNISHED' : 'UNFURNISHED' }))} /> Amoblado</label><label><input type="checkbox" checked={formData.petsAllowed} onChange={e => setFormData(prev => ({ ...prev, petsAllowed: e.target.checked }))} /> Se permiten mascotas</label><label><input type="checkbox" checked={formData.expensesIncluded} onChange={e => setFormData(prev => ({ ...prev, expensesIncluded: e.target.checked }))} /> Expensas incluidas</label><label><input type="checkbox" checked={formData.wifiIncluded} onChange={e => setFormData(prev => ({ ...prev, wifiIncluded: e.target.checked }))} /> Wifi incluido</label><label className="commission-field">Comisión a pagar (%)<input type="number" min="0" max="100" step="0.1" value={formData.commissionPercentage} onChange={e => setFormData(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))} /></label></div></div>}
+        <div className="mt-6"><label htmlFor="property-description" className={LABEL_CLASS}>Descripción</label><textarea id="property-description" name="description" value={formData.description} onChange={handleChange} rows={4} className={INPUT_CLASS} placeholder="Cuéntanos qué hace especial a esta propiedad: distribución, servicios y lugares cercanos." /></div>
+        {(formData.operation === 'RENTAL' || formData.operation === 'ANTICRETIC') && <div className="operation-options"><h4>{formData.operation === 'RENTAL' ? 'Condiciones del alquiler' : 'Condiciones del anticrético'}</h4><div className="options-grid"><label><input type="checkbox" checked={formData.furnished !== 'UNFURNISHED'} onChange={e => setFormData(prev => ({ ...prev, furnished: e.target.checked ? 'FULLY_FURNISHED' : 'UNFURNISHED' }))} /> Amoblado</label><label><input type="checkbox" checked={formData.petsAllowed} onChange={e => setFormData(prev => ({ ...prev, petsAllowed: e.target.checked }))} /> Se permiten mascotas</label><label><input type="checkbox" checked={formData.expensesIncluded} onChange={e => setFormData(prev => ({ ...prev, expensesIncluded: e.target.checked }))} /> Expensas incluidas</label><label><input type="checkbox" checked={formData.wifiIncluded} onChange={e => setFormData(prev => ({ ...prev, wifiIncluded: e.target.checked }))} /> Wifi incluido</label><label className="commission-field">Comisión a pagar por el lado colocador (%)<input aria-describedby="placing-commission-hint" type="number" min="0" max="100" step="1" value={formData.commissionPercentage} onChange={e => setFormData(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))} /><span id="placing-commission-hint" className="commission-hint">Este porcentaje corresponde a la comisión que debe pagar el lado colocador de la operación.</span></label></div></div>}
       </section>
       <section className="form-section"><div className="form-section-heading"><span className="step-number">02</span><div><h3>Ubicación y características</h3><p>Ayuda a los interesados a saber si este es su próximo espacio.</p></div></div>
-        <div className="property-fields">{field('address','Dirección',true)}{field('city','Ciudad',true)}{field('region','Región o departamento',true)}{field('areaSquareMeters','Superficie (m²)')}{field('bedrooms','Habitaciones')}{field('bathrooms','Baños')}</div>
         <div className="location-settings">
-          <label className="exclusive-toggle"><input type="checkbox" checked={formData.isExclusive} onChange={e => {
-            const isExclusive = e.target.checked
-            setFormData(prev => ({ ...prev, isExclusive, locationMode: 'RADIUS', latitude: null, longitude: null }))
-          }} /> Tengo la exclusiva de esta propiedad</label>
-          <p>{formData.isExclusive ? 'Puedes publicar la ubicación exacta o mantenerla dentro de una zona.' : 'Sin exclusiva se publica únicamente una zona aproximada.'}</p>
+          <div className={`exclusivity-card${formData.isExclusive ? ' is-active' : ''}`}>
+            <div className="exclusivity-card-top">
+              <span className="exclusivity-kicker">Privacidad de la ubicación</span>
+              <span className="exclusivity-status">{formData.isExclusive ? 'Con exclusiva' : 'Sin exclusiva'}</span>
+            </div>
+            <label className="exclusivity-choice" htmlFor="property-exclusive">
+              <span className="exclusivity-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z" /><path d="m8.5 12 2.5 2.5 4.5-5" /></svg>
+              </span>
+              <span className="exclusivity-copy">
+                <span className="exclusivity-title">Tengo la exclusiva de esta propiedad</span>
+                <span className="exclusivity-description" id="exclusivity-description">Activa esta opción si cuentas con la exclusiva para comercializar este inmueble.</span>
+              </span>
+              <span className="exclusivity-switch">
+                <input id="property-exclusive" type="checkbox" role="switch" aria-describedby="exclusivity-description exclusivity-location-hint" checked={formData.isExclusive} onChange={e => {
+                  const isExclusive = e.target.checked
+                  setFormData(prev => ({ ...prev, isExclusive, locationMode: 'RADIUS', latitude: null, longitude: null }))
+                }} />
+                <span className="exclusivity-switch-track" aria-hidden="true" />
+              </span>
+            </label>
+            <div className="exclusivity-location-hint" id="exclusivity-location-hint" aria-live="polite">
+              <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>
+              <span><strong>{formData.isExclusive ? 'Tú eliges qué mostrar.' : 'La ubicación exacta queda protegida.'}</strong> {formData.isExclusive ? 'Puedes publicar un marcador exacto o mantener una zona aproximada.' : 'En la publicación solo se verá una zona aproximada.'}</span>
+            </div>
+          </div>
           <div className="property-fields mt-4">
             <div><label htmlFor="location-mode" className={LABEL_CLASS}>Mostrar ubicación como</label>
               <select id="location-mode" className={INPUT_CLASS} value={formData.locationMode} disabled={!formData.isExclusive} onChange={e => setFormData(prev => ({ ...prev, locationMode: e.target.value as 'EXACT' | 'RADIUS', latitude: null, longitude: null }))}>
                 <option value="RADIUS">Zona con radio</option>{formData.isExclusive && <option value="EXACT">Marcador exacto</option>}
               </select>
             </div>
-            {formData.locationMode === 'RADIUS' && <div><label htmlFor="location-radius" className={LABEL_CLASS}>Radio de la zona (metros)</label>
-              <select id="location-radius" className={INPUT_CLASS} value={formData.locationRadiusMeters} onChange={e => setFormData(prev => ({ ...prev, locationRadiusMeters: Number(e.target.value) }))}>
-                {Array.from(new Set([100, 200, 300, 500, 1000, 2000, 5000, formData.locationRadiusMeters])).sort((a,b) => a-b).map(radius => <option key={radius} value={radius}>{radius} m</option>)}
-              </select>
-            </div>}
+
           </div>
-          <PropertyLocationMap value={formData} city={formData.city} onChange={coordinates => setFormData(prev => ({ ...prev, ...coordinates }))} />
-          {formData.locationMode === 'RADIUS' && <p>La dirección escrita queda disponible para gestionar tu publicación. Los demás usuarios verán la zona. Evita incluir la dirección exacta en el título, la descripción o las fotografías.</p>}
+          <PropertyLocationMap value={formData} address={formData.address} neighborhood={formData.region} city={formData.city} onAddressChange={(details, baseline) => setFormData(prev => ({
+            ...prev,
+            address: prev.address === baseline.address ? details.address : prev.address,
+            city: prev.city === baseline.city ? details.city : prev.city,
+            region: prev.region === baseline.neighborhood ? details.neighborhood : prev.region,
+          }))} onRadiusChange={radius => setFormData(prev => ({ ...prev, locationRadiusMeters: radius }))} onChange={coordinates => setFormData(prev => ({ ...prev, ...coordinates }))} />
+          {!formData.isExclusive && <p className="location-privacy-note">La dirección escrita queda disponible para gestionar tu publicación. Los demás usuarios verán la zona.</p>}
         </div>
-        <div className="mt-6"><label htmlFor="property-description" className={LABEL_CLASS}>Descripción</label><textarea id="property-description" name="description" value={formData.description} onChange={handleChange} rows={4} className={INPUT_CLASS} placeholder="Cuéntanos qué hace especial a esta propiedad: distribución, servicios y lugares cercanos." /></div>
+        <div className="property-fields">{field('address','Dirección',true)}<CityAutocomplete value={formData.city} onChange={city => setFormData(prev => ({ ...prev, city }))} />{field('region','Zona o barrio',true)}{field('areaSquareMeters','Superficie (m²)')}{field('bedrooms','Habitaciones')}{field('bathrooms','Baños')}</div>
       </section>
-      <section className="form-section"><div className="form-section-heading"><span className="step-number">03</span><div><h3>Fotografías</h3><p>La primera imagen será la portada. Puedes agregar más de una.</p></div></div>
-        <div className="upload-zone"><label htmlFor="property-images" className={LABEL_CLASS}>Agregar fotografías</label><input id="property-images" type="file" multiple accept="image/*" onChange={handleImageSelect} className="w-full text-sm" /><p>Imágenes de hasta 5 MB cada una.</p></div>
-        {(existingImages.length > 0 || images.length > 0) && <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {existingImages.map((url,index) => <div key={url} className="relative"><img src={url} alt={`Fotografía ${index+1}`} className="w-full h-24 object-cover rounded" /><button type="button" onClick={() => handleRemoveExistingImage(url)} aria-label={`Quitar fotografía ${index+1}`} className="absolute top-1 right-1 bg-white text-red-700 rounded-full w-10 h-10">×</button></div>)}
-          {images.map((file,index) => <div key={index} className="relative"><img src={previews[index]} alt={file.name} className="w-full h-24 object-cover rounded" /><button type="button" onClick={() => handleRemoveImage(index)} aria-label={`Quitar ${file.name}`} className="absolute top-1 right-1 bg-white text-red-700 rounded-full w-10 h-10">×</button></div>)}
-        </div>}
+      <section className="form-section property-photos-section"><div className="form-section-heading"><span className="step-number">03</span><div><h3>Fotografías</h3><p>Muestra lo mejor de tu propiedad. Puedes ampliar cada foto y ajustar su encuadre.</p></div></div>
+        <label htmlFor="property-images" className="photo-upload">
+          <input id="property-images" type="file" multiple accept="image/*" onChange={handleImageSelect} className="photo-upload-input" aria-describedby="photo-upload-help" />
+          <span className="photo-upload-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9M17 3h6m-3-3v6M3 16l5-5 9 10m-4-4 3-3 5 5" /><circle cx="8" cy="7" r="1" /></svg></span>
+          <span className="photo-upload-copy"><strong>Un buen espacio merece buenas fotos</strong><span id="photo-upload-help">Selecciona varias imágenes · Hasta 5 MB por foto</span></span>
+          <span className="photo-upload-cta"><Icon name="plus" />Agregar fotos</span>
+        </label>
+        {(existingImages.length > 0 || images.length > 0) && <>
+        <div className="photo-gallery-heading"><h4>Tu galería <span>{existingImages.length + images.length}</span></h4><p>La primera foto será la portada</p></div>
+        <div className="property-photo-grid">
+          {existingImages.map((url, index) => <div key={url} className="property-photo">
+            <button type="button" className="property-photo-edit" onClick={() => setEditingImage({ kind: 'existing', url })} aria-label={`Ampliar y recortar fotografía ${index + 1}`}><img src={existingPreviews[url] ?? url} alt={`Fotografía ${index + 1}`} /><span><span>Foto {String(index + 1).padStart(2, '0')}</span><span>Ajustar encuadre <Icon name="arrow" width="14" height="14" /></span></span></button>
+            {index === 0 && <span className="property-photo-cover"><Icon name="check" width="12" height="12" />Portada</span>}
+            <button type="button" onClick={() => handleRemoveExistingImage(url)} aria-label={`Quitar fotografía ${index + 1}`} className="property-photo-remove"><Icon name="close" width="15" height="15" /></button>
+          </div>)}
+          {images.map((file, index) => <div key={index} className="property-photo">
+            <button type="button" className="property-photo-edit" onClick={() => setEditingImage({ kind: 'new', index })} aria-label={`Ampliar y recortar ${file.name}`}><img src={previews[index]} alt={file.name} /><span><span>Foto {String(existingImages.length + index + 1).padStart(2, '0')}</span><span>Ajustar encuadre <Icon name="arrow" width="14" height="14" /></span></span></button>
+            {existingImages.length === 0 && index === 0 && <span className="property-photo-cover"><Icon name="check" width="12" height="12" />Portada</span>}
+            <button type="button" onClick={() => handleRemoveImage(index)} aria-label={`Quitar ${file.name}`} className="property-photo-remove"><Icon name="close" width="15" height="15" /></button>
+          </div>)}
+        </div></>}
+        <p className="form-review-note" role="status">{isLoading ? 'Estamos guardando los datos y las fotografías…' : 'Revisa la información antes de guardar.'}</p>
       </section>
-      <div className="form-actions"><p>{isLoading ? 'Estamos guardando los datos y las fotografías…' : 'Revisa la información antes de guardar.'}</p><button type="submit" disabled={isLoading || success} className="button button-primary">{isLoading ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Publicar propiedad'}</button></div>
+      <div className="form-actions">{!isLoading && <Link to="/properties" className="button button-secondary">Volver a mis propiedades</Link>}<button type="submit" disabled={isLoading || success} className="button button-primary">{isLoading ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Publicar propiedad'}</button></div>
     </fieldset>
-    {!isLoading && <Link to="/properties" className="text-link mt-4">Volver a mis propiedades</Link>}
+    {editingImage && <PropertyImageEditor
+      src={editingImage.kind === 'new' ? previews[editingImage.index] : existingPreviews[editingImage.url] ?? editingImage.url}
+      filename={editingImage.kind === 'new' ? images[editingImage.index].name : 'fotografia'}
+      onClose={() => setEditingImage(null)}
+      onSave={file => {
+        if (editingImage.kind === 'new') setImages(previous => previous.map((image, index) => index === editingImage.index ? file : image))
+        else setExistingImageEdits(previous => ({ ...previous, [editingImage.url]: file }))
+        setEditingImage(null)
+      }}
+    />}
   </form>
 }

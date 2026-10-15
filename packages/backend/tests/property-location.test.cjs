@@ -30,13 +30,13 @@ test('non-exclusive listings cannot bypass radius-only mode through the API', ()
   assert.equal(validatePropertyInput(valid).isValid, true)
 })
 test('radius limits and coordinate pairs are validated', () => {
-  for (const radius of [0, 99, 5001, 100.5, '500', Infinity]) {
+  for (const radius of [0, 99, 1001, 5000, 5001, 100.5, '500', Infinity]) {
     assert.equal(validatePropertyInput({ ...valid, locationRadiusMeters: radius }).isValid, false)
   }
   for (const point of [{latitude: 86}, {longitude: 181}, {latitude: NaN}, {longitude: null}, {latitude: '0'}]) {
     assert.equal(validatePropertyInput({ ...valid, ...point }).isValid, false)
   }
-  for (const radius of [100, 5000]) assert.equal(validatePropertyInput({ ...valid, locationRadiusMeters: radius }).isValid, true)
+  for (const radius of [100, 1000]) assert.equal(validatePropertyInput({ ...valid, locationRadiusMeters: radius }).isValid, true)
   assert.equal(validatePropertyInput({ ...valid, latitude: 0, longitude: 0 }).isValid, true)
   assert.equal(validatePropertyInput({ ...valid, locationMode: 'OTHER' }).isValid, false)
 })

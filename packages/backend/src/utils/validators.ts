@@ -127,8 +127,8 @@ export const validatePropertyInput = (payload: any) => {
   if (typeof isExclusive !== 'boolean') errors.push('Indica si la propiedad tiene exclusiva')
   if (!['EXACT', 'RADIUS'].includes(locationMode)) errors.push('Modalidad de ubicación inválida')
   if (locationMode === 'EXACT' && isExclusive !== true) errors.push('Sin exclusiva solo puedes publicar una zona con radio')
-  if (!Number.isInteger(locationRadiusMeters) || locationRadiusMeters < 100 || locationRadiusMeters > 5000) {
-    errors.push('El radio debe estar entre 100 y 5000 metros')
+  if (!Number.isInteger(locationRadiusMeters) || locationRadiusMeters < 100 || locationRadiusMeters > 1000) {
+    errors.push('El radio debe estar entre 100 y 1000 metros')
   }
   if ((latitude === null) !== (longitude === null) ||
       (latitude !== null && (typeof latitude !== 'number' || !Number.isFinite(latitude) || Math.abs(latitude) > 85)) ||
