@@ -6,6 +6,15 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
   try {
     const { searchParams } = new URL(request.url)
 
+    const boundsKeys = ['west', 'south', 'east', 'north'] as const
+    const bounds = Object.fromEntries(boundsKeys.map(key => [key, searchParams.has(key) && searchParams.get(key)?.trim() ? Number(searchParams.get(key)) : undefined])) as Record<typeof boundsKeys[number], number | undefined>
+    if (boundsKeys.some(key => searchParams.has(key)) &&
+      (!boundsKeys.every(key => typeof bounds[key] === 'number' && Number.isFinite(bounds[key])) ||
+        bounds.west! < -180 || bounds.east! > 180 || bounds.south! < -85 || bounds.north! > 85 ||
+        bounds.west! >= bounds.east! || bounds.south! >= bounds.north!)) {
+      return NextResponse.json({ success: false, error: { code: 'INVALID_BOUNDS', message: 'El área de búsqueda no es válida.' } }, { status: 400 })
+    }
+
     const city = searchParams.get('city') || undefined
     const region = searchParams.get('region') || undefined
     const type = searchParams.get('type') || undefined
@@ -22,6 +31,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const pageSize = searchParams.get('pageSize') ? parseInt(searchParams.get('pageSize')!) : 20
 
     const result = await propertyService.searchProperties({
+      ...bounds,
       mapView: searchParams.get('view') === 'map',
       operation: searchParams.get('operation') || undefined,
       currency: searchParams.get('currency') || undefined,

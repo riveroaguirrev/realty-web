@@ -1,7 +1,8 @@
 import axios from 'axios'
 import { ApiResponse } from '@shared/types'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+// Use Vite's same-origin proxy for both localhost and 127.0.0.1.
+const API_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || '/api'
 
 const client = axios.create({
   baseURL: API_URL,
@@ -13,6 +14,10 @@ export const propertySearchAPI = {
     filters?: {
       operation?: string
       currency?: string
+      west?: number
+      south?: number
+      east?: number
+      north?: number
       city?: string
       region?: string
       type?: string
@@ -31,6 +36,7 @@ export const propertySearchAPI = {
   ) {
     const params = new URLSearchParams()
 
+    for (const key of ['west', 'south', 'east', 'north'] as const) { if (filters?.[key] !== undefined) params.append(key, String(filters[key])) }
     if (filters?.operation) params.append('operation', filters.operation)
     if (filters?.currency) params.append('currency', filters.currency)
     if (filters?.city) params.append('city', filters.city)

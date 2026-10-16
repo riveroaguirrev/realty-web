@@ -2,9 +2,10 @@ import { useCallback } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { authAPI } from '@/services/auth'
 import { SignUpPayload, AuthPayload, User } from '@shared/types'
+import { requirementNotifications } from '@/services/requirements'
 
 export const useAuth = () => {
-  const { user, accessToken, isLoading, error, setUser, setAccessToken, setIsLoading, setError, logout } =
+  const { user, accessToken, isLoading, error, setUser, setAccessToken, setIsLoading, setError, logout: clearSession } =
     useAuthStore()
 
   const register = useCallback(
@@ -91,6 +92,13 @@ export const useAuth = () => {
   )
 
   const isAuthenticated = !!user && !!accessToken
+
+  const logout = useCallback(() => {
+    clearSession()
+    if (accessToken && 'serviceWorker' in navigator) {
+      void requirementNotifications.disable(accessToken).catch(() => {})
+    }
+  }, [accessToken, clearSession])
 
   return {
     user,

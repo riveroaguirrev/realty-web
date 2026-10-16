@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+// Use Vite's same-origin proxy for both localhost and 127.0.0.1.
+const API_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || '/api'
 
 export interface PropertyMatch {
   propertyId: string

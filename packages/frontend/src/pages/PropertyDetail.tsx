@@ -240,6 +240,15 @@ export const PropertyDetail = () => {
 
                 <div className="mt-8 space-y-3">
                   {actionError && <p role="alert" className="form-error">{actionError}</p>}
+                  {property.advisor && property.advisor.id !== user?.id && (
+                    <button
+                      onClick={handleContactAdvisor}
+                      disabled={contactLoading}
+                      className="button button-primary w-full"
+                    >
+                      <Icon name="message" />{contactLoading ? 'Abriendo conversación…' : 'Contactar al asesor'}
+                    </button>
+                  )}
                   <button
                     aria-pressed={isFavorite}
                     onClick={handleToggleFavorite}
@@ -262,15 +271,7 @@ export const PropertyDetail = () => {
                     </button>
                   )}
 
-                  {property.advisor && property.advisor.id !== user?.id && (
-                    <button
-                      onClick={handleContactAdvisor}
-                      disabled={contactLoading}
-                      className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow disabled:opacity-50"
-                    >
-                      {contactLoading ? '...' : 'Contactar al asesor'}
-                    </button>
-                  )}
+
                 </div>
               </div>
             </div>

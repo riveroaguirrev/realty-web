@@ -1,10 +1,12 @@
+import { PROPERTY_STEPS, validatePropertyStep } from '@/utils/propertyWizard'
+import './PropertyForm.css'
 import { CityAutocomplete } from './CityAutocomplete'
 import { Icon } from '@/components/ui/Icon'
 import { PropertyImageEditor } from './PropertyImageEditor'
 import { PropertyLocationMap } from '@/components/map/PropertyLocationMap'
 import { Link } from 'react-router-dom'
-import { PROPERTY_TYPES } from '@/utils/propertyPresentation'
-import { FormEvent, useState, useEffect } from 'react'
+import { PROPERTY_TYPES, formatPrice } from '@/utils/propertyPresentation'
+import { FormEvent, useState, useEffect, useRef } from 'react'
 import { propertyAPI } from '@/services/property'
 import { getErrorMessage } from '@/utils/errorMessage'
 import { PROPERTY_STATUS_OPTIONS } from '@/utils/propertyStatus'
@@ -104,6 +106,17 @@ const toFormData = (property?: EditableProperty) =>
 
 export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) => {
   const isEditing = Boolean(property)
+  const [step, setStep] = useState(0)
+  const stepStatus = useRef<HTMLParagraphElement>(null)
+  const previousStep = useRef(0)
+  const formRef = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    if (isEditing || previousStep.current === step) return
+    previousStep.current = step
+    stepStatus.current?.focus({ preventScroll: true })
+    stepStatus.current?.scrollIntoView({ block: 'start', behavior: 'auto' })
+  }, [step, isEditing])
+  const goToStep = (next: number) => { setError(null); setStep(next) }
 
   const [formData, setFormData] = useState(() => toFormData(property))
   const [existingImages, setExistingImages] = useState<string[]>(property?.images ?? [])
@@ -139,6 +152,11 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files)
+      if (existingImages.length + images.length + files.length > 20) {
+        setError('Puedes agregar hasta 20 fotografías por publicación.')
+        e.target.value = ''
+        return
+      }
       if (files.some(file => !file.type.startsWith('image/') || file.size > 5 * 1024 * 1024)) {
         setError('Selecciona imágenes de hasta 5 MB cada una.')
         e.target.value = ''
@@ -192,6 +210,22 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isLoading || success) return
+    if (!isEditing) {
+      const stages = step < 3 ? [step] : [0, 1, 2]
+      for (const stage of stages) {
+        const issue = validatePropertyStep(stage, formData, existingImages.length + images.length)
+        if (issue) {
+          setStep(stage)
+          setError(issue.message)
+          window.requestAnimationFrame(() => {
+            const field = issue.field ? document.getElementById(issue.field) : null
+            if (field && formRef.current?.contains(field)) field.focus()
+          })
+          return
+        }
+      }
+      if (step < 3) { goToStep(step + 1); return }
+    }
     if (formData.latitude == null || formData.longitude == null) {
       setError('Selecciona la ubicación o el centro de la zona en el mapa antes de publicar.')
       return
@@ -227,12 +261,13 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
     <label htmlFor={`property-${name}`} className={LABEL_CLASS}>{label}{required ? ' *' : ''}</label>
     <input id={`property-${name}`} name={name} type={NUMERIC_FIELDS.includes(name) ? 'number' : 'text'} value={String(formData[name] ?? '')} onChange={handleChange} className={INPUT_CLASS} required={required} placeholder={placeholder} min={NUMERIC_FIELDS.includes(name) ? 0 : undefined} step={NUMERIC_FIELDS.includes(name) ? name === 'areaSquareMeters' ? '0.01' : '1' : undefined} />
   </div>
-  return <form onSubmit={handleSubmit} className="property-form bg-white shadow rounded-xl p-8">
-    <div className="page-heading"><div><p className="eyebrow">{isEditing ? 'ACTUALIZA TU PUBLICACIÓN' : 'UNA NUEVA OPORTUNIDAD'}</p><h1>{isEditing ? 'Editar propiedad' : 'Publicar propiedad'}</h1><p>Completa los datos del inmueble. Los campos con * son obligatorios.</p></div></div>
+  return <form ref={formRef} onSubmit={handleSubmit} className={`property-form ${!isEditing ? 'property-wizard' : ''} bg-white shadow rounded-xl p-8`}>
+    <div className="page-heading"><div><p className="eyebrow">{isEditing ? 'ACTUALIZA TU PUBLICACIÓN' : 'UNA NUEVA OPORTUNIDAD'}</p><h1>{isEditing ? 'Editar propiedad' : 'Publicar propiedad'}</h1><p>{isEditing ? 'Actualiza los datos del inmueble. Los campos con * son obligatorios.' : 'Publica tu inmueble paso a paso. Puedes volver atrás sin perder los datos.'}</p></div></div>
+    {!isEditing && <div className="property-wizard-progress"><ol aria-label="Pasos para publicar">{PROPERTY_STEPS.map((label, index) => <li key={label} className={index === step ? 'is-current' : index < step ? 'is-complete' : ''} aria-current={index === step ? 'step' : undefined}><button type="button" onClick={() => goToStep(index)} disabled={index >= step || isLoading || success} aria-label={`Volver al paso ${index + 1}: ${label}`}><span className="wizard-step-dot">{index < step ? <Icon name="check" width="16" height="16" /> : index + 1}</span><span>{label}</span></button></li>)}</ol><div className="wizard-progress-track" aria-hidden="true"><span style={{ width: `${((step + 1) / PROPERTY_STEPS.length) * 100}%` }} /></div><p ref={stepStatus} className="wizard-step-status" tabIndex={-1}>Paso {step + 1} de {PROPERTY_STEPS.length} · {PROPERTY_STEPS[step]}</p></div>}
     {error && <div role="alert" className="form-error">{error}</div>}
     {success && <p role="status" className="text-green-700 mb-4">Propiedad guardada correctamente.</p>}
     <fieldset disabled={isLoading || success}>
-      <section className="form-section"><div className="form-section-heading"><span className="step-number">01</span><div><h3>Información principal</h3><p>Un título claro ayuda a encontrar tu propiedad.</p></div></div>
+      {(isEditing || step === 0) && <section className="form-section"><div className="form-section-heading"><span className="step-number">01</span><div><h3>Información principal</h3><p>Un título claro ayuda a encontrar tu propiedad.</p></div></div>
         <div className="property-fields">
           <div className="property-title-field">{field('title', 'Título de la publicación', true, 'Ej. Departamento luminoso en Sopocachi')}</div>
           <div>
@@ -265,8 +300,8 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
         </div>
         <div className="mt-6"><label htmlFor="property-description" className={LABEL_CLASS}>Descripción</label><textarea id="property-description" name="description" value={formData.description} onChange={handleChange} rows={4} className={INPUT_CLASS} placeholder="Cuéntanos qué hace especial a esta propiedad: distribución, servicios y lugares cercanos." /></div>
         {(formData.operation === 'RENTAL' || formData.operation === 'ANTICRETIC') && <div className="operation-options"><h4>{formData.operation === 'RENTAL' ? 'Condiciones del alquiler' : 'Condiciones del anticrético'}</h4><div className="options-grid"><label><input type="checkbox" checked={formData.furnished !== 'UNFURNISHED'} onChange={e => setFormData(prev => ({ ...prev, furnished: e.target.checked ? 'FULLY_FURNISHED' : 'UNFURNISHED' }))} /> Amoblado</label><label><input type="checkbox" checked={formData.petsAllowed} onChange={e => setFormData(prev => ({ ...prev, petsAllowed: e.target.checked }))} /> Se permiten mascotas</label><label><input type="checkbox" checked={formData.expensesIncluded} onChange={e => setFormData(prev => ({ ...prev, expensesIncluded: e.target.checked }))} /> Expensas incluidas</label><label><input type="checkbox" checked={formData.wifiIncluded} onChange={e => setFormData(prev => ({ ...prev, wifiIncluded: e.target.checked }))} /> Wifi incluido</label><label className="commission-field">Comisión a pagar por el lado colocador (%)<input aria-describedby="placing-commission-hint" type="number" min="0" max="100" step="1" value={formData.commissionPercentage} onChange={e => setFormData(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))} /><span id="placing-commission-hint" className="commission-hint">Este porcentaje corresponde a la comisión que debe pagar el lado colocador de la operación.</span></label></div></div>}
-      </section>
-      <section className="form-section"><div className="form-section-heading"><span className="step-number">02</span><div><h3>Ubicación y características</h3><p>Ayuda a los interesados a saber si este es su próximo espacio.</p></div></div>
+      </section>}
+      {(isEditing || step === 1) && <section className="form-section"><div className="form-section-heading"><span className="step-number">02</span><div><h3>Ubicación y características</h3><p>Ayuda a los interesados a saber si este es su próximo espacio.</p></div></div>
         <div className="location-settings">
           <div className={`exclusivity-card${formData.isExclusive ? ' is-active' : ''}`}>
             <div className="exclusivity-card-top">
@@ -311,12 +346,12 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
           {!formData.isExclusive && <p className="location-privacy-note">La dirección escrita queda disponible para gestionar tu publicación. Los demás usuarios verán la zona.</p>}
         </div>
         <div className="property-fields">{field('address','Dirección',true)}<CityAutocomplete value={formData.city} onChange={city => setFormData(prev => ({ ...prev, city }))} />{field('region','Zona o barrio',true)}{field('areaSquareMeters','Superficie (m²)')}{field('bedrooms','Habitaciones')}{field('bathrooms','Baños')}</div>
-      </section>
-      <section className="form-section property-photos-section"><div className="form-section-heading"><span className="step-number">03</span><div><h3>Fotografías</h3><p>Muestra lo mejor de tu propiedad. Puedes ampliar cada foto y ajustar su encuadre.</p></div></div>
+      </section>}
+      {(isEditing || step === 2) && <section className="form-section property-photos-section"><div className="form-section-heading"><span className="step-number">03</span><div><h3>Fotografías</h3><p>Muestra lo mejor de tu propiedad. Puedes ampliar cada foto y ajustar su encuadre.</p></div></div>
         <label htmlFor="property-images" className="photo-upload">
           <input id="property-images" type="file" multiple accept="image/*" onChange={handleImageSelect} className="photo-upload-input" aria-describedby="photo-upload-help" />
           <span className="photo-upload-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9M17 3h6m-3-3v6M3 16l5-5 9 10m-4-4 3-3 5 5" /><circle cx="8" cy="7" r="1" /></svg></span>
-          <span className="photo-upload-copy"><strong>Un buen espacio merece buenas fotos</strong><span id="photo-upload-help">Selecciona varias imágenes · Hasta 5 MB por foto</span></span>
+          <span className="photo-upload-copy"><strong>Un buen espacio merece buenas fotos</strong><span id="photo-upload-help">Selecciona varias imágenes · Hasta 20 fotos · 5 MB por foto</span></span>
           <span className="photo-upload-cta"><Icon name="plus" />Agregar fotos</span>
         </label>
         {(existingImages.length > 0 || images.length > 0) && <>
@@ -333,9 +368,25 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
             <button type="button" onClick={() => handleRemoveImage(index)} aria-label={`Quitar ${file.name}`} className="property-photo-remove"><Icon name="close" width="15" height="15" /></button>
           </div>)}
         </div></>}
-        <p className="form-review-note" role="status">{isLoading ? 'Estamos guardando los datos y las fotografías…' : 'Revisa la información antes de guardar.'}</p>
-      </section>
-      <div className="form-actions">{!isLoading && <Link to="/properties" className="button button-secondary">Volver a mis propiedades</Link>}<button type="submit" disabled={isLoading || success} className="button button-primary">{isLoading ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Publicar propiedad'}</button></div>
+        {(isEditing || isLoading) && <p className="form-review-note" role="status">{isLoading ? 'Estamos guardando los datos y las fotografías…' : 'Revisa la información antes de guardar.'}</p>}
+      </section>}
+      {!isEditing && step === 3 && <section className="form-section wizard-review" aria-labelledby="review-title">
+        <div className="form-section-heading"><span className="step-number">04</span><div><h3 id="review-title">Revisa tu publicación</h3><p>Comprueba los datos antes de compartir tu propiedad.</p></div></div>
+        <div className="wizard-review-overview">{previews[0] ? <img src={previews[0]} alt="Portada de la propiedad" /> : <span className="wizard-review-placeholder"><Icon name="home" width="38" height="38" /></span>}<div><span className="eyebrow">{formData.operation === 'RENTAL' ? 'Alquiler' : formData.operation === 'ANTICRETIC' ? 'Anticrético' : 'Venta'} · {PROPERTY_TYPES[formData.type] || formData.type}</span><h3>{formData.title}</h3><strong>{formatPrice(formData.price, formData.currency)}</strong><p>{formData.city} · {formData.region}</p></div></div>
+        <div className="wizard-review-grid">
+          <div className="wizard-review-card"><div className="wizard-review-card-heading"><h4>Información principal</h4><button type="button" className="text-link" onClick={() => goToStep(0)}><Icon name="edit" width="15" height="15" />Editar</button></div><p className="wizard-review-description">{formData.description || 'Sin descripción adicional.'}</p><dl><div><dt>Comisión</dt><dd>{formData.commissionPercentage}%</dd></div>{formData.operation !== 'SALE' && <><div><dt>Amoblado</dt><dd>{formData.furnished === 'UNFURNISHED' ? 'No' : 'Sí'}</dd></div><div><dt>Mascotas</dt><dd>{formData.petsAllowed ? 'Permitidas' : 'No permitidas'}</dd></div><div><dt>Expensas incluidas</dt><dd>{formData.expensesIncluded ? 'Sí' : 'No'}</dd></div><div><dt>Wifi incluido</dt><dd>{formData.wifiIncluded ? 'Sí' : 'No'}</dd></div></>}</dl></div>
+          <div className="wizard-review-card"><div className="wizard-review-card-heading"><h4>Ubicación y características</h4><button type="button" className="text-link" onClick={() => goToStep(1)}><Icon name="edit" width="15" height="15" />Editar</button></div><p>{formData.address}<br />{formData.region}, {formData.city}</p><dl><div><dt>Ubicación pública</dt><dd>{formData.isExclusive && formData.locationMode === 'EXACT' ? 'Exacta' : `Zona de ${formData.locationRadiusMeters} m`}</dd></div><div><dt>Exclusiva</dt><dd>{formData.isExclusive ? 'Sí' : 'No'}</dd></div><div><dt>Superficie</dt><dd>{formData.areaSquareMeters ? `${formData.areaSquareMeters} m²` : 'Sin especificar'}</dd></div><div><dt>Habitaciones</dt><dd>{formData.bedrooms || 'Sin especificar'}</dd></div><div><dt>Baños</dt><dd>{formData.bathrooms || 'Sin especificar'}</dd></div></dl></div>
+          <div className="wizard-review-card wizard-review-photos"><div className="wizard-review-card-heading"><h4>Fotografías · {images.length}</h4><button type="button" className="text-link" onClick={() => goToStep(2)}><Icon name="edit" width="15" height="15" />Editar</button></div>{previews.length ? <div className="wizard-review-thumbnails">{previews.map((src, index) => <img key={src} src={src} alt={`Fotografía ${index + 1}${index === 0 ? ' · Portada' : ''}`} />)}</div> : <p>Publicarás sin fotografías. Podrás agregarlas al editar la propiedad.</p>}</div>
+        </div>
+        <p className="wizard-publish-hint"><Icon name="check" />Al publicar, la propiedad aparecerá en Explorar y en el mapa.</p>
+      </section>}
+      <div className={`form-actions ${!isEditing ? 'wizard-actions' : ''}`}>
+        {!isLoading && <Link to="/properties" className={isEditing ? 'button button-secondary' : 'text-link wizard-cancel'}>{isEditing ? 'Volver a mis propiedades' : 'Cancelar'}</Link>}
+        <div className="wizard-actions-main">
+          {!isEditing && step > 0 && <button type="button" disabled={isLoading || success} className="button button-secondary" onClick={() => goToStep(step - 1)}>Anterior</button>}
+          <button type="submit" disabled={isLoading || success} className="button button-primary">{isLoading ? isEditing ? 'Guardando…' : 'Publicando…' : isEditing ? 'Guardar cambios' : step < 3 ? <>{step === 2 ? 'Revisar publicación' : 'Siguiente'}<Icon name="arrow" width="18" height="18" /></> : 'Publicar propiedad'}</button>
+        </div>
+      </div>
     </fieldset>
     {editingImage && <PropertyImageEditor
       src={editingImage.kind === 'new' ? previews[editingImage.index] : existingPreviews[editingImage.url] ?? editingImage.url}

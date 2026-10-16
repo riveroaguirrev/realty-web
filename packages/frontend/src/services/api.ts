@@ -1,7 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { ApiResponse } from '@shared/types'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+// Use Vite's same-origin proxy for both localhost and 127.0.0.1.
+const API_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || '/api'
 
 class ApiClient {
   private client: AxiosInstance

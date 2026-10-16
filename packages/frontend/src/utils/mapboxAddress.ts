@@ -2,6 +2,7 @@ export interface MapboxPlace {
   id: string
   place_name: string
   center: [number, number]
+  bbox?: [number, number, number, number]
   text?: string
   address?: string
   place_type?: string[]

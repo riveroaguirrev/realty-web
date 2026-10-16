@@ -1,8 +1,10 @@
+import { readMapFilters } from '@/utils/propertyMap'
+import type { SearchFilters } from '@/components/property/SearchFilters'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { SearchFiltersComponent, SearchFilters } from '@/components/property/SearchFilters'
+import { SearchFiltersComponent } from '@/components/property/SearchFilters'
 import { propertySearchAPI } from '@/services/propertySearch'
 import { PropertyCard, PropertyCardProps } from '@/components/property/PropertyCard'
 import { Pagination } from '@/components/ui/Pagination'
@@ -10,9 +12,7 @@ import { Icon } from '@/components/ui/Icon'
 export const PropertySearch = () => {
   const { accessToken } = useAuth()
   const [params, setParams] = useSearchParams()
-  const filters: SearchFilters = {}
-  for (const key of ['city', 'region', 'type', 'operation', 'currency'] as const) { if (params.get(key)) filters[key] = params.get(key)! }
-  for (const key of ['priceMin','priceMax','bedroomsMin','bedroomsMax','bathroomsMin','bathroomsMax','areaMin','areaMax'] as const) { const value = params.get(key); if (value !== null && Number.isFinite(Number(value)) && Number(value) >= 0) filters[key] = Number(value) }
+  const filters = readMapFilters(params)
   const page = Math.max(1, Math.floor(Number(params.get('page')) || 1))
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['property-search', accessToken, filters, page], queryFn: () => propertySearchAPI.search(accessToken!, { ...filters, page, pageSize: 12 }), enabled: !!accessToken })
   const search = (values: SearchFilters) => { const next = new URLSearchParams(); Object.entries(values).forEach(([key,value]) => { if (value !== undefined && value !== '') next.set(key,String(value)) }); setParams(next) }

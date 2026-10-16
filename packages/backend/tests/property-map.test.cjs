@@ -37,3 +37,24 @@ test('map discovery covers the filtered search independently of pagination and p
   assert.equal(result.properties[0].address, 'Zona aproximada')
   assert.equal(query.select.advisor, undefined)
 })
+
+test('Mapbox geographic bounds constrain discovery and counts in both map and grid modes', async () => {
+  for (const mapView of [true, false]) {
+    let query
+    const counts = []
+    const { propertyService } = load('../src/services/property.service.ts', {
+      '@/utils/propertyLocation': location,
+      '@/lib/prisma': { prisma: { property: {
+        findMany: async args => { query = args; return [] },
+        count: async args => { counts.push(args.where); return 0 },
+      } } },
+    })
+    await propertyService.searchProperties({ mapView, west: -66.3, east: -66.1, south: -17.5, north: -17.2, type: 'APARTMENT' })
+    assert.equal(query.where.longitude.gte, -66.3)
+    assert.equal(query.where.longitude.lte, -66.1)
+    assert.equal(query.where.latitude.gte, -17.5)
+    assert.equal(query.where.latitude.lte, -17.2)
+    assert.equal(query.where.type, 'APARTMENT')
+    assert.ok(counts.every(where => where.longitude.gte === -66.3 && where.latitude.lte === -17.2))
+  }
+})

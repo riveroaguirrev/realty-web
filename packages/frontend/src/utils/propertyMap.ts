@@ -1,3 +1,4 @@
+import { validSearchBounds } from './searchLocation'
 import type { PropertyCardProps } from '@/components/property/PropertyCard'
 import type { SearchFilters } from '@/components/property/SearchFilters'
 
@@ -13,7 +14,7 @@ export interface MapBounds { west: number; east: number; south: number; north: n
 
 export function readMapFilters(params: URLSearchParams): SearchFilters {
   const filters: SearchFilters = {}
-  for (const key of ['city', 'region', 'type', 'operation', 'currency'] as const) {
+  for (const key of ['city', 'region', 'type', 'operation', 'currency', 'location'] as const) {
     const value = params.get(key)?.trim()
     if (value) filters[key] = value
   }
@@ -21,6 +22,9 @@ export function readMapFilters(params: URLSearchParams): SearchFilters {
     const value = params.get(key)
     if (value?.trim() && Number.isFinite(Number(value)) && Number(value) >= 0) filters[key] = Number(value)
   }
+  const bounds = Object.fromEntries(['west', 'south', 'east', 'north'].map(key => [key, params.get(key)?.trim() ? Number(params.get(key)) : undefined]))
+  if (validSearchBounds(bounds)) Object.assign(filters, bounds)
+  else delete filters.location
   return filters
 }
 

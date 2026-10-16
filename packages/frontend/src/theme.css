@@ -432,3 +432,36 @@ input::placeholder, textarea::placeholder { color: #808b95; }
 .property-management-delete { width: 40px; color: #9a6457; background: transparent; border-color: transparent; }
 .property-management-delete:hover { background: #fff0ec; color: #b42318; }
 .property-delete-pending { font-size: 20px; }
+
+/* Keep authentication readable in narrow windows and at larger text sizes. */
+.auth-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100dvh; }
+.auth-layout > *, .auth-story > *, .auth-main > div { min-width: 0; }
+.auth-story { padding: clamp(32px, 5vw, 64px) clamp(28px, 5vw, 80px); }
+.auth-story .banner-label { display: block; white-space: normal; overflow-wrap: anywhere; line-height: 1.7; }
+.auth-story h2 { font-size: clamp(32px, 4vw, 64px); overflow-wrap: break-word; }
+.auth-story p, .auth-story footer { overflow-wrap: break-word; }
+.auth-main { padding: 48px clamp(24px, 4vw, 56px); }
+.auth-form-card { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 820px) {
+  .auth-layout { display: block; }
+  .auth-story { display: none; }
+  .auth-main { min-height: 100dvh; padding: 36px 24px; }
+  .auth-main .brand { display: inline-flex; margin-bottom: 32px; }
+}
+@media (max-width: 380px) {
+  .auth-main { padding: 28px 18px; }
+  .auth-main .auth-heading h2 { font-size: 28px; }
+}
+
+/* Sidebar controls remain available when the navigation is collapsed. */
+.brand-row .close-sidebar { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; }
+.topbar .sidebar-toggle { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; }
+@media (min-width: 821px) {
+  .app-shell .sidebar { transition: transform .2s ease, visibility .2s; }
+  .app-shell .workspace { transition: margin-left .2s ease; }
+  .app-shell.sidebar-collapsed .sidebar { transform: translateX(-100%); visibility: hidden; }
+  .app-shell.sidebar-collapsed .workspace { margin-left: 0; }
+  .app-shell.sidebar-collapsed .topbar.map-topbar { display: flex; position: fixed; top: 20px; left: 16px; width: 40px; height: 40px; min-height: 0; padding: 0; justify-content: center; background: white; border: 1px solid var(--swiss-line); border-radius: 14px; z-index: 40; }
+  .app-shell.sidebar-collapsed .map-topbar .breadcrumb, .app-shell.sidebar-collapsed .map-topbar .topbar-actions { display: none; }
+  .app-shell.sidebar-collapsed .map-floating-toolbar { left: 76px; }
+}

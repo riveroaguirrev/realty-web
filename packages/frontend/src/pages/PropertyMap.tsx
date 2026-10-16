@@ -1,3 +1,4 @@
+import { validSearchBounds } from '@/utils/searchLocation'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -17,6 +18,7 @@ export function PropertyMap() {
   const { accessToken } = useAuth()
   const [params, setParams] = useSearchParams()
   const filters = useMemo(() => readMapFilters(params), [params])
+  const searchBounds = useMemo(() => validSearchBounds(filters) ? { west: filters.west, south: filters.south, east: filters.east, north: filters.north } : null, [filters])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [bounds, setBounds] = useState<MapBounds | null>(null)
   const [onlyVisible, setOnlyVisible] = useState(false)
@@ -45,7 +47,7 @@ export function PropertyMap() {
   if (filters.type) listParams.set('type', filters.type)
   return <div className={`map-page ${showFilters ? 'filters-open' : ''}`}>
     <div className="map-floating-toolbar">
-      <div className="map-toolbar-heading"><div><h1>Mapa de propiedades</h1><p aria-live="polite">{query.isPending ? 'Buscando…' : query.isError ? 'Búsqueda no disponible' : `${query.data?.locatedTotal || 0} ${query.data?.locatedTotal === 1 ? 'propiedad' : 'propiedades'}`}{filters.type ? ` · ${PROPERTY_TYPES[filters.type] || filters.type}` : ' · Todos los inmuebles'}</p></div><div className="map-toolbar-buttons"><button className="button button-secondary" aria-expanded={showResults} aria-controls="map-results-panel" onClick={() => setShowResults(value => !value)}><Icon name="grid" />Resultados</button><button className={`button ${showFilters ? 'button-primary' : 'button-secondary'}`} aria-expanded={showFilters} aria-controls="map-filter-panel" onClick={() => setShowFilters(value => !value)}><Icon name="filter" />Filtros{Object.keys(filters).length > 0 && <span className="map-filter-count">{Object.keys(filters).length}</span>}</button><Link to={`/search?${listParams.toString()}`} className="icon-button" aria-label="Explorar en cuadrícula"><Icon name="arrow" /></Link></div></div>
+      <div className="map-toolbar-heading"><div><h1>Mapa de propiedades</h1><p aria-live="polite">{query.isPending ? 'Buscando…' : query.isError ? 'Búsqueda no disponible' : `${query.data?.locatedTotal || 0} ${query.data?.locatedTotal === 1 ? 'propiedad' : 'propiedades'}`}{filters.type ? ` · ${PROPERTY_TYPES[filters.type] || filters.type}` : ' · Todos los inmuebles'}</p></div><div className="map-toolbar-buttons"><button className="button button-secondary" aria-expanded={showResults} aria-controls="map-results-panel" onClick={() => setShowResults(value => !value)}><Icon name="grid" />Resultados</button><button className={`button ${showFilters ? 'button-primary' : 'button-secondary'}`} aria-expanded={showFilters} aria-controls="map-filter-panel" onClick={() => setShowFilters(value => !value)}><Icon name="filter" />Filtros{Object.values(filters).filter(value => value !== undefined).length > 0 && <span className="map-filter-count">{Object.entries(filters).filter(([key, value]) => value !== undefined && !['west', 'south', 'east', 'north'].includes(key)).length}</span>}</button><Link to={`/search?${listParams.toString()}`} className="icon-button" aria-label="Explorar en cuadrícula"><Icon name="arrow" /></Link></div></div>
       {showFilters && <div id="map-filter-panel"><SearchFiltersComponent key={JSON.stringify(filters)} initialFilters={filters} onSearch={search} applySelectsImmediately isLoading={query.isFetching} /></div>}
     </div>
     {query.isError ? <div className="empty-panel" role="alert"><h3>No pudimos cargar las propiedades</h3><p>Revisa tu conexión y vuelve a intentarlo.</p><button className="button button-primary" onClick={() => query.refetch()}>Reintentar</button></div> : <>
@@ -60,7 +62,7 @@ export function PropertyMap() {
           </div>
         </aside>
         <section className="map-explorer" aria-label="Explorar ubicaciones">
-          <Suspense fallback={<div className="loading-panel" role="status">Cargando mapa…</div>}><DiscoveryMap properties={properties} selected={selected} onSelect={select} onBounds={setBounds} /></Suspense>
+          <Suspense fallback={<div className="loading-panel" role="status">Cargando mapa…</div>}><DiscoveryMap properties={properties} searchBounds={searchBounds} selected={selected} onSelect={select} onBounds={setBounds} /></Suspense>
           {selected && <div className="map-selection" aria-label="Propiedad seleccionada"><button className="icon-button map-selection-close" aria-label="Cerrar propiedad seleccionada" onClick={() => setSelectedId(null)}><Icon name="close" /></button><PropertyCard key={selected.id} {...selected} /><p className="map-selection-location"><Icon name="pin" width="15" height="15" />{selected.isExclusive && selected.locationMode === 'EXACT' ? 'Ubicación exacta' : `Zona aproximada · radio de ${selected.locationRadiusMeters || 500} m`}</p></div>}
         </section>
       </div>

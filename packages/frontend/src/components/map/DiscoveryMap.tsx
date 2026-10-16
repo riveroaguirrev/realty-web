@@ -6,13 +6,14 @@ import { radiusPolygon } from '@/utils/mapGeometry'
 
 interface Props {
   properties: MapProperty[]
+  searchBounds: MapBounds | null
   selected: MapProperty | null
   onSelect: (id: string) => void
   onBounds: (bounds: MapBounds) => void
 }
 const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
 
-export default function DiscoveryMap({ properties, selected, onSelect, onBounds }: Props) {
+export default function DiscoveryMap({ properties, searchBounds, selected, onSelect, onBounds }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const latest = useRef({ onSelect, onBounds })
@@ -24,6 +25,7 @@ export default function DiscoveryMap({ properties, selected, onSelect, onBounds 
 
   useEffect(() => {
     if (!token || !container.current) return
+    setReady(false)
     setError('')
     let map: mapboxgl.Map
     try {
@@ -88,12 +90,13 @@ export default function DiscoveryMap({ properties, selected, onSelect, onBounds 
     ;(mapRef.current?.getSource('properties') as GeoJSONSource)?.setData(mapFeatureCollection(properties))
     const areas: GeoJSON.FeatureCollection<GeoJSON.Polygon> = { type: 'FeatureCollection', features: properties.filter(p => !(p.isExclusive && p.locationMode === 'EXACT')).map(p => ({ ...radiusPolygon(p.longitude, p.latitude, p.locationRadiusMeters || 500), properties: { id: p.id } })) }
     ;(mapRef.current?.getSource('areas') as GeoJSONSource)?.setData(areas)
-    fit()
-  }, [ready, properties])
+    if (searchBounds) mapRef.current?.fitBounds([[searchBounds.west, searchBounds.south], [searchBounds.east, searchBounds.north]], { padding: 65, maxZoom: 15, duration: 550 })
+    else fit()
+  }, [ready, properties, searchBounds])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!ready || !map) return
+    if (!ready || !map || !map.getLayer('points') || !map.getSource('selection')) return
     for (const layer of ['areas-fill', 'areas-line']) map.setFilter(layer, ['!=', ['get', 'id'], selected?.id || ''])
     const approximate = selected && !(selected.isExclusive && selected.locationMode === 'EXACT')
     ;(map.getSource('selection') as GeoJSONSource).setData(approximate ? radiusPolygon(selected.longitude, selected.latitude, selected.locationRadiusMeters || 500) : empty)
@@ -105,7 +108,6 @@ export default function DiscoveryMap({ properties, selected, onSelect, onBounds 
   return <div className="discovery-map">
     <div ref={container} className="discovery-canvas" role="region" aria-label="Mapa interactivo de propiedades. Usa la lista para seleccionar una propiedad." />
     {!token ? <div className="discovery-map-message" role="status"><strong>El mapa aún no está configurado</strong><p>Puedes consultar los resultados en la lista mientras se habilita el mapa.</p></div> : error ? <div className="discovery-map-message" role="alert"><p>{error}</p><button className="button button-secondary" onClick={() => { setReady(false); setAttempt(a => a + 1) }}>Reintentar mapa</button></div> : !ready && <div className="discovery-map-message" role="status">Cargando mapa…</div>}
-    {ready && <button className="button button-secondary map-fit-button" onClick={fit} disabled={!properties.length}>Ver todos los resultados</button>}
     <div className="map-legend"><span className="map-legend-dot" />Ubicación exacta<span className="map-legend-cluster">12</span>Agrupación<span className="map-legend-zone" />Zona aproximada</div>
   </div>
 }

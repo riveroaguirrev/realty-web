@@ -160,6 +160,10 @@ export class PropertyService {
   }
 
   async searchProperties(filters?: {
+    west?: number
+    south?: number
+    east?: number
+    north?: number
     city?: string
     region?: string
     type?: string
@@ -194,6 +198,11 @@ export class PropertyService {
     if (filters?.currency) where.currency = filters.currency
     if (organizationId) where.advisor = { organizationId }
 
+    if (filters?.west !== undefined && filters.east !== undefined && filters.south !== undefined && filters.north !== undefined) {
+      where.longitude = { gte: filters.west, lte: filters.east }
+      where.latitude = { gte: filters.south, lte: filters.north }
+    }
+
     if (filters?.priceMin !== undefined || filters?.priceMax !== undefined) {
       where.price = {}
       if (filters.priceMin !== undefined) where.price.gte = filters.priceMin
@@ -220,7 +229,7 @@ export class PropertyService {
 
     if (filters?.mapView) {
       // A map must cover the search, independently of the list's pagination.
-      const locatedWhere = { ...where, latitude: { not: null, gte: -85, lte: 85 }, longitude: { not: null, gte: -180, lte: 180 } }
+      const locatedWhere = { ...where, latitude: { not: null, gte: -85, lte: 85, ...where.latitude }, longitude: { not: null, gte: -180, lte: 180, ...where.longitude } }
       const limit = 2000
       const [properties, total, locatedTotal] = await Promise.all([
         prisma.property.findMany({

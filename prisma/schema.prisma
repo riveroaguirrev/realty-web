@@ -134,6 +134,7 @@ model Advisor {
   requirements          Requirement[]
   matches               Match[]
   notifications         Notification[]
+  pushSubscriptions     PushSubscription[]
   reviews               Review[]
   transactionsAsAdvisor Transaction[] @relation("TransactionAdvisor")
   transactionsAsBuyer   Transaction[] @relation("TransactionBuyer")
@@ -286,6 +287,10 @@ model Requirement {
 
   // Search Criteria
   propertyType            PropertyType[]
+  operation               PropertyOperation @default(SALE)
+  zones                   String[] @default([])
+  requiresGroundFloor     Boolean @default(false)
+  petsRequired            Boolean @default(false)
   budget                  Json?     // {min, max, flexible, preApproved}
   financing               PropertyFinancing @default(MORTGAGE)
   downPayment             Decimal?  @db.Decimal(10, 2)
@@ -508,6 +513,17 @@ model Notification {
 // ============================================================================
 // MESSAGING & CONVERSATIONS
 // ============================================================================
+
+model PushSubscription {
+  id        String @id @default(cuid())
+  advisorId String
+  advisor   Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  endpoint  String @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  @@index([advisorId])
+}
 
 model Conversation {
   id                String   @id @default(cuid())

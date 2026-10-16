@@ -20,6 +20,9 @@ import { Favorites } from '@/pages/Favorites'
 import { Conversations } from '@/pages/Conversations'
 import { ConversationDetail } from '@/pages/ConversationDetail'
 import { NotificationCenter } from '@/components/notifications/NotificationCenter'
+import { Requirements } from '@/pages/Requirements'
+import { RequirementEditor } from '@/pages/RequirementEditor'
+import { RequirementDetail } from '@/pages/RequirementDetail'
 
 const queryClient = new QueryClient()
 
@@ -50,6 +53,10 @@ function App() {
           <Route path="/map" element={<PropertyMap />} />
           <Route path="/search" element={<PropertySearch />} />
           <Route path="/favorites" element={<Favorites />} />
+          <Route path="/requirements" element={<Requirements />} />
+          <Route path="/requirements/create" element={<RequirementEditor />} />
+          <Route path="/requirements/:id/edit" element={<RequirementEditor />} />
+          <Route path="/requirements/:id" element={<RequirementDetail />} />
 
           {/* Messaging & Collaboration */}
           <Route path="/messages" element={<Conversations />} />
