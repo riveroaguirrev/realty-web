@@ -18,6 +18,7 @@ const links: { to: string; label: string; icon: IconName }[] = [
 ]
 export const AppShell = () => {
   const { user, accessToken, logout } = useAuth()
+  const isAdvisor = user?.role === 'ADVISOR'
   const unread = useUnreadMessageCount(accessToken)
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -49,14 +50,14 @@ export const AppShell = () => {
         <button className="close-sidebar icon-button" onClick={closeMenu} aria-label="Ocultar menú lateral" aria-controls="workspace-sidebar"><Icon name="close" /></button></div>
         <span className="workspace-label">TU ESPACIO INMOBILIARIO</span>
         <nav id="workspace-navigation" aria-label="Navegación principal" className={menuOpen ? 'sidebar-nav is-open' : 'sidebar-nav'}>
-          {links.map(({ to, label, icon }) => <NavLink key={to} to={to} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}><Icon name={icon} /><span>{label}</span>{to === '/messages' && unread > 0 && <span className="nav-count" aria-label={`${unread} mensajes sin leer`}>{unread}</span>}</NavLink>)}
-          <div className="sidebar-tip"><span className="eyebrow">CRECE EN EQUIPO</span><strong>Crecer es mejor<br />en equipo.</strong><p>Conecta con tu inmobiliaria y trabaja junto a otros asesores.</p><Link to="/organization/dashboard">Ver mi equipo <Icon name="arrow" /></Link></div>
-          <div className="sidebar-account"><NavLink to="/auth/profile" className="nav-item"><Icon name="user" />Mi perfil</NavLink><button className="nav-item" onClick={logout}><Icon name="logout" />Cerrar sesión</button></div>
+          {links.filter(({ to }) => isAdvisor || (!to.startsWith('/organization') && to !== '/properties' && to !== '/requirements')).map(({ to, label, icon }) => <NavLink key={to} to={to} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}><Icon name={icon} /><span>{label}</span>{to === '/messages' && unread > 0 && <span className="nav-count" aria-label={`${unread} mensajes sin leer`}>{unread}</span>}</NavLink>)}
+          {isAdvisor && <div className="sidebar-tip"><span className="eyebrow">CRECE EN EQUIPO</span><strong>Más conexiones.<br />Más oportunidades.</strong><p>Conecta con tu inmobiliaria y trabaja junto a otros asesores.</p><Link to="/organization/dashboard">Ver mi equipo <Icon name="arrow" /></Link></div>}
+          <div className="sidebar-account"><NavLink to="/auth/profile" className="nav-item"><Icon name="user" />Mi perfil</NavLink><button className="nav-item" onClick={() => { void logout().catch(() => {}) }}><Icon name="logout" />Cerrar sesión</button></div>
         </nav>
 
       </aside>
       <div className="workspace">
-        <header className={`topbar ${pathname === '/map' ? 'map-topbar' : ''}`}><button className="mobile-menu sidebar-toggle icon-button" onClick={toggleMenu} aria-expanded={menuExpanded} aria-controls="workspace-sidebar" aria-label={menuExpanded ? 'Ocultar menú lateral' : 'Mostrar menú lateral'}><Icon name="menu" /></button><div className="breadcrumb">Mi espacio <span>/</span> <strong>{pathname === '/auth/profile' ? 'Mi perfil' : current?.label || 'Propiedades'}</strong></div><div className="topbar-actions"><RequirementNotices /><Link to="/properties/create" className="button button-primary button-small"><Icon name="plus" />Publicar propiedad</Link><Link to="/auth/profile" className="profile-link" aria-label="Ir a mi perfil"><span className="avatar">{user?.firstName?.[0]}{user?.lastName?.[0]}</span><span className="profile-label"><strong>{user?.firstName} {user?.lastName}</strong><small>Mi perfil</small></span></Link></div></header>
+        <header className={`topbar ${pathname === '/map' ? 'map-topbar' : ''}`}><button className="mobile-menu sidebar-toggle icon-button" onClick={toggleMenu} aria-expanded={menuExpanded} aria-controls="workspace-sidebar" aria-label={menuExpanded ? 'Ocultar menú lateral' : 'Mostrar menú lateral'}><Icon name="menu" /></button><div className="breadcrumb">Mi espacio <span>/</span> <strong>{pathname === '/auth/profile' ? 'Mi perfil' : current?.label || 'Propiedades'}</strong></div><div className="topbar-actions">{isAdvisor && <RequirementNotices />}{isAdvisor && <Link to="/properties/create" className="button button-primary button-small"><Icon name="plus" />Publicar propiedad</Link>}<Link to="/auth/profile" className="profile-link" aria-label="Ir a mi perfil"><span className="avatar">{user?.firstName?.[0]}{user?.lastName?.[0]}</span><span className="profile-label"><strong>{user?.firstName} {user?.lastName}</strong><small>Mi perfil</small></span></Link></div></header>
         <main id="main-content" className={`workspace-content ${pathname === '/map' ? 'map-content' : ''}`} tabIndex={-1}><Outlet /></main>
         <footer className={`workspace-footer ${pathname === '/map' ? 'map-footer-hidden' : ''}`}><span>realty. · Tu próxima oportunidad empieza aquí.</span><span>Un espacio para conectar.</span></footer>
       </div>

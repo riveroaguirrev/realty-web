@@ -70,7 +70,7 @@ test('publication announces to other active advisors within the same transaction
       return { ...args.data, id: 'new-req', buyer: { firstName: 'Andy', lastName: 'Velarde' } }
     } },
     advisor: { findMany: async args => {
-      assert.deepEqual(args.where, { status: 'ACTIVE', id: { not: 'author' } })
+      assert.deepEqual(args.where, { status: 'ACTIVE', userRole: 'ADVISOR', id: { not: 'author' } })
       return [{ id: 'other' }]
     } },
     notification: { createMany: async args => { notificationData = args.data } },
@@ -114,4 +114,32 @@ test('push delivery removes expired subscriptions and leaves successful notices 
     assert.deepEqual(removed, {id:'s1'})
     assert.equal(update.scheduledFor, null)
   } finally { for (const [key,value] of Object.entries(old)) { if (value == null) delete process.env[key]; else process.env[key] = value } }
+})
+
+test('requirements reject buyers and revoked sessions before accessing data', async () => {
+  let databaseReads = 0
+  let user = { id: 'advisor', role: 'BUYER' }
+  const SessionError = class extends Error { constructor() { super('Sesión reemplazada'); this.code = 'SESSION_REPLACED'; this.statusCode = 401 } }
+  const { authenticatedRoute } = loadMocked('../src/utils/authenticatedRoute.ts', {
+    'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
+    zod: { ZodError: class extends Error {} },
+    '@/middleware/auth': { requireUser: async () => { if (!user) throw new SessionError(); return user } },
+    '@/lib/prisma': { prisma: { advisor: { findUnique: async () => { databaseReads++; return { status: 'ACTIVE' } } } } },
+    '@/utils/errors': { ApiError: SessionError },
+  })
+  let called = false
+  const handler = async () => { called = true; return { status: 200 } }
+  const buyer = await authenticatedRoute({}, handler)
+  assert.equal(buyer.status, 403)
+  assert.equal(databaseReads, 0)
+  assert.equal(called, false)
+  user = null
+  const revoked = await authenticatedRoute({}, handler)
+  assert.equal(revoked.status, 401)
+  assert.equal(revoked.body.error.code, 'SESSION_REPLACED')
+  assert.equal(databaseReads, 0)
+  user = { id: 'advisor', role: 'ADVISOR' }
+  const advisor = await authenticatedRoute({}, handler)
+  assert.equal(advisor.status, 200)
+  assert.equal(databaseReads, 1)
 })

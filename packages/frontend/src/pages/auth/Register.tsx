@@ -1,164 +1,50 @@
-import { AuthLayout } from '@/components/layout/AuthLayout'
 import { FormEvent, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { UserRole } from '@shared/types'
-
-export const Register = () => {
+import { registrationFormSchema } from '@shared/validation/auth'
+import { AuthLayout } from '@/components/layout/AuthLayout'
+import { AuthField, FormError } from '@/components/ui/AuthField'
+import { useAuth } from '@/hooks/useAuth'
+import { authLink, formErrors, safeNext, savePending } from '@/utils/authFlow'
+export function Register() {
   const navigate = useNavigate()
-  const { register, isLoading, error } = useAuth()
-
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    role: UserRole.ADVISOR as UserRole,
-  })
-
-  const [showPassword, setShowPassword] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+  const [params] = useSearchParams()
+  const next = safeNext(params.get('next'), '/auth/profile')
+  const { register, isLoading } = useAuth()
+  const [data, setData] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', role: UserRole.ADVISOR })
+  const [errors, setErrors] = useState<Record<string, string[]>>({})
+  const change = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setData({ ...data, [event.target.name]: event.target.value })
+    setErrors({ ...errors, [event.target.name]: [], _form: [] })
   }
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setFormError(null)
-
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
-      setFormError('Completa todos los campos para crear tu cuenta')
-      return
-    }
-
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
     try {
-      await register(formData)
-      navigate('/auth/profile')
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'No pudimos crear tu cuenta. Inténtalo de nuevo.')
-    }
+      const { confirmPassword: _confirm, ...payload } = registrationFormSchema.parse(data)
+      const result = await register(payload)
+      if (result.status !== 'AUTHENTICATED') {
+        savePending(result, next)
+        navigate(authLink('/auth/verify', next))
+      }
+    } catch (error) { setErrors(formErrors(error)) }
   }
-
-  return (
-    <AuthLayout title="Crea tu cuenta" description="Todo lo que necesitas para dar el siguiente paso.">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {(error || formError) && (
-              <div role="alert" className="bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm">
-                <p className="font-semibold">Error al registrar</p>
-                <p className="text-sm">{error || formError}</p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre
-                </label>
-                <input
-                  id="firstName" autoComplete="given-name" required
-                  name="firstName"
-                  type="text"
-                  placeholder="Juan"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
-                  disabled={isLoading}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Apellido
-                </label>
-                <input
-                  id="lastName" autoComplete="family-name" required
-                  name="lastName"
-                  type="text"
-                  placeholder="Pérez"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                Correo electrónico
-              </label>
-              <input
-                id="email"
-                autoComplete="email" required
-                name="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
-                Contraseña
-              </label>
-              <div className="password-wrap">
-              <input
-                id="password"
-                autoComplete="new-password" required minLength={8}
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Al menos 8 caracteres"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
-                disabled={isLoading}
-              />
-                <button type="button" className="password-toggle" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Ocultar' : 'Mostrar'}</button>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="role" className="block text-sm font-semibold text-gray-700 mb-2">
-                Tipo de usuario
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50"
-                disabled={isLoading}
-              >
-                <option value={UserRole.BUYER}>Comprador</option>
-                <option value={UserRole.ADVISOR}>Asesor Inmobiliario</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 px-4 rounded-lg shadow-lg text-base font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Creando cuenta...' : 'Crear cuenta'}
-            </button>
-          </form>
-
-          <div className="mt-8 pt-8 border-t-2 border-gray-100">
-            <p className="text-center text-gray-600">
-              ¿Ya tienes cuenta?{' '}
-              <Link to="/auth/login" className="text-green-600 hover:text-green-700 font-bold transition-colors">
-                Inicia sesión aquí
-              </Link>
-            </p>
-          </div>
-    </AuthLayout>
-  )
+  return <AuthLayout title="Crea tu cuenta" description="Una cuenta personal para cada usuario.">
+    <form noValidate onSubmit={submit} className="space-y-5">
+      <FormError errors={errors} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <AuthField label="Nombres" name="firstName" autoComplete="given-name" required value={data.firstName} onChange={change} error={errors.firstName} disabled={isLoading} />
+        <AuthField label="Apellidos" name="lastName" autoComplete="family-name" required value={data.lastName} onChange={change} error={errors.lastName} disabled={isLoading} />
+      </div>
+      <AuthField label="Correo electrónico" name="email" type="email" autoComplete="email" required value={data.email} onChange={change} error={errors.email} disabled={isLoading} />
+      <AuthField label="Contraseña" name="password" type="password" autoComplete="new-password" hint="Usa al menos 12 caracteres. Puedes usar una frase." required value={data.password} onChange={change} error={errors.password} disabled={isLoading} />
+      <AuthField label="Confirmar contraseña" name="confirmPassword" type="password" autoComplete="new-password" required value={data.confirmPassword} onChange={change} error={errors.confirmPassword} disabled={isLoading} />
+      <div><label htmlFor="role" className="block text-sm font-semibold mb-2">Tipo de usuario</label>
+        <select id="role" name="role" value={data.role} onChange={change} disabled={isLoading} className="w-full border-2 rounded-lg p-3" aria-invalid={!!errors.role?.length} aria-describedby={errors.role?.length ? 'role-error' : undefined}>
+          <option value={UserRole.ADVISOR}>Asesor inmobiliario</option><option value={UserRole.BUYER}>Comprador</option>
+        </select>{errors.role?.length ? <p id="role-error" className="text-red-700">{errors.role.join(' ')}</p> : null}
+      </div>
+      <button className="button button-primary w-full" disabled={isLoading}>{isLoading ? 'Creando cuenta…' : 'Crear cuenta'}</button>
+    </form>
+    <p className="mt-6 text-center">¿Ya tienes cuenta? <Link to={authLink('/auth/login', next)} className="text-green-700 font-semibold">Inicia sesión</Link></p>
+  </AuthLayout>
 }

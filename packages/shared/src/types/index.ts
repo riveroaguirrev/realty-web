@@ -50,8 +50,21 @@ export interface SignUpPayload extends AuthPayload {
 }
 
 export interface AuthResponse {
+  status: 'AUTHENTICATED'
   user: User
   accessToken: string
+  refreshToken: string
+}
+
+export interface PendingAuth {
+  status: 'EMAIL_VERIFICATION_REQUIRED' | 'DEVICE_VERIFICATION_REQUIRED'
+  email: string
+  challengeId?: string
+}
+export type LoginResult = AuthResponse | PendingAuth
+export interface RecoveryGrant {
+  challengeId: string
+  recoveryToken: string
 }
 
 // ============================================================================
@@ -214,6 +227,7 @@ export interface ApiResponse<T> {
   error?: {
     message: string
     code?: string
+    fieldErrors?: Record<string, string[]>
   }
   meta?: {
     page?: number

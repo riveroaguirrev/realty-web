@@ -24,7 +24,7 @@ export async function publishRequirement(advisorId: string, input: unknown) {
   // The announcement and publication commit together. Push transport failure cannot undo a publication.
   return prisma.$transaction(async tx => {
     const requirement = await tx.requirement.create({ data: { ...data, buyerId: advisorId }, include: { buyer: { select: buyerSelect } } })
-    const recipients = await tx.advisor.findMany({ where: { status: 'ACTIVE', id: { not: advisorId } }, select: { id: true } })
+    const recipients = await tx.advisor.findMany({ where: { status: 'ACTIVE', userRole: 'ADVISOR', id: { not: advisorId } }, select: { id: true } })
     if (recipients.length) await tx.notification.createMany({ data: recipients.map(({ id }) => ({
       advisorId: id, type: 'REQUIREMENT_CREATED' as const, channel: 'PUSH' as const,
       title: 'Nuevo requerimiento', message: `${requirement.buyer.firstName} ${requirement.buyer.lastName}: ${requirement.title}`,

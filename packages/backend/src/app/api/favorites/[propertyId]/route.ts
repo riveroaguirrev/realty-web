@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { favoritesService } from '@/services/favorites.service'
 import { supabase } from '@/lib/supabase'
@@ -11,6 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: { property
     const isFavorite = await favoritesService.isFavorite(user.id, params.propertyId)
     return NextResponse.json({ success: true, data: { isFavorite } })
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     if (error instanceof ApiError) return sendError(error, error.statusCode)
     console.error('Check favorite error:', error)
     return sendError(Errors.INTERNAL_ERROR, 500)

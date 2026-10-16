@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { propertyService } from '@/services/property.service'
 import { verifyAuth, sendError } from '@/middleware/auth'
@@ -8,7 +10,7 @@ export async function GET(req: NextRequest) {
     const auth = await verifyAuth(req)
 
     if (!auth.user) {
-      const response = sendError(Errors.UNAUTHORIZED, 401)
+      const response = sendError(auth.error ?? Errors.UNAUTHORIZED, 401)
       return response
     }
 
@@ -29,6 +31,7 @@ export async function GET(req: NextRequest) {
     })
     return response
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Error fetching advisor properties:', error)
     const response = sendError(Errors.INTERNAL_ERROR, 500)
     return response

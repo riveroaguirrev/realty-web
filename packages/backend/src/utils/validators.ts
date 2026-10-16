@@ -1,60 +1,14 @@
-import { UserRole } from '@shared/types'
+import { emailSchema, passwordSchema, registerSchema, loginSchema } from '@shared/validation/auth'
 import type { PropertyStatus, PropertyType } from '@prisma/client'
 
-export const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
+export const validateEmail = (value: unknown) => emailSchema.safeParse(value).success
+export const validatePassword = (value: unknown) => passwordSchema.safeParse(value).success
+const validate = (schema: typeof registerSchema | typeof loginSchema, payload: unknown) => {
+  const result = schema.safeParse(payload)
+  return { isValid: result.success, errors: result.success ? [] : result.error.issues.map((issue) => issue.message) }
 }
-
-export const validatePassword = (password: string): boolean => {
-  return Boolean(password) && password.length >= 6
-}
-
-export const validateSignUp = (payload: any) => {
-  const errors: string[] = []
-
-  if (!payload.email || !validateEmail(payload.email)) {
-    errors.push('Valid email is required')
-  }
-
-  if (!payload.password || !validatePassword(payload.password)) {
-    errors.push('Password must be at least 6 characters')
-  }
-
-  if (!payload.firstName || payload.firstName.trim().length === 0) {
-    errors.push('First name is required')
-  }
-
-  if (!payload.lastName || payload.lastName.trim().length === 0) {
-    errors.push('Last name is required')
-  }
-
-  if (!payload.role || !Object.values(UserRole).includes(payload.role)) {
-    errors.push('Valid role (ADVISOR or BUYER) is required')
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  }
-}
-
-export const validateLogin = (payload: any) => {
-  const errors: string[] = []
-
-  if (!payload.email || !validateEmail(payload.email)) {
-    errors.push('Valid email is required')
-  }
-
-  if (!payload.password) {
-    errors.push('Password is required')
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  }
-}
+export const validateSignUp = (payload: unknown) => validate(registerSchema, payload)
+export const validateLogin = (payload: unknown) => validate(loginSchema, payload)
 
 const PROPERTY_TYPES = ['RESIDENTIAL', 'COMMERCIAL', 'LAND', 'APARTMENT', 'HOUSE', 'OFFICE', 'INDUSTRIAL']
 const PROPERTY_STATUSES = ['AVAILABLE', 'UNDER_OFFER', 'SOLD', 'RENT', 'ARCHIVED']

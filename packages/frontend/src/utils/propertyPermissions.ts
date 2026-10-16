@@ -8,7 +8,7 @@ interface OwnedProperty {
 const ORG_ADMIN_PERMISSION = 'org:admin'
 
 export const canManageProperty = (user: User | null, property: OwnedProperty): boolean => {
-  if (!user) return false
+  if (!user || user.role === 'BUYER') return false
   if (property.advisorId === user.id) return true
 
   const isOrgAdmin = user.permissions?.some((permission) => permission === ORG_ADMIN_PERMISSION)

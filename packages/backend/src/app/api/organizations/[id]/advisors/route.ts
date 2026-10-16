@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { ApiResponse, Permission } from '@shared/types'
 import { requireUser } from '@/middleware/auth'
@@ -27,13 +29,13 @@ export async function GET(
       {
         status: 200,
         headers: {
-          'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       }
     )
   } catch (error) {
+    if (error instanceof AccountApiError || (error instanceof Error && error.name === 'ZodError')) return accountErrorResponse(error)
     console.error('List advisors error:', error)
 
     if (error instanceof Error && error.message === 'Permission denied') {
@@ -93,13 +95,13 @@ export async function POST(
       {
         status: 201,
         headers: {
-          'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       }
     )
   } catch (error) {
+    if (error instanceof AccountApiError || (error instanceof Error && error.name === 'ZodError')) return accountErrorResponse(error)
     console.error('Send invite error:', error)
 
     if (error instanceof Error && error.message.includes('already')) {
@@ -138,7 +140,6 @@ export async function OPTIONS(): Promise<NextResponse> {
     {
       status: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },

@@ -17,19 +17,14 @@ function loadTS(file, mocks, env = {}) {
   return module.exports
 }
 
-test('development uses the Vite proxy; production respects its API URL', () => {
-  for (const [env, expected] of [
-    [{ DEV: true, VITE_API_URL: 'http://localhost:3000/api' }, '/api'],
-    [{ DEV: false, VITE_API_URL: 'https://api.example.com/api' }, 'https://api.example.com/api'],
-    [{ DEV: false }, '/api'],
-  ]) {
-    let options
-    loadTS('../src/services/organization.ts', {
-      axios: { create: config => { options = config; return {} } },
-    }, env)
-    assert.equal(options.baseURL, expected)
-    assert.equal(options.timeout, 15000)
-  }
+test('organization requests use the shared authenticated client', async () => {
+  let request
+  const { organizationAPI } = loadTS('../src/services/organization.ts', {
+    './api': { httpClient: { get: async (url, config) => { request = { url, config }; return { data: { success: true, data: [] } } } } },
+  })
+  await organizationAPI.listInvites('test-token', 'org')
+  assert.equal(request.url, '/organizations/org/invites')
+  assert.equal(request.config.headers.Authorization, 'Bearer test-token')
 })
 
 test('retry recovers organization and members after a network failure', async () => {

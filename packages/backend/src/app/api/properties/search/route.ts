@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { propertyService } from '@/services/property.service'
 import { ApiResponse } from '@shared/types'
@@ -66,6 +68,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       { status: 200 }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Search properties error:', error)
     return NextResponse.json(
       {

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { formErrors } from '@/utils/authFlow'
+import { organizationSchema } from '@shared/validation/auth'
 import { useOrganization } from '@/hooks/useOrganization'
+const fieldLabels: Record<string, string> = { name: 'Nombre', city: 'Ciudad', region: 'Región', email: 'Correo', phone: 'Teléfono' }
 
 export const OrganizationSetup = () => {
   const navigate = useNavigate()
@@ -22,15 +25,16 @@ export const OrganizationSetup = () => {
     setLocalError(null)
 
     try {
-      await createOrganization(formData.name, {
-        city: formData.city,
-        region: formData.region,
-        email: formData.email,
-        phone: formData.phone,
+      const validated = organizationSchema.parse({ ...formData, phone: formData.phone.replace(/\s/g, "") })
+      await createOrganization(validated.name, {
+        city: validated.city,
+        region: validated.region,
+        email: validated.email,
+        phone: validated.phone,
       })
       navigate('/organization/dashboard')
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'No pudimos crear la inmobiliaria.')
+      setLocalError(Object.entries(formErrors(err)).map(([field, messages]) => (field === '_form' ? '' : (fieldLabels[field] ?? field) + ': ') + messages.join(' ')).join(' '))
     }
   }
 
@@ -39,7 +43,7 @@ export const OrganizationSetup = () => {
     setLocalError(null)
 
     if (!inviteCode.trim()) {
-      setLocalError('Please enter an invite code')
+      setLocalError('Escribe el código de invitación')
       return
     }
 
@@ -130,7 +134,7 @@ export const OrganizationSetup = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
                     <input
                       type="text"
-                      name="city"
+                      name="city" required
                       value={formData.city}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -141,7 +145,7 @@ export const OrganizationSetup = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Región</label>
                     <input
                       type="text"
-                      name="region"
+                      name="region" required
                       value={formData.region}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

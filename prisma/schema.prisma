@@ -71,6 +71,8 @@ model InviteCode {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   expiresAt      DateTime     @default(dbgenerated("now() + interval '7 days'"))
   usedAt         DateTime?
+  usedById       String?
+  cancelledAt    DateTime?
   createdAt      DateTime     @default(now())
 
   @@index([organizationId])
@@ -85,6 +87,10 @@ model Advisor {
   firstName             String
   lastName              String
   email                 String    @unique
+  userRole              UserRole  @default(ADVISOR)
+  activeSessionId       String?   @db.Uuid
+  authorizedBrowserHash String?
+  credentialsVersion    Int       @default(0)
   phone                 String?
   profileImage          String?
   bio                   String?
@@ -144,12 +150,51 @@ model Advisor {
   activityLogs          ActivityLog[]
   conversationParticipants ConversationParticipant[]
   messagesSent          Message[]
+  accountSessions       AccountSession[]
 
   @@index([organizationId])
   @@index([email])
   @@index([status])
   @@index([rating])
   @@index([createdAt])
+}
+
+// Only server-authorized sessions may access application data.
+model AccountSession {
+  id          String   @id @db.Uuid
+  advisorId   String
+  advisor     Advisor  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  browserHash String
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  @@index([advisorId, revokedAt])
+}
+
+model AuthChallenge {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String
+  purpose     String
+  email       String
+  newEmail    String?
+  browserHash String
+  sessionId   String?  @db.Uuid
+  credentialsVersion Int @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+  @@index([userId, purpose])
+}
+
+model AuthRateLimit {
+  key       String   @id
+  hits      Int
+  resetAt   DateTime
+  @@index([resetAt])
+}
+
+enum UserRole {
+  ADVISOR
+  BUYER
 }
 
 // ============================================================================

@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { ApiResponse } from '@shared/types'
 import { requireUser } from '@/middleware/auth'
@@ -36,13 +38,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       {
         status: 200,
         headers: {
-          'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Accept invite error:', error)
 
     if (error instanceof Error && error.message.includes('Invalid')) {
@@ -91,7 +93,6 @@ export async function OPTIONS(): Promise<NextResponse> {
     {
       status: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { propertySearchAPI } from '@/services/propertySearch'
@@ -15,6 +15,7 @@ export const Dashboard = () => {
   const [query, setQuery] = useState('')
   const { user, accessToken } = useAuth()
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['dashboard-discovery', accessToken], queryFn: () => propertySearchAPI.search(accessToken!, { pageSize: 3 }), enabled: !!accessToken })
+  if (user?.role === 'BUYER') return <Navigate to='/search' replace />
   return <div className="dashboard-page">
     <div className="page-heading"><div><p className="eyebrow">TU DÍA, MÁS SIMPLE</p><h1>Hola, {user?.firstName || 'bienvenido'}<span className="greeting-dot">.</span></h1><p>Tus propiedades, contactos y próximas oportunidades. Todo en un lugar.</p></div><span className="date-label">{new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
     <section className="welcome-banner">

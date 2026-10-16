@@ -1,26 +1,14 @@
 import { publicPropertyLocation } from '@/utils/propertyLocation'
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { favoritesService } from '@/services/favorites.service'
-import { supabase } from '@/lib/supabase'
+import { requireUser } from '@/middleware/auth'
 import { ApiResponse } from '@shared/types'
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } },
-        { status: 401 }
-      )
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
+    const user = await requireUser(request)
 
     const body = await request.json() as { propertyId?: string }
     const { propertyId } = body
@@ -42,6 +30,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       { status: 201 }
     )
   } catch (error: any) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     if (error.code === 'P2002') {
       return NextResponse.json(
         { success: false, error: { code: 'ALREADY_FAVORITED', message: 'Already favorited' } },
@@ -62,21 +51,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } },
-        { status: 401 }
-      )
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
+    const user = await requireUser(request)
 
     const { searchParams } = new URL(request.url)
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1
@@ -98,6 +73,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       { status: 200 }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Get favorites error:', error)
     return NextResponse.json(
       {

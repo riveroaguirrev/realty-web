@@ -16,7 +16,7 @@ function organizationError(error: unknown, fallback: string): string {
 }
 
 export const useOrganization = () => {
-  const { accessToken } = useAuth()
+  const { accessToken, getProfile } = useAuth()
   const {
     organization,
     advisors,
@@ -35,6 +35,7 @@ export const useOrganization = () => {
     try {
       const org = await organizationAPI.create(accessToken!, { name, ...data })
       setOrganization(org)
+      await getProfile()
       return org
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create organization'
@@ -130,7 +131,9 @@ export const useOrganization = () => {
     setError(null)
     try {
       const org = await organizationAPI.acceptInvite(accessToken!, code)
-      setOrganization(org)
+      await getProfile()
+      const updated = await organizationAPI.get(accessToken!, org.organizationId)
+      setOrganization(updated)
       return org
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to accept invite'

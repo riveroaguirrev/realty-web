@@ -1,8 +1,12 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { propertyService } from '@/services/property.service'
 import { verifyAuth, sendError } from '@/middleware/auth'
 import { Errors } from '@/utils/errors'
 import { validatePropertyInput } from '@/utils/validators'
+import { Permission } from '@shared/types'
+import { requirePermission } from '@/lib/permissions'
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,6 +40,7 @@ export async function GET(req: NextRequest) {
     })
     return response
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Error fetching properties:', error)
     const response = sendError(Errors.INTERNAL_ERROR, 500)
     return response
@@ -47,10 +52,11 @@ export async function POST(req: NextRequest) {
     const auth = await verifyAuth(req)
 
     if (!auth.user) {
-      const response = sendError(Errors.UNAUTHORIZED, 401)
+      const response = sendError(auth.error ?? Errors.UNAUTHORIZED, 401)
       return response
     }
 
+    requirePermission(auth.user.permissions, Permission.PROPERTY_CREATE)
     const validation = validatePropertyInput(await req.json())
     if (!validation.isValid) {
       return NextResponse.json(
@@ -71,6 +77,7 @@ export async function POST(req: NextRequest) {
     })
     return response
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Error creating property:', error)
     const response = sendError(error || Errors.INTERNAL_ERROR, 400)
     return response

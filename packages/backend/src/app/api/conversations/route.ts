@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { conversationService } from '@/services/conversation.service'
 import { supabase } from '@/lib/supabase'
@@ -41,6 +43,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       { status: 200 }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('List conversations error:', error)
     return NextResponse.json(
       {
@@ -104,6 +107,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       { status: 201 }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Create conversation error:', error)
     return NextResponse.json(
       {

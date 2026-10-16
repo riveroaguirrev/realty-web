@@ -29,7 +29,7 @@ export const requirementNotifications = {
     const subscription = await registration?.pushManager.getSubscription()
     if (subscription) {
       await subscription.unsubscribe()
-      await apiClient.delete('/notifications/subscriptions', { ...config(token), data: { endpoint: subscription.endpoint } })
+      await apiClient.delete('/notifications/subscriptions', { ...config(token), data: { endpoint: subscription.endpoint }, timeout: 5000 })
     }
   },
 }

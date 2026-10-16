@@ -6,6 +6,8 @@ interface AuthState {
   accessToken: string | null
   isLoading: boolean
   error: string | null
+  isReady: boolean
+  setReady: (ready: boolean) => void
 
   setUser: (user: User | null) => void
   setAccessToken: (token: string | null) => void
@@ -16,17 +18,14 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  accessToken: localStorage.getItem('accessToken'),
+  accessToken: null,
   isLoading: false,
   error: null,
+  isReady: false,
+  setReady: (isReady) => set({ isReady }),
 
   setUser: (user) => set({ user }),
   setAccessToken: (token) => {
-    if (token) {
-      localStorage.setItem('accessToken', token)
-    } else {
-      localStorage.removeItem('accessToken')
-    }
     set({ accessToken: token })
   },
   setIsLoading: (loading) => set({ isLoading: loading }),

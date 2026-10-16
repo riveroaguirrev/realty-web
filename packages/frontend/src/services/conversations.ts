@@ -1,12 +1,5 @@
-import axios from 'axios'
+import { httpClient as client } from './api'
 import { ApiResponse } from '@shared/types'
-
-// Use Vite's same-origin proxy for both localhost and 127.0.0.1.
-const API_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || '/api'
-
-const client = axios.create({
-  baseURL: API_URL,
-})
 
 export const conversationsAPI = {
   async list(token: string, page = 1, pageSize = 20) {

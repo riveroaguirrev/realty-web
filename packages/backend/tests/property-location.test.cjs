@@ -12,7 +12,7 @@ function loadTS(relative) {
   }).outputText
   const module = { exports: {} }
   new Function('require', 'module', 'exports', source)(id =>
-    id === '@shared/types' ? loadTS('../../shared/src/types/index.ts') : require(id), module, module.exports)
+    id === '@shared/types' || id === '../types' ? loadTS('../../shared/src/types/index.ts') : id === '@shared/validation/auth' ? loadTS('../../shared/src/validation/auth.ts') : require(id), module, module.exports)
   return module.exports
 }
 const { validatePropertyInput } = loadTS('../src/utils/validators.ts')

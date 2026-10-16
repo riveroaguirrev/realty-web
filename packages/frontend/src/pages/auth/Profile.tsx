@@ -1,164 +1,51 @@
-import { FormEvent, useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { FormEvent, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-
-export const Profile = () => {
-  const navigate = useNavigate()
-  const { user, isLoading, error, logout, updateProfile } = useAuth()
-
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    bio: '',
-    phone: '',
-  })
-
-  const [formError, setFormError] = useState<string | null>(null)
+import { AuthField, FormError } from '@/components/ui/AuthField'
+import { profileSchema } from '@shared/validation/auth'
+import { formErrors } from '@/utils/authFlow'
+import { AccountSecurity } from '@/components/auth/AccountSecurity'
+export function Profile() {
+  const { user, updateProfile, isLoading } = useAuth()
+  const [data, setData] = useState({ firstName: '', lastName: '', bio: '', prefix: '', number: '' })
+  const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [success, setSuccess] = useState(false)
-
   useEffect(() => {
-    if (user) {
-      setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        bio: user.bio || '',
-        phone: user.phone || '',
-      })
-    }
-  }, [user])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setFormError(null)
-    setSuccess(false)
-
+    if (!user) return
+    const twoDigit = new Set('20 27 30 31 32 33 34 36 39 40 41 43 44 45 46 47 48 49 51 52 53 54 55 56 57 58 60 61 62 63 64 65 66 81 82 84 86 90 91 92 93 94 95 98'.split(' '))
+    const phone = user.phone ?? ''
+    const prefixLength = /^\+[17]/.test(phone) ? 2 : twoDigit.has(phone.slice(1, 3)) ? 3 : 4
+    const parts = phone.startsWith('+') ? [phone, phone.slice(0, prefixLength), phone.slice(prefixLength)] : null
+    setData({ firstName: user.firstName, lastName: user.lastName, bio: user.bio ?? '', prefix: parts?.[1] ?? '', number: parts?.[2] ?? user.phone ?? '' })
+  }, [user?.id])
+  const change = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { setData({ ...data, [event.target.name]: event.target.value }); setSuccess(false) }
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setErrors({}); setSuccess(false)
     try {
-      await updateProfile(formData)
-      setSuccess(true)
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'No pudimos actualizar tu perfil')
-    }
+      const payload = profileSchema.parse({ firstName: data.firstName, lastName: data.lastName, bio: data.bio, phone: (data.prefix + data.number).replace(/\s/g, '') })
+      await updateProfile(payload); setSuccess(true)
+    } catch (error) { setErrors(formErrors(error)) }
   }
-
-  const handleLogout = () => {
-    logout()
-    navigate('/auth/login')
-  }
-
-  return (
-    <>
-      <div className="page-surface">
-        <div className="max-w-2xl mx-auto bg-white shadow rounded-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Mi perfil</h1>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700"
-            >
-              Cerrar sesión
-            </button>
-          </div>
-
-          <div className="mb-6 pb-6 border-b border-gray-200">
-            <p className="text-sm text-gray-600">
-              <strong>Email:</strong> {user?.email}
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              <strong>Rol:</strong> {user?.role === 'BUYER' ? 'Comprador' : 'Asesor inmobiliario'}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {(error || formError) && (
-              <div role="alert" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                {error || formError}
-              </div>
-            )}
-
-            {success && (
-              <div role="status" className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-                Tu perfil se ha actualizado.
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                Nombre
-              </label>
-              <input
-                id="firstName"
-                name="firstName"
-                type="text"
-                value={formData.firstName}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                Apellido
-              </label>
-              <input
-                id="lastName"
-                name="lastName"
-                type="text"
-                value={formData.lastName}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                Teléfono
-              </label>
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
-                Acerca de ti
-              </label>
-              <textarea
-                id="bio"
-                name="bio"
-                rows={4}
-                value={formData.bio}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                disabled={isLoading}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Guardando…' : 'Guardar cambios'}
-            </button>
-          </form>
+  return <div className="page-surface"><div className="max-w-2xl mx-auto space-y-6">
+    <section className="bg-white shadow rounded-lg p-6">
+      <h1 className="text-2xl font-bold mb-4">Mi perfil</h1>
+      <p className="mb-2"><strong>Correo:</strong> {user?.email}</p>
+      <p className="mb-6"><strong>Tipo de cuenta:</strong> {user?.role === 'BUYER' ? 'Comprador' : 'Asesor inmobiliario'}</p>
+      <form noValidate onSubmit={submit} className="space-y-5">
+        <FormError errors={errors} />
+        {success && <p role="status" className="text-green-700">Tu perfil se ha actualizado.</p>}
+        <AuthField label="Nombres" name="firstName" autoComplete="given-name" value={data.firstName} onChange={change} error={errors.firstName} required disabled={isLoading} />
+        <AuthField label="Apellidos" name="lastName" autoComplete="family-name" value={data.lastName} onChange={change} error={errors.lastName} required disabled={isLoading} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <AuthField label="Prefijo internacional" name="prefix" type="tel" autoComplete="tel-country-code" placeholder="+591" value={data.prefix} onChange={change} error={errors.phone} disabled={isLoading} />
+          <div className="sm:col-span-2"><AuthField label="Teléfono (opcional)" name="number" type="tel" autoComplete="tel-national" value={data.number} onChange={change} disabled={isLoading} /></div>
         </div>
-      </div>
-    </>
-  )
+        <div><label htmlFor="bio" className="block text-sm font-semibold mb-2">Acerca de ti (opcional)</label>
+          <textarea id="bio" name="bio" value={data.bio} onChange={change} rows={4} className="w-full border-2 rounded-lg p-3" disabled={isLoading} aria-invalid={!!errors.bio?.length} aria-describedby={errors.bio?.length ? 'bio-error' : undefined} />
+          {errors.bio?.length ? <p id="bio-error" className="text-red-700">{errors.bio.join(' ')}</p> : null}
+        </div>
+        <button className="button button-primary w-full" disabled={isLoading}>{isLoading ? 'Guardando…' : 'Guardar cambios'}</button>
+      </form>
+    </section>
+    <AccountSecurity />
+  </div></div>
 }

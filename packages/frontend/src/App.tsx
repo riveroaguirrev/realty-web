@@ -23,12 +23,16 @@ import { NotificationCenter } from '@/components/notifications/NotificationCente
 import { Requirements } from '@/pages/Requirements'
 import { RequirementEditor } from '@/pages/RequirementEditor'
 import { RequirementDetail } from '@/pages/RequirementDetail'
+import { AuthSessionLifecycle } from '@/components/layout/AuthSessionLifecycle'
+import { Verify } from '@/pages/auth/Verify'
+import { ForgotPassword } from '@/pages/auth/ForgotPassword'
 
 const queryClient = new QueryClient()
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthSessionLifecycle />
       <BrowserRouter>
         <NotificationCenter />
         <Routes>
@@ -37,6 +41,8 @@ function App() {
           {/* Auth Routes */}
           <Route path="/auth/login" element={<Login />} />
           <Route path="/auth/register" element={<Register />} />
+          <Route path="/auth/verify" element={<Verify />} />
+          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
           <Route path="/auth/profile" element={<Profile />} />
 
@@ -44,27 +50,27 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
 
           {/* Properties */}
-          <Route path="/properties" element={<Properties />} />
-          <Route path="/properties/create" element={<CreateProperty />} />
-          <Route path="/properties/:id/edit" element={<EditProperty />} />
+          <Route path="/properties" element={<ProtectedRoute advisorsOnly><Properties /></ProtectedRoute>} />
+          <Route path="/properties/create" element={<ProtectedRoute advisorsOnly><CreateProperty /></ProtectedRoute>} />
+          <Route path="/properties/:id/edit" element={<ProtectedRoute advisorsOnly><EditProperty /></ProtectedRoute>} />
           <Route path="/properties/:id" element={<PropertyDetail />} />
 
           {/* Search & Discovery */}
           <Route path="/map" element={<PropertyMap />} />
           <Route path="/search" element={<PropertySearch />} />
           <Route path="/favorites" element={<Favorites />} />
-          <Route path="/requirements" element={<Requirements />} />
-          <Route path="/requirements/create" element={<RequirementEditor />} />
-          <Route path="/requirements/:id/edit" element={<RequirementEditor />} />
-          <Route path="/requirements/:id" element={<RequirementDetail />} />
+          <Route path="/requirements" element={<ProtectedRoute advisorsOnly><Requirements /></ProtectedRoute>} />
+          <Route path="/requirements/create" element={<ProtectedRoute advisorsOnly><RequirementEditor /></ProtectedRoute>} />
+          <Route path="/requirements/:id/edit" element={<ProtectedRoute advisorsOnly><RequirementEditor /></ProtectedRoute>} />
+          <Route path="/requirements/:id" element={<ProtectedRoute advisorsOnly><RequirementDetail /></ProtectedRoute>} />
 
           {/* Messaging & Collaboration */}
           <Route path="/messages" element={<Conversations />} />
           <Route path="/messages/:id" element={<ConversationDetail />} />
 
           {/* Organization Routes */}
-          <Route path="/organization/setup" element={<OrganizationSetup />} />
-          <Route path="/organization/dashboard" element={<OrganizationDashboard />} />
+          <Route path="/organization/setup" element={<ProtectedRoute advisorsOnly><OrganizationSetup /></ProtectedRoute>} />
+          <Route path="/organization/dashboard" element={<ProtectedRoute advisorsOnly><OrganizationDashboard /></ProtectedRoute>} />
           </Route>
           <Route path="/invite" element={<InviteAccept />} />
 

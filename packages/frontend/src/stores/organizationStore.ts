@@ -11,6 +11,7 @@ export interface Organization {
   phone?: string
   website?: string
   logo?: string
+  seats?: { limit: number; occupied: number; reserved: number; available: number }
 }
 
 export interface OrganizationState {

@@ -1,40 +1,13 @@
-import { ReactNode, useEffect } from 'react'
+import { ReactNode } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
+import { UserRole } from '@shared/types'
 import { useAuth } from '@/hooks/useAuth'
-import { useNavigate } from 'react-router-dom'
-
-interface ProtectedRouteProps {
-  children: ReactNode
-}
-
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, user, accessToken, getProfile, logout } = useAuth()
-  const navigate = useNavigate()
-
-  // The token survives a page reload (localStorage) but the user profile does not.
-  const isRestoringSession = Boolean(accessToken) && !user
-
-  useEffect(() => {
-    if (!isRestoringSession) return
-    getProfile().catch(() => logout())
-  }, [isRestoringSession])
-
-  useEffect(() => {
-    if (!isLoading && !isRestoringSession && !isAuthenticated) {
-      navigate('/auth/login')
-    }
-  }, [isAuthenticated, isLoading, isRestoringSession, navigate])
-
-  if ((isLoading && !user) || isRestoringSession) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-gray-600">Preparando tu espacio...</div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return null
-  }
-
+export const ProtectedRoute = ({ children, advisorsOnly = false }: { children: ReactNode; advisorsOnly?: boolean }) => {
+  const { isReady, isAuthenticated, accessToken, user, error, getProfile } = useAuth()
+  const location = useLocation()
+  if (!isReady) return <div className="loading-panel" role="status">Preparando tu espacio…</div>
+  if (accessToken && !user) return <div className="empty-panel" role="alert"><p>{error || 'No pudimos restaurar tu sesión.'}</p><button className="button button-primary" onClick={() => { void getProfile().catch(() => {}) }}>Reintentar</button></div>
+  if (!isAuthenticated) return <Navigate to={'/auth/login?next=' + encodeURIComponent(location.pathname + location.search)} replace />
+  if (advisorsOnly && user?.role !== UserRole.ADVISOR) return <Navigate to="/search" replace />
   return <>{children}</>
 }

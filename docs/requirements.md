@@ -14,14 +14,7 @@ La puntuación expresa compatibilidad con los campos comparados, no probabilidad
 
 ## Instalación
 
-Con Node 22 y las dependencias instaladas:
-
-```sh
-npm run db:generate -w @realty/backend
-node --env-file=.env.local ./node_modules/prisma/build/index.js db execute --file=./prisma/sql/requirements.sql --schema=./prisma/schema.prisma
-```
-
-La migración es aditiva e idempotente. No usar `db push --accept-data-loss`.
+La migración `202610160001_property_requirements` aplica las columnas de descubrimiento y requerimientos, y crea la tabla privada de suscripciones push. En una base nueva se ejecuta con las migraciones de autenticación mediante `prisma migrate deploy`. En una base local previa gestionada con `db push`, sigue primero la conversión a migraciones descrita en `docs/ACCOUNT_FLOWS.md`; esta migración admite columnas ya existentes. El script `prisma/sql/requirements.sql` se conserva para instalaciones anteriores y no debe ejecutarse además de la migración en instalaciones nuevas.
 
 ## Push
 

@@ -1,3 +1,5 @@
+import { ApiError as AccountApiError } from '@/utils/errors'
+import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { messageService } from '@/services/message.service'
 import { supabase } from '@/lib/supabase'
@@ -61,6 +63,7 @@ export async function PUT(
       { status: 200 }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Edit message error:', error)
     return NextResponse.json(
       {
@@ -121,6 +124,7 @@ export async function DELETE(
       { status: 200 }
     )
   } catch (error) {
+    if (error instanceof AccountApiError) return accountErrorResponse(error)
     console.error('Delete message error:', error)
     return NextResponse.json(
       {
