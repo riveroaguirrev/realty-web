@@ -6,27 +6,29 @@
     "name": "realty-api",
     "url": "https://realty-api-century21urbanbo-9375s-projects.vercel.app",
     "rootDirectory": "packages/backend",
-    "deploymentId": "dpl_D2x6n6xJBkHwcNqmaTELuS8tMntQ",
-    "deploymentUrl": "https://realty-856ybhtjd-century21urbanbo-9375s-projects.vercel.app",
+    "deploymentId": "dpl_7ZhbDiAfL1DBGBrrcYnafHAQ3qBz",
+    "deploymentUrl": "https://realty-rjwrdbspe-century21urbanbo-9375s-projects.vercel.app",
     "status": "READY",
     "promoted": true,
     "healthVerified": true,
-    "previousDeploymentId": "dpl_E7DkpwLqR6is2ohRghUoY6Gssh4P",
+    "previousDeploymentId": "dpl_D2x6n6xJBkHwcNqmaTELuS8tMntQ",
     "nextVersion": "16.4.6",
     "reactVersion": "19.3.1",
     "source": {
-      "baseCommit": "728afd1b89b7a13fd2382d065cb512ad4f46e395",
+      "baseCommit": "ce9b4bc313cad0c07853dc3b96c7a661ccef0436",
       "dirty": true,
-      "sha256": "551881d8103bd65267a31e3458cbc803667c52f78b78e7be98e36510e3e3f7e7"
-    }
+      "sha256": "7a89ae22656141821596fe271ccf60e73c1ea43e2037e7fe0f4e6f967163d0e7",
+      "files": 201
+    },
+    "signupVerificationRequired": false
   },
   "frontend": {
     "projectId": "prj_PdlccImiJEadTPmwRVKTd6PtE1Mf",
     "name": "realty-web",
     "url": "https://realty-web-century21urbanbo-9375s-projects.vercel.app",
     "rootDirectory": "packages/frontend",
-    "deploymentId": "dpl_GrDsHSRjqeyod9fLmJx4GokRk5Qn",
-    "deploymentUrl": "https://realty-fd38bqf7u-century21urbanbo-9375s-projects.vercel.app",
+    "deploymentId": "dpl_5sgEPjYWpQvsDjea7vxa6Rtd71PU",
+    "deploymentUrl": "https://realty-8xwl2fioo-century21urbanbo-9375s-projects.vercel.app",
     "status": "READY",
     "promoted": true,
     "loginPageVerified": true,
@@ -34,42 +36,39 @@
     "publicRoutesVerified": true,
     "authCookieVerified": true,
     "source": {
-      "baseCommit": "728afd1b89b7a13fd2382d065cb512ad4f46e395",
+      "baseCommit": "ce9b4bc313cad0c07853dc3b96c7a661ccef0436",
       "dirty": true,
-      "sha256": "551881d8103bd65267a31e3458cbc803667c52f78b78e7be98e36510e3e3f7e7"
-    }
+      "sha256": "a8b6868526485108b6c2ae3443df9bbb8f3d7360fcb6d7b4068d8d151ab1d889",
+      "files": 201
+    },
+    "previousDeploymentId": "dpl_6boPVAKBbuKKy19xmH4XV2wWpnxt",
+    "registrationPageVerified": true,
+    "userTypeSelectorRemoved": true
   },
   "source": {
-    "baseCommit": "728afd1b89b7a13fd2382d065cb512ad4f46e395",
+    "baseCommit": "ce9b4bc313cad0c07853dc3b96c7a661ccef0436",
     "dirty": true,
-    "sha256": "551881d8103bd65267a31e3458cbc803667c52f78b78e7be98e36510e3e3f7e7"
+    "sha256": "7a89ae22656141821596fe271ccf60e73c1ea43e2037e7fe0f4e6f967163d0e7",
+    "files": 201
   },
-  "lastVerifiedDate": "2026-11-19",
+  "lastVerifiedDate": "2026-11-23",
   "release": {
-    "date": "2026-11-19",
+    "date": "2026-11-23",
     "status": "PUBLISHED",
     "frontendPublished": true,
-    "backendLocalVersion": "16.4.6",
-    "backendBuildVerified": true,
-    "localTestsPassed": 60,
-    "localIntegrationTestsSkipped": 4,
-    "databaseMigrationApplied": true,
-    "publicHealthStatus": 200,
-    "nextStep": "Publish the three DNS records in deploy/RESEND-DNS.md, verify auth.century21.bo in Resend, then test real email signup/login. Realtime messaging and image cleanup scheduler remain pending.",
     "backendPublished": true,
-    "backendDeployedVersion": "16.4.6",
-    "appliedMigration": "202611180001_managed_property_images",
-    "supabaseStatus": "ACTIVE_HEALTHY",
+    "source": "local-workspace",
+    "directSignupConfigured": true,
+    "signupVerificationEnvironmentVariable": "AUTH_REQUIRE_SIGNUP_VERIFICATION=false",
+    "localTestsPassed": 20,
+    "localIntegrationTestsSkipped": 4,
     "backendTypeCheckPassed": true,
-    "productionSmokeTestsPassed": 7,
-    "authenticatedUserFlowsVerified": true,
-    "authenticatedApiChecksPassed": 20,
-    "passwordLoginVerified": true,
-    "photoUploadVerified": true,
-    "otpVerificationMethod": "admin-generated-code",
-    "emailDeliveryVerified": false,
+    "frontendTypeCheckPassed": true,
+    "frontendRegistrationPageVerified": true,
+    "publicProxyHealthVerified": true,
     "signupEmailEndToEndVerified": false,
-    "realtimeMessagingVerified": false,
-    "testFixturesRemoved": true
+    "productionSignupEndToEndVerified": false,
+    "note": "Published local UI and direct signup changes. No new production account was created during verification. Automatic Git deployment connection was not changed.",
+    "userTypeSelectorRemoved": true
   }
 }

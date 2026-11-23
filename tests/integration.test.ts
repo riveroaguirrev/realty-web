@@ -50,7 +50,7 @@ test('real Supabase signup, device handover, recovery, bcrypt storage and double
   const url = new URL(process.env.DATABASE_URL!)
   assert.equal(url.hostname, '127.0.0.1')
   assert.equal(url.port, '59941', 'Integration tests must use the isolated test database')
-  const signup = await authService.signUp({ email, password, firstName: 'María José', lastName: 'Pérez', role: UserRole.ADVISOR })
+  const signup = await authService.signUp({ email, password, firstName: 'María José', lastName: 'Pérez', role: UserRole.ADVISOR }, browserA)
   assert.equal(signup.status, 'EMAIL_VERIFICATION_REQUIRED')
   const signupCode = await codeFor(email)
   await assert.rejects(authService.verify({ purpose: 'signup', email, code: '000000' }, browserA), { code: 'INVALID_CODE' })

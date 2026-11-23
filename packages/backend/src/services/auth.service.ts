@@ -33,8 +33,26 @@ export class AuthService {
       include: { organization: true },
     })
   }
-  async signUp(payload: SignUpPayload): Promise<LoginResult> {
+  async signUp(payload: SignUpPayload, browserHash: string): Promise<LoginResult> {
     await rateLimit('mail:' + payload.email, 1, 60)
+    // Temporary direct registration. Set this flag to true to restore signup codes.
+    if (process.env.AUTH_REQUIRE_SIGNUP_VERIFICATION !== 'true') {
+      const created = await supabase.auth.admin.createUser({
+        email: payload.email, password: payload.password, email_confirm: true,
+        user_metadata: { firstName: payload.firstName, lastName: payload.lastName, role: payload.role },
+      })
+      if (created.error) {
+        if (['email_exists', 'user_already_exists'].includes(created.error.code ?? '')) throw Errors.USER_ALREADY_EXISTS
+        throw new ApiError(503, 'REGISTRATION_FAILED', 'No pudimos crear la cuenta. Inténtalo de nuevo más tarde.')
+      }
+      if (!created.data.user) throw new ApiError(503, 'REGISTRATION_FAILED', 'No pudimos crear la cuenta. Inténtalo de nuevo más tarde.')
+      const advisor = await this.ensureProfile(created.data.user)
+      const signed = await getSupabaseClient().auth.signInWithPassword({ email: payload.email, password: payload.password })
+      if (signed.error || !signed.data.session || signed.data.user?.id !== advisor.id) {
+        throw new ApiError(503, 'REGISTRATION_LOGIN_FAILED', 'Tu cuenta se creó. Inicia sesión con tu correo y contraseña.')
+      }
+      return this.authorize(signed.data.session, advisor.id, browserHash)
+    }
     const { data, error } = await getSupabaseClient().auth.signUp({
       email: payload.email, password: payload.password,
       options: { data: { firstName: payload.firstName, lastName: payload.lastName, role: payload.role } },

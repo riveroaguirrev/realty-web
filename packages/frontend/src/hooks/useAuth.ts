@@ -15,7 +15,11 @@ export const useAuth = () => {
       throw error
     } finally { useAuthStore.getState().setIsLoading(false) }
   }, [])
-  const register = useCallback((payload: SignUpPayload) => run(() => authAPI.register(payload)), [run])
+  const register = useCallback((payload: SignUpPayload) => run(async () => {
+    const response = await authAPI.register(payload)
+    if (response.status === 'AUTHENTICATED') await acceptSession(response)
+    return response
+  }), [run])
   const login = useCallback((payload: AuthPayload) => run(async () => {
     const response = await authAPI.login(payload)
     if (response.status === 'AUTHENTICATED') await acceptSession(response)
