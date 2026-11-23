@@ -7,7 +7,7 @@ import { ApiResponse } from '@shared/types'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
     const token = request.headers.get('authorization')?.split(' ')[1]
@@ -26,7 +26,7 @@ export async function PUT(
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Verify conversation exists and user is participant
     const conversation = await conversationService.getConversation(id)

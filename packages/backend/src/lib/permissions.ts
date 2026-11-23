@@ -1,4 +1,5 @@
 import { Permission, UserRole } from '@shared/types'
+import type { Prisma } from '@prisma/client'
 import { Errors } from '@/utils/errors'
 
 export const isOrgAdmin = (permissions?: Permission[]): boolean => {
@@ -58,4 +59,15 @@ export const requirePropertyManagement = (actor: PropertyActor, property: Proper
   if (!canManageProperty(actor, property)) {
     throw Errors.FORBIDDEN
   }
+}
+
+export const visiblePropertyWhere = (actor: PropertyActor): Prisma.PropertyWhereInput => {
+  const published: Prisma.PropertyWhereInput = { status: { not: 'ARCHIVED' } }
+  if (actor.role === UserRole.BUYER) return published
+
+  const accessible: Prisma.PropertyWhereInput[] = [published, { advisorId: actor.id }]
+  if (actor.organizationId && isOrgAdmin(actor.permissions)) {
+    accessible.push({ organizationId: actor.organizationId })
+  }
+  return { OR: accessible }
 }

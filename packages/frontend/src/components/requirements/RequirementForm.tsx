@@ -53,7 +53,7 @@ export const RequirementForm = ({ token, initial, onSaved }: Props) => {
       <div className="req-checks"><label className="req-check"><input type="checkbox" checked={garage} onChange={e => setGarage(e.target.checked)} />Necesita garaje</label><label className="req-check"><input type="checkbox" checked={ground} onChange={e => setGround(e.target.checked)} />En planta baja</label><label className="req-check"><input type="checkbox" checked={pets} onChange={e => setPets(e.target.checked)} />Debe admitir mascotas</label></div>
     </div>
     {error && <p className="req-error" role="alert">{error}</p>}
-    <p className="req-note">{initial ? 'Al guardar se actualizarán las sugerencias.' : 'Al publicar, los demás asesores recibirán un aviso y podrás revisar inmuebles sugeridos.'} Las condiciones del texto libre deben confirmarse con el asesor del inmueble.</p>
+    <p className="req-note">{initial ? 'Al guardar se actualizarán las sugerencias.' : 'Al publicar verás debajo las propiedades con más coincidencias y los demás asesores recibirán un aviso.'} La compatibilidad prioriza habitaciones, zona, presupuesto, parqueo, mascotas, superficie y preferencias adicionales. Las condiciones del texto libre deben confirmarse con el asesor del inmueble.</p>
     <button className="button button-primary" disabled={busy} type="submit">{busy ? 'Guardando…' : initial ? 'Guardar cambios' : 'Publicar requerimiento'}</button>
   </form>
 }

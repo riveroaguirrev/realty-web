@@ -2,15 +2,14 @@ import { ApiError as AccountApiError } from '@/utils/errors'
 import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { favoritesService } from '@/services/favorites.service'
-import { supabase } from '@/lib/supabase'
 import { ApiResponse } from '@shared/types'
 import { requireUser, sendError } from '@/middleware/auth'
 import { ApiError, Errors } from '@/utils/errors'
 
-export async function GET(request: NextRequest, { params }: { params: { propertyId: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ propertyId: string }> }) {
   try {
     const user = await requireUser(request)
-    const isFavorite = await favoritesService.isFavorite(user.id, params.propertyId)
+    const isFavorite = await favoritesService.isFavorite(user.id, (await params).propertyId)
     return NextResponse.json({ success: true, data: { isFavorite } })
   } catch (error) {
     if (error instanceof AccountApiError) return accountErrorResponse(error)
@@ -22,26 +21,12 @@ export async function GET(request: NextRequest, { params }: { params: { property
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { propertyId: string } }
+  { params }: { params: Promise<{ propertyId: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } },
-        { status: 401 }
-      )
-    }
+    const user = await requireUser(request)
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
-
-    const { propertyId } = params
+    const { propertyId } = await params
 
     if (!propertyId) {
       return NextResponse.json(
@@ -60,6 +45,7 @@ export async function DELETE(
       { status: 200 }
     )
   } catch (error: any) {
+    if (error instanceof ApiError) return accountErrorResponse(error)
     if (error.code === 'P2025') {
       return NextResponse.json(
         {

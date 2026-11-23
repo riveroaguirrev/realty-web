@@ -1,13 +1,10 @@
 import { publicPropertyLocation } from '@/utils/propertyLocation'
+import { propertyDiscoveryView } from '@/utils/propertyView'
 import { canManageProperty } from '@/lib/permissions'
-import { ApiError as AccountApiError } from '@/utils/errors'
-import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { propertyService } from '@/services/property.service'
-import { propertyImageService } from '@/services/propertyImage.service'
 import { requireUser, sendError, verifyAuth } from '@/middleware/auth'
 import { ApiError, Errors } from '@/utils/errors'
-import { requirePropertyManagement } from '@/lib/permissions'
 import { validatePropertyInput } from '@/utils/validators'
 
 const PROPERTY_NOT_FOUND = new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found')
@@ -18,7 +15,7 @@ const PROPERTY_IN_USE = new ApiError(
 )
 const FOREIGN_KEY_VIOLATION = 'P2003'
 
-type RouteContext = { params: { id: string } }
+type RouteContext = { params: Promise<{ id: string }> }
 
 const handleError = (error: unknown, action: string) => {
   if (error instanceof ApiError) return sendError(error, error.statusCode)
@@ -31,12 +28,15 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const auth = await verifyAuth(req)
     if (!auth.user) return sendError(auth.error ?? Errors.UNAUTHORIZED, 401)
 
-    const property = await propertyService.getProperty(params.id)
+    const { id } = await params
+    const property = await propertyService.getProperty(id)
     if (!property) return sendError(PROPERTY_NOT_FOUND, 404)
 
-    return NextResponse.json({ success: true, data: canManageProperty(auth.user, property) ? property : publicPropertyLocation(property) })
+    const canManage = canManageProperty(auth.user, property)
+    if (!canManage && property.status === 'ARCHIVED') return sendError(PROPERTY_NOT_FOUND, 404)
+
+    return NextResponse.json({ success: true, data: canManage ? property : publicPropertyLocation(propertyDiscoveryView(property)) })
   } catch (error) {
-    if (error instanceof AccountApiError) return accountErrorResponse(error)
     return handleError(error, 'fetching')
   }
 }
@@ -44,10 +44,6 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 export async function PUT(req: NextRequest, { params }: RouteContext) {
   try {
     const user = await requireUser(req)
-
-    const existing = await propertyService.getProperty(params.id)
-    if (!existing) return sendError(PROPERTY_NOT_FOUND, 404)
-    requirePropertyManagement(user, existing)
 
     const validation = validatePropertyInput(await req.json())
     if (!validation.isValid) {
@@ -57,14 +53,11 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
       )
     }
 
-    const updated = await propertyService.updateProperty(params.id, validation.data)
-
-    const removedImages = existing.images.filter((url) => !validation.data.images.includes(url))
-    await propertyImageService.deleteByUrls(removedImages)
+    const { id } = await params
+    const updated = await propertyService.updateProperty(id, validation.data, user)
 
     return NextResponse.json({ success: true, data: updated })
   } catch (error) {
-    if (error instanceof AccountApiError) return accountErrorResponse(error)
     return handleError(error, 'updating')
   }
 }
@@ -73,21 +66,15 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const user = await requireUser(req)
 
-    const existing = await propertyService.getProperty(params.id)
-    if (!existing) return sendError(PROPERTY_NOT_FOUND, 404)
-    requirePropertyManagement(user, existing)
-
+    const { id } = await params
     try {
-      await propertyService.deleteProperty(params.id)
+      await propertyService.deleteProperty(id, user)
     } catch (error: any) {
       if (error?.code === FOREIGN_KEY_VIOLATION) return sendError(PROPERTY_IN_USE, 409)
       throw error
     }
-    await propertyImageService.deleteByUrls(existing.images)
-
     return NextResponse.json({ success: true, data: { deleted: true } })
   } catch (error) {
-    if (error instanceof AccountApiError) return accountErrorResponse(error)
     return handleError(error, 'deleting')
   }
 }

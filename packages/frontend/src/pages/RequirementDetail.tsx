@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { requirementsAPI, requirementError } from '@/services/requirements'
 import { conversationsAPI } from '@/services/conversations'
 import { PropertyCard } from '@/components/property/PropertyCard'
+import { RequirementCompatibility } from '@/components/requirements/RequirementCompatibility'
 import { PROPERTY_TYPES } from '@/utils/propertyPresentation'
 import { OPERATIONS, STATUSES, requirementBudget } from './Requirements'
 import type { RequirementStatus } from '@shared/types/requirements'
@@ -16,7 +17,14 @@ export const RequirementDetail = () => {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const query = useQuery({ queryKey: ['requirement', id, accessToken], queryFn: () => requirementsAPI.get(accessToken!, id!), enabled: !!id && !!accessToken })
+  const [minScore, setMinScore] = useState(0)
+  const [withinBudget, setWithinBudget] = useState(false)
+  const query = useQuery({
+    queryKey: ['requirement', id, accessToken, minScore, withinBudget],
+    queryFn: () => requirementsAPI.get(accessToken!, id!, { minScore, withinBudget }),
+    enabled: !!id && !!accessToken,
+    placeholderData: previous => previous?.data.id === id ? previous : undefined,
+  })
   const r = query.data?.data
   const updateStatus = async (status: RequirementStatus) => {
     setBusy(true); setError('')
@@ -40,8 +48,13 @@ export const RequirementDetail = () => {
       <div className="req-tags">{r.bedroomsMin != null && <span>{r.bedroomsMin}+ habitaciones</span>}{r.bathroomsMin != null && <span>{r.bathroomsMin}+ baños</span>}{r.areaMin != null && <span>Desde {r.areaMin} m²</span>}{r.requiresGarage && <span>Con garaje</span>}{r.requiresGroundFloor && <span>Planta baja</span>}{r.petsRequired && <span>Admite mascotas</span>}</div></div>
       <div className="req-actions">{owner ? <><Link className="button" to={`/requirements/${r.id}/edit`}>Editar</Link><button className="button" disabled={busy} onClick={() => updateStatus(r.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE')}>{r.status === 'ACTIVE' ? 'Pausar búsqueda' : 'Reactivar búsqueda'}</button>{r.status !== 'FULFILLED' && <button className="button button-primary" disabled={busy} onClick={() => updateStatus('FULFILLED')}>Marcar como atendido</button>}</> : <button className="button button-primary" disabled={busy} onClick={contact}>Contactar al asesor</button>}</div>
     </div>{error && <p className="req-error" role="alert">{error}</p>}
-    <div className="req-suggestions-heading"><h2>Inmuebles que podrían servir</h2><p>Ordenados por compatibilidad con los datos publicados. Confirma las condiciones pendientes con el asesor.</p></div>
-    {!r.suggestions.length && <div className="req-empty"><h3>{r.status !== 'ACTIVE' ? 'La búsqueda no está activa' : 'Aún no hay inmuebles compatibles'}</h3><p>{r.status !== 'ACTIVE' ? 'Reactiva el requerimiento para consultar sugerencias.' : 'Puedes volver a revisar cuando se publiquen nuevos inmuebles.'}</p><button className="button" onClick={() => query.refetch()}>Actualizar sugerencias</button></div>}
-    <div className="req-grid">{r.suggestions.map(s => <div className="req-suggestion" key={s.propertyId}><PropertyCard {...s.property} price={Number(s.property.price)} /><div className="req-match"><strong>{s.score}% de compatibilidad con los campos comparados</strong><ul>{s.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>{s.mismatches.length > 0 && <div className="req-mismatches"><strong>Para revisar</strong><ul>{s.mismatches.map(reason => <li key={reason}>{reason}</li>)}</ul></div>}</div></div>)}</div>
+    <div className="req-suggestions-heading"><h2>Propiedades con más coincidencias</h2><p>Hasta 12 opciones, de mayor a menor compatibilidad. Prioridad: habitaciones, zona, presupuesto, parqueo, mascotas, superficie y preferencias adicionales.</p><p>Solo cuentan los criterios solicitados. La zona se compara con lo escrito en el anuncio; las condiciones del texto libre deben confirmarse con el asesor.</p></div>
+    <div className="req-match-filters">
+      <label>Compatibilidad mínima<select value={minScore} onChange={event => setMinScore(Number(event.target.value))}><option value={0}>Todas las coincidencias</option><option value={70}>70% o más</option><option value={80}>80% o más</option><option value={90}>90% o más</option></select></label>
+      <label className="req-check"><input type="checkbox" checked={withinBudget} disabled={r.priceMin == null && r.priceMax == null} onChange={event => setWithinBudget(event.target.checked)} />Solo dentro del presupuesto{r.priceMin == null && r.priceMax == null && <small>Presupuesto abierto</small>}</label>
+      {query.isFetching && <span role="status">Actualizando coincidencias…</span>}
+    </div>
+    {!r.suggestions.length && <div className="req-empty"><h3>{r.status !== 'ACTIVE' ? 'La búsqueda no está activa' : minScore || withinBudget ? 'No hay opciones con estos filtros' : 'Aún no hay inmuebles compatibles'}</h3><p>{r.status !== 'ACTIVE' ? 'Reactiva el requerimiento para consultar sugerencias.' : minScore || withinBudget ? 'Reduce la compatibilidad mínima o amplía el presupuesto para revisar alternativas.' : 'Puedes volver a revisar cuando se publiquen nuevos inmuebles.'}</p>{!!(minScore || withinBudget) && <button className="button" onClick={() => { setMinScore(0); setWithinBudget(false) }}>Quitar filtros</button>} <button className="button" onClick={() => query.refetch()}>Actualizar sugerencias</button></div>}
+    <div className="req-grid" aria-busy={query.isFetching}>{r.suggestions.map(s => <div className="req-suggestion" key={s.propertyId}><PropertyCard {...s.property} price={Number(s.property.price)} /><RequirementCompatibility suggestion={s} /></div>)}</div>
   </div>
 }

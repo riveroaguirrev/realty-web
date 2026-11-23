@@ -54,7 +54,7 @@ export function PropertyImageEditor({ src, filename, onSave, onClose }: Props) {
       context.fillRect(0, 0, canvas.width, canvas.height)
       context.drawImage(image.current, crop.x, crop.y, crop.width, crop.height, 0, 0, canvas.width, canvas.height)
       const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(result => result ? resolve(result) : reject(new Error()), 'image/jpeg', .9))
-      if (blob.size > 5 * 1024 * 1024) throw new Error()
+      if (blob.size > 4 * 1024 * 1024) throw new Error()
       onSave(new File([blob], `${filename.replace(/\.[^.]+$/, '')}-recorte.jpg`, { type: 'image/jpeg' }))
     } catch {
       setError('No pudimos guardar el recorte. Prueba con una fotografía cargada desde tu dispositivo.')

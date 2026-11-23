@@ -157,8 +157,8 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
         e.target.value = ''
         return
       }
-      if (files.some(file => !file.type.startsWith('image/') || file.size > 5 * 1024 * 1024)) {
-        setError('Selecciona imágenes de hasta 5 MB cada una.')
+      if (files.some(file => !file.type.startsWith('image/') || file.size > 4 * 1024 * 1024)) {
+        setError('Selecciona imágenes de hasta 4 MB cada una.')
         e.target.value = ''
         return
       }
@@ -351,7 +351,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
         <label htmlFor="property-images" className="photo-upload">
           <input id="property-images" type="file" multiple accept="image/*" onChange={handleImageSelect} className="photo-upload-input" aria-describedby="photo-upload-help" />
           <span className="photo-upload-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9M17 3h6m-3-3v6M3 16l5-5 9 10m-4-4 3-3 5 5" /><circle cx="8" cy="7" r="1" /></svg></span>
-          <span className="photo-upload-copy"><strong>Un buen espacio merece buenas fotos</strong><span id="photo-upload-help">Selecciona varias imágenes · Hasta 20 fotos · 5 MB por foto</span></span>
+          <span className="photo-upload-copy"><strong>Un buen espacio merece buenas fotos</strong><span id="photo-upload-help">Selecciona varias imágenes · Hasta 20 fotos · 4 MB por foto</span></span>
           <span className="photo-upload-cta"><Icon name="plus" />Agregar fotos</span>
         </label>
         {(existingImages.length > 0 || images.length > 0) && <>

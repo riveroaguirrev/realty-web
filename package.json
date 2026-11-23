@@ -20,7 +20,9 @@
     "db:policies": "node --env-file=.env.local ./node_modules/prisma/build/index.js db execute --file=./prisma/sql/realtime-messaging.sql --schema=./prisma/schema.prisma",
     "db:migrate": "node --env-file=.env.local ./node_modules/prisma/build/index.js migrate dev --schema=./prisma/schema.prisma",
     "db:studio": "node --env-file=.env.local ./node_modules/prisma/build/index.js studio --schema=./prisma/schema.prisma",
-    "db:seed:demo": "node scripts/seed-demo.cjs"
+    "db:seed:demo": "node scripts/seed-demo.cjs",
+    "deploy:configure": "node scripts/configure-vercel.cjs",
+    "db:deploy": "node scripts/deploy-database.cjs"
   },
   "keywords": [
     "real-estate",
@@ -31,10 +33,11 @@
   "devDependencies": {
     "@playwright/test": "^1.56.0",
     "tsx": "^4.20.0",
-    "turbo": "^2.0.0"
+    "turbo": "^2.0.0",
+    "@typescript-eslint/parser": "^8.71.0"
   },
   "engines": {
-    "node": ">=20.6.0"
+    "node": "22.x"
   },
   "dependencies": {
     "react": "^18.3.1",

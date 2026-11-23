@@ -9,11 +9,11 @@ import { Errors } from '@/utils/errors'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; advisorId: string } }
+  { params }: { params: Promise<{ id: string; advisorId: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
     const user = await requireUser(request)
-    const { id: orgId, advisorId } = params
+    const { id: orgId, advisorId } = await params
 
     // Check if user is member of this organization
     requireOrgAccess(user.organizationId, orgId)

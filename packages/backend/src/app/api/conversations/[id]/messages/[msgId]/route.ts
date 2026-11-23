@@ -7,7 +7,7 @@ import { ApiResponse } from '@shared/types'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; msgId: string } }
+  { params }: { params: Promise<{ id: string; msgId: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
     const token = request.headers.get('authorization')?.split(' ')[1]
@@ -26,11 +26,11 @@ export async function PUT(
       )
     }
 
-    const { msgId } = params
+    const { msgId } = await params
     const body = await request.json() as { content?: string }
     const { content } = body
 
-    if (!content || typeof content !== 'string' || !content.trim()) {
+    if (typeof content !== 'string' || !content.trim()) {
       return NextResponse.json(
         { success: false, error: { code: 'BAD_REQUEST', message: 'content is required' } },
         { status: 400 }
@@ -53,6 +53,9 @@ export async function PUT(
       )
     }
 
+    if (content.trim().length > 10000) {
+      return NextResponse.json({ success: false, error: { code: 'MESSAGE_TOO_LONG', message: 'El mensaje supera los 10.000 caracteres.' } }, { status: 400 })
+    }
     const updated = await messageService.editMessage(msgId, content.trim())
 
     return NextResponse.json(
@@ -77,7 +80,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; msgId: string } }
+  { params }: { params: Promise<{ id: string; msgId: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
     const token = request.headers.get('authorization')?.split(' ')[1]
@@ -96,7 +99,7 @@ export async function DELETE(
       )
     }
 
-    const { msgId } = params
+    const { msgId } = await params
 
     const message = await messageService.getMessage(msgId)
     if (!message) {

@@ -9,11 +9,11 @@ import { Errors } from '@/utils/errors'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
     const user = await requireUser(request)
-    const { id: orgId } = params
+    const { id: orgId } = await params
 
     // Check if user is member of this organization
     requireOrgAccess(user.organizationId, orgId)

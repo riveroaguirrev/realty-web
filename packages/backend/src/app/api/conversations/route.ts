@@ -1,5 +1,6 @@
 import { ApiError as AccountApiError } from '@/utils/errors'
 import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
+import { readPagination } from '@/utils/pagination'
 import { NextRequest, NextResponse } from 'next/server'
 import { conversationService } from '@/services/conversation.service'
 import { supabase } from '@/lib/supabase'
@@ -24,8 +25,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     }
 
     const { searchParams } = new URL(request.url)
-    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1
-    const pageSize = searchParams.get('pageSize') ? parseInt(searchParams.get('pageSize')!) : 20
+    const { page, pageSize } = readPagination(searchParams, 20)
 
     const result = await conversationService.listConversations(user.id, page, pageSize)
 

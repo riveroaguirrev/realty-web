@@ -317,6 +317,20 @@ model Property {
   @@index([publishedAt])
 }
 
+// The property ID is retained after deletion until Storage cleanup succeeds.
+model PropertyImage {
+  id          String    @id @default(cuid())
+  path        String    @unique
+  url         String    @unique
+  uploadedBy  String
+  propertyId  String?
+  removedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([propertyId])
+  @@index([removedAt])
+}
+
 // ============================================================================
 // REQUIREMENTS (Requerimientos/Búsquedas)
 // ============================================================================

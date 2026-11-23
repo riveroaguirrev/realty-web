@@ -26,9 +26,23 @@ export interface RequirementRecord extends Omit<RequirementInput, 'priceMin' | '
   createdAt: string
   buyer: { id: string; firstName: string; lastName: string }
 }
+export interface RequirementMatchCriterion {
+  key: 'bedrooms' | 'zone' | 'budget' | 'parking' | 'pets' | 'area' | 'preferences'
+  label: string
+  weight: number
+  earnedWeight: number
+  status: 'MATCH' | 'MISMATCH' | 'UNKNOWN'
+  details: string[]
+}
+export interface RequirementSuggestionFilters {
+  minScore: number
+  withinBudget: boolean
+}
 export interface RequirementSuggestion {
   propertyId: string
-  score: number
+  score: number | null
+  totalWeight?: number
+  breakdown?: RequirementMatchCriterion[]
   reasons: string[]
   mismatches: string[]
   property: {

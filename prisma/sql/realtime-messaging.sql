@@ -3,8 +3,15 @@
 -- The backend connects as a privileged role (Prisma / service role) and bypasses RLS;
 -- these policies only govern browser clients authenticated with a Supabase JWT.
 
+BEGIN;
+
+-- Keep privileged lookups outside the schemas exposed by the Data API.
+CREATE SCHEMA IF NOT EXISTS private;
+REVOKE ALL ON SCHEMA private FROM PUBLIC, anon;
+GRANT USAGE ON SCHEMA private TO authenticated;
+
 -- Tokens from a replaced/unapproved/recovery session must not bypass the API.
-CREATE OR REPLACE FUNCTION public.application_session_allowed()
+CREATE OR REPLACE FUNCTION private.application_session_allowed()
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   SELECT EXISTS (
     SELECT 1 FROM public."AccountSession" s
@@ -17,8 +24,8 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
       AND (a."userRole" = 'BUYER' OR a."activeSessionId" = s.id)
   );
 $$;
-REVOKE ALL ON FUNCTION public.application_session_allowed() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.application_session_allowed() TO authenticated;
+REVOKE ALL ON FUNCTION private.application_session_allowed() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION private.application_session_allowed() TO authenticated;
 
 -- Application data is served by Prisma; only messaging SELECT is exposed to Realtime.
 DO $$
@@ -31,6 +38,12 @@ BEGIN
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', target);
     EXECUTE format('REVOKE ALL ON public.%I FROM anon, authenticated', target);
   END LOOP;
+
+  -- Also protects installs that created the new table with db push.
+  IF to_regclass('public."PropertyImage"') IS NOT NULL THEN
+    ALTER TABLE public."PropertyImage" ENABLE ROW LEVEL SECURITY;
+    REVOKE ALL ON public."PropertyImage" FROM anon, authenticated;
+  END IF;
 END $$;
 
 ALTER TABLE "Conversation" ENABLE ROW LEVEL SECURITY;
@@ -43,12 +56,12 @@ GRANT SELECT ON "Conversation", "ConversationParticipant", "Message" TO authenti
 DROP POLICY IF EXISTS participant_reads_own_rows ON "ConversationParticipant";
 CREATE POLICY participant_reads_own_rows ON "ConversationParticipant"
   FOR SELECT TO authenticated
-  USING (public.application_session_allowed() AND "advisorId" = auth.uid()::text);
+  USING (private.application_session_allowed() AND "advisorId" = auth.uid()::text);
 
 DROP POLICY IF EXISTS participant_reads_conversation ON "Conversation";
 CREATE POLICY participant_reads_conversation ON "Conversation"
   FOR SELECT TO authenticated
-  USING (public.application_session_allowed() AND EXISTS (
+  USING (private.application_session_allowed() AND EXISTS (
     SELECT 1 FROM "ConversationParticipant" p
     WHERE p."conversationId" = "Conversation"."id" AND p."advisorId" = auth.uid()::text
   ));
@@ -56,7 +69,7 @@ CREATE POLICY participant_reads_conversation ON "Conversation"
 DROP POLICY IF EXISTS participant_reads_messages ON "Message";
 CREATE POLICY participant_reads_messages ON "Message"
   FOR SELECT TO authenticated
-  USING (public.application_session_allowed() AND EXISTS (
+  USING (private.application_session_allowed() AND EXISTS (
     SELECT 1 FROM "ConversationParticipant" p
     WHERE p."conversationId" = "Message"."conversationId" AND p."advisorId" = auth.uid()::text
   ));
@@ -70,3 +83,8 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE "Message";
   END IF;
 END $$;
+
+-- Policies now use the private helper; remove the old RPC if previously installed.
+DROP FUNCTION IF EXISTS public.application_session_allowed();
+
+COMMIT;

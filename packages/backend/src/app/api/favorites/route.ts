@@ -1,4 +1,4 @@
-import { publicPropertyLocation } from '@/utils/propertyLocation'
+import { readPagination } from '@/utils/pagination'
 import { ApiError as AccountApiError } from '@/utils/errors'
 import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
@@ -13,19 +13,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const body = await request.json() as { propertyId?: string }
     const { propertyId } = body
 
-    if (!propertyId) {
+    if (typeof propertyId !== 'string' || !propertyId) {
       return NextResponse.json(
         { success: false, error: { code: 'BAD_REQUEST', message: 'propertyId is required' } },
         { status: 400 }
       )
     }
 
-    const favorite = await favoritesService.addFavorite(user.id, propertyId)
+    const favorite = await favoritesService.addFavorite(user, propertyId)
 
     return NextResponse.json(
       {
         success: true,
-        data: { ...favorite, property: publicPropertyLocation(favorite.property) },
+        data: favorite,
       },
       { status: 201 }
     )
@@ -54,15 +54,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const user = await requireUser(request)
 
     const { searchParams } = new URL(request.url)
-    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1
-    const pageSize = searchParams.get('pageSize') ? parseInt(searchParams.get('pageSize')!) : 10
+    const { page, pageSize } = readPagination(searchParams, 10)
 
-    const result = await favoritesService.listFavorites(user.id, page, pageSize)
+    const result = await favoritesService.listFavorites(user, page, pageSize)
 
     return NextResponse.json(
       {
         success: true,
-        data: result.favorites.map((f) => publicPropertyLocation(f.property)),
+        data: result.favorites.map((f) => f.property),
         meta: {
           page: result.page,
           pageSize: result.pageSize,

@@ -20,7 +20,15 @@ for (const [label, env, expected] of [
 ]) {
   test(`all REST services use the correct origin in ${label}`, async () => {
     let config
-    const client = { interceptors: { request: { use() {} }, response: { use() {} } } }
+    const calls = []
+    const response = { data: { success: true, data: [], meta: { total: 0, locatedTotal: 0, limit: 2000 } } }
+    const client = {
+      interceptors: { request: { use() {} }, response: { use() {} } },
+      get: async (url, options) => {
+        calls.push({ url: `${config.baseURL}${url}`, options })
+        return response
+      },
+    }
     const axios = { create: options => { config = options; return client } }
     const api = load('api', env, {
       axios, './supabase': { supabase: {} }, '@/utils/sessionIdentity': {},
@@ -31,11 +39,13 @@ for (const [label, env, expected] of [
     for (const name of ['propertySearch', 'messages', 'favorites', 'conversations', 'organization']) {
       load(name, env, { './api': api })
     }
-    const urls = []
-    const transport = { get: async url => { urls.push(url); return { data: { success: true, data: [], meta: { total: 0, locatedTotal: 0, limit: 2000 } } } } }
+    const transport = { get: async (url, options) => { calls.push({ url, options }); return response } }
     await load('propertyMap', env, { axios: transport }).searchMapProperties('demo-token', {})
-    await load('matching', env, { axios: transport }).matchingAPI.getSimilarProperties('demo-property')
-    assert.equal(urls.length, 2)
-    assert.ok(urls.every(url => url.startsWith(`${expected}/properties/`)))
+    await load('matching', env, { './api': api }).matchingAPI.getSimilarProperties('demo-token', 'demo-property')
+    assert.deepEqual(calls.map(call => call.url), [
+      `${expected}/properties/search`,
+      `${expected}/properties/demo-property/similar`,
+    ])
+    assert.ok(calls.every(call => call.options.headers.Authorization === 'Bearer demo-token'))
   })
 }

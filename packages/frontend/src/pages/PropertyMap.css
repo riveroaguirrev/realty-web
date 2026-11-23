@@ -84,10 +84,9 @@
 .map-toolbar-buttons .icon-button { width: 34px; height: 34px; }
 .map-filter-count { display: grid; place-items: center; width: 18px; height: 18px; background: #ffffff30; border: 1px solid currentColor; border-radius: 50%; font-size: 10px; }
 .map-page #map-filter-panel { max-height: min(55dvh, 470px); overflow-y: auto; border-top: 1px solid var(--swiss-line); }
-.map-page .filter-panel { margin: 0; padding: 16px 18px; border: 0; box-shadow: none; border-radius: 0; }
+.map-page .filter-panel { --filter-control-height: 40px; --filter-control-padding: 10px; margin: 0; padding: 16px 18px; border: 0; box-shadow: none; border-radius: 0; }
 .map-page .filter-basic { gap: 12px; }
 .map-page .filter-basic label { font-size: 11px; }
-.map-page .filter-basic input,.map-page .filter-basic select { font-size: 12px; min-height: 40px; padding: 9px 10px; }
 .map-page .filter-basic .button { font-size: 12px; padding: 11px 14px; }
 .map-page .filter-toolbar { margin-top: 12px; padding-top: 12px; }
 .map-page .map-results { display: none; position: absolute; left: 24px; top: 110px; bottom: 70px; width: 320px; max-width: calc(100% - 48px); z-index: 4; background: white; border: 1px solid var(--swiss-line); box-shadow: 0 4px 20px #14243b15; height: auto; }
@@ -121,7 +120,6 @@
 .map-page.filters-open .mapboxgl-ctrl-top-right { top: 250px; }
 .map-page.filters-open .map-results { top: 265px; }
 @media (max-width: 600px) { .map-page.filters-open .mapboxgl-ctrl-top-right { top: 340px; } .map-page.filters-open .map-results { top: 120px; z-index: 6; } }
-.map-page .filter-panel select { appearance: none; -webkit-appearance: none; min-height: 40px; padding-right: 30px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%236d7885' stroke-width='1.7' viewBox='0 0 24 24'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; }
 /* Let Mapbox suggestions extend over the map instead of clipping inside the filters. */
 .map-page #map-filter-panel:has(.city-suggestions) { overflow: visible; }
 .map-page .city-suggestions { z-index: 25; min-width: 260px; }

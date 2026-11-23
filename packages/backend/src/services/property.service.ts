@@ -1,4 +1,8 @@
 import { publicPropertyLocation } from '@/utils/propertyLocation'
+import { propertyDiscoverySelect } from '@/utils/propertyView'
+import { serializable } from '@/lib/transactions'
+import { requirePropertyManagement } from '@/lib/permissions'
+import { ApiError } from '@/utils/errors'
 import { prisma } from '@/lib/prisma'
 import { PropertyStatus } from '@shared/types'
 import { slugify } from '@/utils/slug'
@@ -56,23 +60,28 @@ export class PropertyService {
     data: PropertyInput & { advisorId: string; organizationId?: string }
   ) {
     const slug = await this.generateAvailableSlug(data.title)
+    const { propertyImageService } = await import('@/services/propertyImage.service')
 
-    const createWithSlug = (propertySlug: string) => prisma.property.create({
-      data: {
-        ...data,
-        slug: propertySlug,
-        status: 'AVAILABLE',
-      },
-      include: {
-        advisor: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+    const createWithSlug = (propertySlug: string) => serializable(async tx => {
+      const property = await tx.property.create({
+        data: {
+          ...data,
+          slug: propertySlug,
+          status: 'AVAILABLE',
+        },
+        include: {
+          advisor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
           },
         },
-      },
+      })
+      await propertyImageService.attach(tx, property.id, data.advisorId, [], data.images)
+      return property
     })
 
     try {
@@ -135,18 +144,11 @@ export class PropertyService {
         where,
         skip,
         take: pageSize,
-        include: {
-          advisor: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
+        select: {
+          ...propertyDiscoverySelect,
+          advisor: { select: { id: true, firstName: true, lastName: true } },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
       }),
       prisma.property.count({ where }),
     ])
@@ -250,26 +252,13 @@ export class PropertyService {
         where,
         skip,
         take: pageSize,
-        include: {
+        select: {
+          ...propertyDiscoverySelect,
           advisor: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-              organization: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
+            select: { id: true, firstName: true, lastName: true, organization: { select: { id: true, name: true } } },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
       }),
       prisma.property.count({ where }),
     ])
@@ -303,50 +292,63 @@ export class PropertyService {
     }
   }
 
-  async updateProperty(id: string, data: PropertyInput) {
-    return await prisma.property.update({
-      where: { id },
-      data: {
-        title: data.title,
-        description: data.description ?? null,
-        type: data.type,
-        operation: data.operation,
-        price: data.price,
-        currency: data.currency,
-        furnished: data.furnished,
-        petsAllowed: data.petsAllowed,
-        expensesIncluded: data.expensesIncluded,
-        wifiIncluded: data.wifiIncluded,
-        commissionPercentage: data.commissionPercentage,
-        address: data.address,
-        city: data.city,
-        region: data.region,
-        isExclusive: data.isExclusive,
-        locationMode: data.locationMode,
-        locationRadiusMeters: data.locationRadiusMeters,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        bedrooms: data.bedrooms ?? null,
-        bathrooms: data.bathrooms ?? null,
-        areaSquareMeters: data.areaSquareMeters ?? null,
-        images: data.images,
-        ...(data.status && { status: data.status }),
-      },
-      include: {
-        advisor: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+  async updateProperty(id: string, data: PropertyInput, actor: Parameters<typeof requirePropertyManagement>[0]) {
+    const { propertyImageService } = await import('@/services/propertyImage.service')
+    return serializable(async tx => {
+      const existing = await tx.property.findUnique({ where: { id } })
+      if (!existing) throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found')
+      requirePropertyManagement(actor, existing)
+      await propertyImageService.attach(tx, id, actor.id, existing.images, data.images)
+
+      return tx.property.update({
+        where: { id },
+        data: {
+          title: data.title,
+          description: data.description ?? null,
+          type: data.type,
+          operation: data.operation,
+          price: data.price,
+          currency: data.currency,
+          furnished: data.furnished,
+          petsAllowed: data.petsAllowed,
+          expensesIncluded: data.expensesIncluded,
+          wifiIncluded: data.wifiIncluded,
+          commissionPercentage: data.commissionPercentage,
+          address: data.address,
+          city: data.city,
+          region: data.region,
+          isExclusive: data.isExclusive,
+          locationMode: data.locationMode,
+          locationRadiusMeters: data.locationRadiusMeters,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          bedrooms: data.bedrooms ?? null,
+          bathrooms: data.bathrooms ?? null,
+          areaSquareMeters: data.areaSquareMeters ?? null,
+          images: data.images,
+          ...(data.status && { status: data.status }),
+        },
+        include: {
+          advisor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
-      },
+      })
     })
   }
 
-  async deleteProperty(id: string) {
-    return await prisma.property.delete({
-      where: { id },
+  async deleteProperty(id: string, actor: Parameters<typeof requirePropertyManagement>[0]) {
+    const { propertyImageService } = await import('@/services/propertyImage.service')
+    return serializable(async tx => {
+      const existing = await tx.property.findUnique({ where: { id } })
+      if (!existing) throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found')
+      requirePropertyManagement(actor, existing)
+      await propertyImageService.attach(tx, id, actor.id, existing.images, [])
+      return tx.property.delete({ where: { id } })
     })
   }
 

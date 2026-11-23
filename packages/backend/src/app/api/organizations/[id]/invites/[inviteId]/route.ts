@@ -4,11 +4,12 @@ import { requireOrgAccess, requirePermission } from '@/lib/permissions'
 import { Permission } from '@shared/types'
 import { errorResponse } from '@/lib/auth-route'
 import { advisorService } from '@/services/advisor.service'
-export async function DELETE(req: NextRequest, { params }: { params: { id: string; inviteId: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string; inviteId: string }> }) {
   try {
     const user = await requireUser(req)
-    requireOrgAccess(user.organizationId, params.id)
+    const { id, inviteId } = await params
+    requireOrgAccess(user.organizationId, id)
     requirePermission(user.permissions, Permission.ADVISOR_MANAGE)
-    return NextResponse.json({ success: true, data: await advisorService.cancelInvite(params.id, params.inviteId) })
+    return NextResponse.json({ success: true, data: await advisorService.cancelInvite(id, inviteId) })
   } catch (error) { return errorResponse(error) }
 }

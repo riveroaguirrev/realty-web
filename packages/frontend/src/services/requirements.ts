@@ -1,9 +1,9 @@
-import { apiClient } from './api'
-import type { RequirementDetail, RequirementInput, RequirementRecord, RequirementStatus } from '@shared/types/requirements'
+import { ApiRequestError, apiClient } from './api'
+import type { RequirementDetail, RequirementInput, RequirementRecord, RequirementStatus, RequirementSuggestionFilters } from '@shared/types/requirements'
 const config = (token: string) => ({ headers: { Authorization: `Bearer ${token}` } })
 export const requirementsAPI = {
   list: (token: string, mine = false, page = 1) => apiClient.get<RequirementRecord[]>(`/requirements?mine=${mine}&page=${page}`, config(token)),
-  get: (token: string, id: string) => apiClient.get<RequirementDetail>(`/requirements/${id}`, config(token)),
+  get: (token: string, id: string, filters?: RequirementSuggestionFilters) => apiClient.get<RequirementDetail>(`/requirements/${id}`, { ...config(token), params: filters }),
   create: (token: string, data: RequirementInput) => apiClient.post<RequirementRecord>('/requirements', data, config(token)),
   update: (token: string, id: string, data: RequirementInput | { status: RequirementStatus }) => apiClient.put<RequirementRecord>(`/requirements/${id}`, data, config(token)),
 }
@@ -21,8 +21,16 @@ export const requirementNotifications = {
     const registration = await navigator.serviceWorker.ready
     const padded = data.publicKey.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - data.publicKey.length % 4) % 4)
     const key = Uint8Array.from(atob(padded), char => char.charCodeAt(0))
-    const subscription = await registration.pushManager.getSubscription() || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
-    await apiClient.post('/notifications/subscriptions', subscription.toJSON(), config(token))
+    const subscribe = () => registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
+    const subscription = await registration.pushManager.getSubscription() || await subscribe()
+    try {
+      await apiClient.post('/notifications/subscriptions', subscription.toJSON(), config(token))
+    } catch (error) {
+      if (!(error instanceof ApiRequestError) || error.code !== 'PUSH_SUBSCRIPTION_CONFLICT') throw error
+      await subscription.unsubscribe()
+      const replacement = await subscribe()
+      await apiClient.post('/notifications/subscriptions', replacement.toJSON(), config(token))
+    }
   },
   async disable(token: string) {
     const registration = await navigator.serviceWorker.getRegistration('/requirements-sw.js')

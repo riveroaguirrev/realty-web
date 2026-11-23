@@ -17,16 +17,18 @@ export async function deliverPendingPush(requirementId?: string) {
       if (!claimed.count) return
       const subscriptions = await prisma.pushSubscription.findMany({ where: { advisorId: notification.advisorId, advisor: { status: 'ACTIVE' } } })
       let retry = false
-      await Promise.all(subscriptions.map(async subscription => {
-        try {
-          await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, JSON.stringify({ title: notification.title, body: notification.message, url: notification.actionUrl, tag: notification.id }), { TTL: 86400, timeout: 4000 })
-          sent++
-        } catch (error) {
-          const status = (error as { statusCode?: number }).statusCode
-          if (status === 404 || status === 410) await prisma.pushSubscription.deleteMany({ where: { id: subscription.id } })
-          else retry = true
-        }
-      }))
+      for (let offset = 0; offset < subscriptions.length; offset += 5) {
+        await Promise.all(subscriptions.slice(offset, offset + 5).map(async subscription => {
+          try {
+            await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, JSON.stringify({ title: notification.title, body: notification.message, url: notification.actionUrl, tag: notification.id }), { TTL: 86400, timeout: 4000 })
+            sent++
+          } catch (error) {
+            const status = (error as { statusCode?: number }).statusCode
+            if (status === 404 || status === 410) await prisma.pushSubscription.deleteMany({ where: { id: subscription.id } })
+            else retry = true
+          }
+        }))
+      }
       await prisma.notification.update({ where: { id: notification.id }, data: { scheduledFor: retry ? new Date(Date.now() + 60000 * (notification.sendAttempts + 1)) : null, failureReason: retry ? 'Entrega push pendiente; se reintentará.' : null } })
     }))
   }

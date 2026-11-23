@@ -71,7 +71,9 @@ async function main() {
   docker(['run', '-d', '--name', db, '--label', 'realty.account-tests=true', '--network', network,
     '-e', 'POSTGRES_PASSWORD=' + password, '-p', '127.0.0.1:59941:5432', 'public.ecr.aws/supabase/postgres:17.11.0.002'])
   created.push(db)
-  await ready(() => spawnSync('docker', ['exec', db, 'pg_isready', '-U', 'postgres']).status === 0, 'Database')
+  // The image starts a temporary socket-only server while bootstrapping roles.
+  // Wait for TCP so migrations cannot race that initialization phase.
+  await ready(() => spawnSync('docker', ['exec', db, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres']).status === 0, 'Database')
   docker(['exec', db, 'psql', '-U', 'supabase_admin', '-d', 'postgres', '-c', "ALTER ROLE supabase_auth_admin WITH PASSWORD '" + password + "';"])
   await run(['node_modules/prisma/build/index.js', 'generate', '--schema=prisma/schema.prisma'])
   await run(['node_modules/prisma/build/index.js', 'migrate', 'deploy', '--schema=prisma/schema.prisma'])

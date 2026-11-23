@@ -43,3 +43,7 @@ playwright-report/
 
 # Misc
 *.pem
+
+# Vercel local project links
+.vercel/
+.env*

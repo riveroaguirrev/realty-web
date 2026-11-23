@@ -1,16 +1,10 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-  swcMinify: true,
-  experimental: {
-    esmExternals: true,
-  },
-  async redirects() {
-    return []
-  },
-  async rewrites() {
-    return []
-  },
-}
+const path = require('node:path')
 
-module.exports = nextConfig
+const monorepoRoot = path.join(__dirname, '../..')
+
+module.exports = {
+  reactStrictMode: true,
+  outputFileTracingRoot: monorepoRoot,
+  turbopack: { root: monorepoRoot },
+}

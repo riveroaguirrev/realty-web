@@ -4,14 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, sendError } from '@/middleware/auth'
 import { Errors } from '@/utils/errors'
 import { Permission } from '@shared/types'
+import { rateLimit } from '@/services/session.service'
 import { requirePermission } from '@/lib/permissions'
-import { propertyImageService, MAX_IMAGE_BYTES, UploadedImage } from '@/services/propertyImage.service'
-
-const isUploadedImage = (value: unknown): value is UploadedImage =>
-  typeof value === 'object' && value !== null && 'arrayBuffer' in value && 'type' in value && 'size' in value
-
-const validationError = (message: string) =>
-  NextResponse.json({ success: false, error: { message, code: 'VALIDATION_ERROR' } }, { status: 400 })
+import { propertyImageService } from '@/services/propertyImage.service'
+import { normalizePropertyImage, readPropertyImageForm } from '@/utils/validatePropertyImage'
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,17 +15,15 @@ export async function POST(req: NextRequest) {
     if (!auth.user) return sendError(auth.error ?? Errors.UNAUTHORIZED, 401)
 
     requirePermission(auth.user.permissions, Permission.PROPERTY_CREATE)
-    const form = await req.formData().catch(() => null)
-    if (!form) return validationError('Request must be multipart/form-data')
-
-    const file = form.get('file')
-    if (!isUploadedImage(file)) return validationError('An image file is required')
-    if (!propertyImageService.isSupportedMimeType(file.type)) {
-      return validationError('Only JPEG, PNG or WebP images are allowed')
+    await rateLimit(`properties:images:${auth.user.id}`, 100, 600)
+    const form = await readPropertyImageForm(req)
+    const files = form.getAll('file')
+    const file = files[0]
+    if (files.length !== 1 || typeof file === 'string' || !file) {
+      throw new AccountApiError(400, 'INVALID_IMAGE_FORM', 'Envía una sola imagen por solicitud.')
     }
-    if (file.size > MAX_IMAGE_BYTES) return validationError('Image must be 5 MB or smaller')
 
-    const url = await propertyImageService.upload(file, auth.user.id)
+    const url = await propertyImageService.upload(await normalizePropertyImage(file), auth.user.id)
     return NextResponse.json({ success: true, data: { url } })
   } catch (error) {
     if (error instanceof AccountApiError) return accountErrorResponse(error)

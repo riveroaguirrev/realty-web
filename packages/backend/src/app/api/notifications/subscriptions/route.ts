@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
+import { serializable } from '@/lib/transactions'
+import { ApiError } from '@/utils/errors'
 import { prisma } from '@/lib/prisma'
 import { authenticatedRoute } from '@/utils/authenticatedRoute'
 import { pushConfigured } from '@/services/push.service'
 // Only known browser push services. Do not allow arbitrary URLs to turn delivery into SSRF.
 const endpointSchema = z.string().url().max(2048).refine(value => {
+  if (!URL.canParse(value)) return false
   const url = new URL(value)
   return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
     (['fcm.googleapis.com', 'updates.push.services.mozilla.com', 'web.push.apple.com'].includes(url.hostname) || url.hostname.endsWith('.notify.windows.com'))
@@ -17,7 +21,24 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return authenticatedRoute(request, async advisorId => {
     const data = subscriptionSchema.parse(await request.json())
-    await prisma.pushSubscription.upsert({ where: { endpoint: data.endpoint }, create: { advisorId, endpoint: data.endpoint, ...data.keys }, update: { advisorId, ...data.keys } })
+    const conflict = new ApiError(409, 'PUSH_SUBSCRIPTION_CONFLICT', 'Este navegador necesita renovar su suscripción de avisos.')
+    try {
+      await serializable(async tx => {
+        const existing = await tx.pushSubscription.findUnique({ where: { endpoint: data.endpoint } })
+        if (existing) {
+          if (existing.advisorId !== advisorId) throw conflict
+          await tx.pushSubscription.update({ where: { id: existing.id }, data: data.keys })
+          return
+        }
+        const count = await tx.pushSubscription.count({ where: { advisorId } })
+        if (count >= 20) throw new ApiError(429, 'PUSH_SUBSCRIPTION_LIMIT', 'Desactiva los avisos en otro dispositivo antes de conectar uno nuevo.')
+        await tx.pushSubscription.create({ data: { advisorId, endpoint: data.endpoint, ...data.keys } })
+      })
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error
+      const result = await prisma.pushSubscription.updateMany({ where: { endpoint: data.endpoint, advisorId }, data: data.keys })
+      if (!result.count) throw conflict
+    }
     return NextResponse.json({ success: true, data: { subscribed: true } })
   })
 }

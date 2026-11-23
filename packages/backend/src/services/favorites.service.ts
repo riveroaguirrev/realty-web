@@ -1,110 +1,51 @@
+import { propertyCardSelect } from '@/utils/propertyView'
+import { visiblePropertyWhere } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
+import { serializable } from '@/lib/transactions'
+import { ApiError } from '@/utils/errors'
+
+type PropertyViewer = Parameters<typeof visiblePropertyWhere>[0]
 
 export class FavoritesService {
-  async addFavorite(advisorId: string, propertyId: string) {
-    return await prisma.favorite.create({
-      data: {
-        buyerId: advisorId,
-        propertyId,
-      },
-      include: {
-        property: {
-          include: {
-            advisor: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                organization: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+  async addFavorite(user: PropertyViewer, propertyId: string) {
+    return serializable(async (tx) => {
+      const property = await tx.property.findFirst({
+        where: { id: propertyId, ...visiblePropertyWhere(user) },
+        select: { id: true },
+      })
+      if (!property) throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found')
+
+      return tx.favorite.create({
+        data: { buyerId: user.id, propertyId },
+        include: { property: { select: propertyCardSelect } },
+      })
     })
   }
 
   async removeFavorite(advisorId: string, propertyId: string) {
-    return await prisma.favorite.delete({
-      where: {
-        buyerId_propertyId: {
-          buyerId: advisorId,
-          propertyId,
-        },
-      },
-    })
+    return prisma.favorite.delete({ where: { buyerId_propertyId: { buyerId: advisorId, propertyId } } })
   }
 
-  async getFavorite(advisorId: string, propertyId: string) {
-    return await prisma.favorite.findUnique({
-      where: {
-        buyerId_propertyId: {
-          buyerId: advisorId,
-          propertyId,
-        },
-      },
-    })
-  }
-
-  async listFavorites(advisorId: string, page = 1, pageSize = 10) {
-    const skip = (page - 1) * pageSize
-
+  async listFavorites(user: PropertyViewer, page = 1, pageSize = 10) {
+    const where = { buyerId: user.id, property: visiblePropertyWhere(user) }
     const [favorites, total] = await Promise.all([
       prisma.favorite.findMany({
-        where: { buyerId: advisorId },
-        skip,
+        where,
+        skip: (page - 1) * pageSize,
         take: pageSize,
-        include: {
-          property: {
-            include: {
-              advisor: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true,
-                  phone: true,
-                  organization: {
-                    select: {
-                      id: true,
-                      name: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        include: { property: { select: propertyCardSelect } },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       }),
-      prisma.favorite.count({ where: { buyerId: advisorId } }),
+      prisma.favorite.count({ where }),
     ])
-
-    return {
-      favorites,
-      total,
-      page,
-      pageSize,
-    }
+    return { favorites, total, page, pageSize }
   }
 
   async isFavorite(advisorId: string, propertyId: string): Promise<boolean> {
-    const favorite = await prisma.favorite.findUnique({
-      where: {
-        buyerId_propertyId: {
-          buyerId: advisorId,
-          propertyId,
-        },
-      },
+    return !!await prisma.favorite.findUnique({
+      where: { buyerId_propertyId: { buyerId: advisorId, propertyId } },
+      select: { id: true },
     })
-    return !!favorite
   }
 }
 

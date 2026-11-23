@@ -1,5 +1,6 @@
 import { ApiError as AccountApiError } from '@/utils/errors'
 import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
+import { readPagination } from '@/utils/pagination'
 import { NextRequest, NextResponse } from 'next/server'
 import { messageService } from '@/services/message.service'
 import { conversationService } from '@/services/conversation.service'
@@ -8,7 +9,7 @@ import { ApiResponse } from '@shared/types'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
     const token = request.headers.get('authorization')?.split(' ')[1]
@@ -27,10 +28,9 @@ export async function GET(
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const { searchParams } = new URL(request.url)
-    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1
-    const pageSize = searchParams.get('pageSize') ? parseInt(searchParams.get('pageSize')!) : 20
+    const { page, pageSize } = readPagination(searchParams, 20)
 
     // Verify user is participant
     const conversation = await conversationService.getConversation(id)
@@ -79,7 +79,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
     const token = request.headers.get('authorization')?.split(' ')[1]
@@ -98,11 +98,11 @@ export async function POST(
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const body = await request.json() as { content?: string }
     const { content } = body
 
-    if (!content || typeof content !== 'string' || !content.trim()) {
+    if (typeof content !== 'string' || !content.trim()) {
       return NextResponse.json(
         { success: false, error: { code: 'BAD_REQUEST', message: 'content is required' } },
         { status: 400 }
@@ -126,6 +126,9 @@ export async function POST(
       )
     }
 
+    if (content.trim().length > 10000) {
+      return NextResponse.json({ success: false, error: { code: 'MESSAGE_TOO_LONG', message: 'El mensaje supera los 10.000 caracteres.' } }, { status: 400 })
+    }
     const message = await messageService.sendMessage(id, user.id, content.trim())
     await conversationService.updateLastMessageTime(id)
 

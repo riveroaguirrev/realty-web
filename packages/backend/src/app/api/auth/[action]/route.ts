@@ -3,13 +3,14 @@ import { changeEmailSchema, changePasswordSchema, resendSchema, resetSchema, ver
 import { authRoute } from '@/lib/auth-route'
 import { authService } from '@/services/auth.service'
 import { ApiError, Errors } from '@/utils/errors'
-export const POST = (req: NextRequest, { params }: { params: { action: string } }) => authRoute(req, async (browserHash, token) => {
-  if (params.action === 'logout') {
+export const POST = (req: NextRequest, { params }: { params: Promise<{ action: string }> }) => authRoute(req, async (browserHash, token) => {
+  const { action } = await params
+  if (action === 'logout') {
     if (!token) throw Errors.UNAUTHORIZED
     return authService.logout(token, browserHash)
   }
   const body: unknown = await req.json()
-  switch (params.action) {
+  switch (action) {
     case 'verify': return authService.verify(verifySchema.parse(body), browserHash, token)
     case 'resend': return authService.resend(resendSchema.parse(body), browserHash, token)
     case 'recovery': return authService.resend({ purpose: 'recovery', email: emailSchema.parse((body as { email?: unknown } | null)?.email) }, browserHash)

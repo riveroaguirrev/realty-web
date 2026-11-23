@@ -18,7 +18,7 @@ test('authentication routes reject malformed JSON and invalid field types before
 test('credential changes and logout require authentication; untrusted browser origins are rejected', async () => {
   const response = await action(new NextRequest('http://localhost:3000/api/auth/password', {
     method: 'POST', body: JSON.stringify({ currentPassword: 'old', password: 'A long new password', confirmPassword: 'A long new password' }),
-  }), { params: { action: 'password' } })
+  }), { params: Promise.resolve({ action: 'password' }) })
   assert.equal(response.status, 401)
   const rejected = await login(new NextRequest('http://localhost:3000/api/auth/login', {
     method: 'POST', body: '{}', headers: { origin: 'https://untrusted.example' },

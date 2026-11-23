@@ -1,0 +1,75 @@
+{
+  "teamId": "team_tM2bT1mGOBq7EVYIuC1fsMiY",
+  "teamSlug": "century21urbanbo-9375s-projects",
+  "backend": {
+    "projectId": "prj_jzscDtyZLIX525y0yDNobLXsnm1m",
+    "name": "realty-api",
+    "url": "https://realty-api-century21urbanbo-9375s-projects.vercel.app",
+    "rootDirectory": "packages/backend",
+    "deploymentId": "dpl_D2x6n6xJBkHwcNqmaTELuS8tMntQ",
+    "deploymentUrl": "https://realty-856ybhtjd-century21urbanbo-9375s-projects.vercel.app",
+    "status": "READY",
+    "promoted": true,
+    "healthVerified": true,
+    "previousDeploymentId": "dpl_E7DkpwLqR6is2ohRghUoY6Gssh4P",
+    "nextVersion": "16.4.6",
+    "reactVersion": "19.3.1",
+    "source": {
+      "baseCommit": "728afd1b89b7a13fd2382d065cb512ad4f46e395",
+      "dirty": true,
+      "sha256": "551881d8103bd65267a31e3458cbc803667c52f78b78e7be98e36510e3e3f7e7"
+    }
+  },
+  "frontend": {
+    "projectId": "prj_PdlccImiJEadTPmwRVKTd6PtE1Mf",
+    "name": "realty-web",
+    "url": "https://realty-web-century21urbanbo-9375s-projects.vercel.app",
+    "rootDirectory": "packages/frontend",
+    "deploymentId": "dpl_GrDsHSRjqeyod9fLmJx4GokRk5Qn",
+    "deploymentUrl": "https://realty-fd38bqf7u-century21urbanbo-9375s-projects.vercel.app",
+    "status": "READY",
+    "promoted": true,
+    "loginPageVerified": true,
+    "proxyHealthVerified": true,
+    "publicRoutesVerified": true,
+    "authCookieVerified": true,
+    "source": {
+      "baseCommit": "728afd1b89b7a13fd2382d065cb512ad4f46e395",
+      "dirty": true,
+      "sha256": "551881d8103bd65267a31e3458cbc803667c52f78b78e7be98e36510e3e3f7e7"
+    }
+  },
+  "source": {
+    "baseCommit": "728afd1b89b7a13fd2382d065cb512ad4f46e395",
+    "dirty": true,
+    "sha256": "551881d8103bd65267a31e3458cbc803667c52f78b78e7be98e36510e3e3f7e7"
+  },
+  "lastVerifiedDate": "2026-11-19",
+  "release": {
+    "date": "2026-11-19",
+    "status": "PUBLISHED",
+    "frontendPublished": true,
+    "backendLocalVersion": "16.4.6",
+    "backendBuildVerified": true,
+    "localTestsPassed": 60,
+    "localIntegrationTestsSkipped": 4,
+    "databaseMigrationApplied": true,
+    "publicHealthStatus": 200,
+    "nextStep": "Publish the three DNS records in deploy/RESEND-DNS.md, verify auth.century21.bo in Resend, then test real email signup/login. Realtime messaging and image cleanup scheduler remain pending.",
+    "backendPublished": true,
+    "backendDeployedVersion": "16.4.6",
+    "appliedMigration": "202611180001_managed_property_images",
+    "supabaseStatus": "ACTIVE_HEALTHY",
+    "backendTypeCheckPassed": true,
+    "productionSmokeTestsPassed": 7,
+    "authenticatedUserFlowsVerified": true,
+    "authenticatedApiChecksPassed": 20,
+    "passwordLoginVerified": true,
+    "photoUploadVerified": true,
+    "otpVerificationMethod": "admin-generated-code",
+    "emailDeliveryVerified": false,
+    "signupEmailEndToEndVerified": false,
+    "realtimeMessagingVerified": false,
+    "testFixturesRemoved": true
+  }
+}

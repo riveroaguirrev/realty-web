@@ -1,0 +1,21 @@
+{
+  "id": "avstudixpieawyfowpws",
+  "ref": "avstudixpieawyfowpws",
+  "name": "realty",
+  "region": "sa-east-1",
+  "status": "INACTIVE",
+  "organization_id": "isxbabgpsjidwjrowciq",
+  "auth_configured": true,
+  "auth_email_templates_configured": true,
+  "smtp_configured": true,
+  "smtp_provider": "resend",
+  "smtp_sender": "noreply@auth.century21.bo",
+  "smtp_domain_verified": false,
+  "storage_configured": true,
+  "storage_public_read_verified": true,
+  "storage_anonymous_write_denied": true,
+  "last_verified_date": "2026-11-19",
+  "site_url": "https://realty-web-century21urbanbo-9375s-projects.vercel.app",
+  "redirect_urls_configured": true,
+  "auth_verify_redirect_configured": true
+}

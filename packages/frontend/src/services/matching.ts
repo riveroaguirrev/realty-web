@@ -1,41 +1,20 @@
-import axios from 'axios'
-
-// Use Vite's same-origin proxy for both localhost and 127.0.0.1.
-const API_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || '/api'
+import { apiClient } from './api'
+import type { PropertyCardProps } from '@/components/property/PropertyCard'
 
 export interface PropertyMatch {
   propertyId: string
   score: number
   matchReason: string
-  property: any
-}
-
-export interface MatchingResponse {
-  success: boolean
-  data: PropertyMatch[]
-  meta: {
-    count: number
-  }
+  property: Omit<PropertyCardProps, 'price'> & { price: string | number }
 }
 
 export const matchingAPI = {
-  async getSimilarProperties(
-    propertyId: string,
-    limit = 6
-  ): Promise<PropertyMatch[]> {
-    try {
-      const response = await axios.get<MatchingResponse>(
-        `${API_URL}/properties/${propertyId}/similar?limit=${limit}`
-      )
-
-      if (response.data.success) {
-        return response.data.data
-      }
-
-      throw new Error('Failed to get similar properties')
-    } catch (error) {
-      console.error('Error fetching similar properties:', error)
-      throw error
-    }
+  async getSimilarProperties(token: string, propertyId: string, limit = 6, signal?: AbortSignal) {
+    const { data } = await apiClient.get<PropertyMatch[]>(`/properties/${propertyId}/similar`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { limit },
+      signal,
+    })
+    return data
   },
 }

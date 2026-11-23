@@ -1,4 +1,4 @@
-import { publicPropertyLocation } from '@/utils/propertyLocation'
+import { propertyCardSelect } from '@/utils/propertyView'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 
@@ -8,15 +8,13 @@ export interface MatchScore {
   matchReason: string
 }
 
-type SimilarProperty = Prisma.PropertyGetPayload<{
-  include: {
-    advisor: {
-      include: {
-        organization: true
-      }
-    }
-  }
-}>
+type SimilarProperty = Prisma.PropertyGetPayload<{ select: typeof propertyCardSelect }>
+
+const scoringSelect = {
+  type: true, price: true, city: true, region: true, bedrooms: true,
+  areaSquareMeters: true, features: true,
+} satisfies Prisma.PropertySelect
+const candidateLimit = 500
 
 export interface PropertyMatch extends MatchScore {
   property: SimilarProperty
@@ -39,32 +37,25 @@ const normalizeFeatures = (features: Prisma.JsonValue | null): string[] => {
 }
 
 export class MatchingService {
-  static async findSimilarProperties(
+  static async getSimilarPropertiesWithDetails(
     propertyId: string,
+    visibility: Prisma.PropertyWhereInput,
     limit = 6
-  ): Promise<MatchScore[]> {
-    // Get the reference property
-    const refProperty = await prisma.property.findUnique({
-      where: { id: propertyId },
+  ): Promise<PropertyMatch[] | null> {
+    const refProperty = await prisma.property.findFirst({
+      where: { id: propertyId, ...visibility },
+      select: scoringSelect,
     })
+    if (!refProperty) return null
 
-    if (!refProperty) {
-      return []
-    }
-
-    // Get all other properties
     const allProperties = await prisma.property.findMany({
       where: {
         id: { not: propertyId },
         status: 'AVAILABLE',
       },
-      include: {
-        advisor: {
-          include: {
-            organization: true,
-          },
-        },
-      },
+      select: { ...scoringSelect, id: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      take: candidateLimit,
     })
 
     const scores = allProperties.map((prop) => {
@@ -133,36 +124,15 @@ export class MatchingService {
       }
     })
 
-    // Sort by score descending and limit
-    return scores.sort((a, b) => b.score - a.score).slice(0, limit)
-  }
-
-  static async getSimilarPropertiesWithDetails(
-    propertyId: string,
-    limit = 6
-  ): Promise<PropertyMatch[]> {
-    const matchScores = await this.findSimilarProperties(propertyId, limit)
-
-    const properties = await Promise.all(
-      matchScores.map(async (match) => {
-        const property = await prisma.property.findUnique({
-          where: { id: match.propertyId },
-          include: {
-            advisor: {
-              include: {
-                organization: true,
-              },
-            },
-          },
-        })
-
-        return {
-          ...match,
-          property: property ? publicPropertyLocation(property) : null,
-        }
-      })
-    )
-
-    return properties.filter((match): match is PropertyMatch => match.property !== null)
+    const ranked = scores.sort((a, b) => b.score - a.score).slice(0, limit)
+    const visibleProperties = await prisma.property.findMany({
+      where: { id: { in: ranked.map(match => match.propertyId) }, status: 'AVAILABLE' },
+      select: propertyCardSelect,
+    })
+    const byId = new Map(visibleProperties.map(property => [property.id, property]))
+    return ranked.flatMap(match => {
+      const property = byId.get(match.propertyId)
+      return property ? [{ ...match, property }] : []
+    })
   }
 }

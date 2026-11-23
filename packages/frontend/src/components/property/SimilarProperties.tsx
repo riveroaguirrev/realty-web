@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { matchingAPI, PropertyMatch } from '@/services/matching'
+import { useAuth } from '@/hooks/useAuth'
 import { PropertyCard } from './PropertyCard'
 
 interface SimilarPropertiesProps {
@@ -7,26 +8,31 @@ interface SimilarPropertiesProps {
 }
 
 export const SimilarProperties = ({ propertyId }: SimilarPropertiesProps) => {
+  const { accessToken } = useAuth()
   const [matches, setMatches] = useState<PropertyMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!accessToken) return
+    const controller = new AbortController()
+
     const loadSimilarProperties = async () => {
       try {
         setIsLoading(true)
         setError(null)
-        const data = await matchingAPI.getSimilarProperties(propertyId, 6)
-        setMatches(data)
+        const data = await matchingAPI.getSimilarProperties(accessToken, propertyId, 6, controller.signal)
+        if (!controller.signal.aborted) setMatches(data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'No pudimos cargar propiedades similares.')
+        if (!controller.signal.aborted) setError(err instanceof Error ? err.message : 'No pudimos cargar propiedades similares.')
       } finally {
-        setIsLoading(false)
+        if (!controller.signal.aborted) setIsLoading(false)
       }
     }
 
     loadSimilarProperties()
-  }, [propertyId])
+    return () => controller.abort()
+  }, [accessToken, propertyId])
 
   if (isLoading) {
     return (
@@ -64,7 +70,7 @@ export const SimilarProperties = ({ propertyId }: SimilarPropertiesProps) => {
             className="cursor-pointer transform transition-all hover:scale-105"
           >
             <div className="relative">
-              <PropertyCard {...match.property} />
+              <PropertyCard {...match.property} price={Number(match.property.price)} />
               {/* Match score badge */}
               <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                 {Math.round(match.score)}%
