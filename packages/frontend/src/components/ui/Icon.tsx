@@ -1,5 +1,6 @@
 import { SVGProps } from 'react'
 const paths = {
+  building: 'M3 21h18 M5 21V7l8-4v18 M13 10h6v11 M8 8v2 M8 13v2 M8 18v3 M16 13v2 M16 18v3',
   map: 'm3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z M9 3v15 M15 6v15',
   bed: 'M3 18V7 M21 18V11H3 M3 15h18 M6 11V7h5v4 M11 7h7a3 3 0 0 1 3 3v1',
   bath: 'M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-3Z M6 12V5a2 2 0 0 1 4 0 M7 20v1 M17 20v1',
@@ -14,12 +15,21 @@ const paths = {
   bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4',
   team: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M22 21v-2a4 4 0 0 0-3-3.9 M15 3.1a4 4 0 0 1 0 7.8 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   plus: 'M12 5v14 M5 12h14',
+  chevronLeft: 'm15 5-7 7 7 7',
+  chevronRight: 'm9 5 7 7-7 7',
+  photos: 'M8 8h13v13H8z M4 16H3V3h13v1',
   arrow: 'M4 12h16 M14 6l6 6-6 6',
   logout: 'M9 21H4V3h5 M9 12h12 M16 7l5 5-5 5',
   menu: 'M4 6h16 M4 12h16 M4 18h16',
   close: 'm6 6 12 12 M6 18 18 6',
   pin: 'M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0 M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
+  copy: 'M9 9h12v12H9z M5 15H3V3h12v2',
   check: 'm5 12 4 4L19 6',
+  attach: 'm21 11-8 8a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8L16 6',
+  file: 'M14 2H5v20h14V7l-5-5Z M14 2v6h5 M8 13h8 M8 17h5',
+  download: 'M12 3v12 M7 10l5 5 5-5 M4 16v5h16v-5',
+  send: 'm22 2-7 20-4-9-9-4 20-7Z M22 2 11 13',
+  back: 'M20 12H4 M10 6l-6 6 6 6',
   filter: 'M4 6h16 M7 12h10 M10 18h4',
   user: 'M20 21v-2a7 7 0 0 0-14 0v2 M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
 } as const
