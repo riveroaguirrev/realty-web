@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { MapboxPlace } from '@/utils/mapboxAddress'
 
-export function CityAutocomplete({ value, onChange, onSelect, id = 'property-city', label = 'Ciudad *', required = true, includeZones = false, placeholder = 'Escribe para buscar una ciudad' }: {
+export function CityAutocomplete({ value, onChange, onSelect, id = 'property-city', label = 'Ciudad *', required = true, includeZones = false, placeholder = 'Escribe para buscar una ciudad', withinCity }: {
   value: string; onChange: (city: string) => void; onSelect?: (place: MapboxPlace) => void
-  id?: string; label?: string; required?: boolean; includeZones?: boolean; placeholder?: string
+  id?: string; label?: string; required?: boolean; includeZones?: boolean; placeholder?: string; withinCity?: string
 }) {
   const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
   const [query, setQuery] = useState<string | null>(null)
@@ -24,18 +24,26 @@ export function CityAutocomplete({ value, onChange, onSelect, id = 'property-cit
       setLoading(true)
       try {
         const params = new URLSearchParams({ access_token: token, language: 'es', country: 'bo', types: includeZones ? 'place,locality,neighborhood' : 'place', autocomplete: 'true', limit: '5' })
+        if (withinCity) {
+          params.set('bbox', '-66.27,-17.46,-66.06,-17.28')
+          params.set('proximity', '-66.1568,-17.3935')
+        }
         const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query.trim())}.json?${params}`, { signal: controller.signal })
         if (!response.ok) throw new Error()
         const data = await response.json() as { features: MapboxPlace[] }
         if (controller.signal.aborted) return
-        setPlaces(data.features)
-        if (!data.features.length) setMessage('No encontramos ubicaciones. Puedes escribir el nombre manualmente.')
+        const suggestions = withinCity ? data.features.filter(place => {
+          const city = place.place_type?.includes('place') ? place.text : place.context?.find(context => context.id.startsWith('place.'))?.text
+          return city?.toLocaleLowerCase() === withinCity.toLocaleLowerCase()
+        }) : data.features
+        setPlaces(suggestions)
+        if (!suggestions.length) setMessage('No encontramos ubicaciones. Puedes escribir el nombre manualmente.')
       } catch {
         if (!controller.signal.aborted) setMessage('No pudimos cargar las sugerencias. Puedes escribir la ciudad manualmente.')
       } finally { if (!controller.signal.aborted) setLoading(false) }
     }, 350)
     return () => { controller.abort(); window.clearTimeout(timer) }
-  }, [token, query, value, focused, includeZones])
+  }, [token, query, value, focused, includeZones, withinCity])
 
   const open = focused && query === value && (loading || places.length > 0 || Boolean(message))
   const choose = (place: MapboxPlace) => {

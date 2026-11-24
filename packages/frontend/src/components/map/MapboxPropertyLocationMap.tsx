@@ -1,4 +1,5 @@
 import { radiusPolygon } from '@/utils/mapGeometry'
+import { propertyOperationColor } from '@/utils/propertyOperations'
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl, { GeoJSONSource } from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -12,6 +13,7 @@ export interface LocationValue {
 }
 interface Props {
   value: LocationValue
+  operation?: string
   onChange?: (coordinates: { latitude: number; longitude: number }) => void
   onAddressChange?: (details: LocationAddress, baseline: LocationAddress) => void
   onRadiusChange?: (meters: number) => void
@@ -20,12 +22,13 @@ interface Props {
   city?: string
 }
 
-export default function MapboxPropertyLocationMap({ value, onChange, onAddressChange, onRadiusChange, city = '', address = '', neighborhood = '' }: Props) {
+export default function MapboxPropertyLocationMap({ value, operation, onChange, onAddressChange, onRadiusChange, city = '', address = '', neighborhood = '' }: Props) {
+  const operationColor = propertyOperationColor(operation)
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markerRef = useRef<mapboxgl.Marker | null>(null)
-  const current = useRef({ value, onChange, onAddressChange, address, city, neighborhood })
-  current.current = { value, onChange, onAddressChange, address, city, neighborhood }
+  const current = useRef({ value, operation, onChange, onAddressChange, address, city, neighborhood })
+  current.current = { value, operation, onChange, onAddressChange, address, city, neighborhood }
   const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
   const [loaded, setLoaded] = useState(false)
   const [mapError, setMapError] = useState('')
@@ -167,8 +170,8 @@ export default function MapboxPropertyLocationMap({ value, onChange, onAddressCh
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')
     map.on('load', () => {
       map.addSource('location-zone', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
-      map.addLayer({ id: 'location-zone-fill', type: 'fill', source: 'location-zone', paint: { 'fill-color': '#244e7c', 'fill-opacity': 0.22 } })
-      map.addLayer({ id: 'location-zone-line', type: 'line', source: 'location-zone', paint: { 'line-color': '#14243b', 'line-width': 3 } })
+      map.addLayer({ id: 'location-zone-fill', type: 'fill', source: 'location-zone', paint: { 'fill-color': propertyOperationColor(current.current.operation), 'fill-opacity': 0.22 } })
+      map.addLayer({ id: 'location-zone-line', type: 'line', source: 'location-zone', paint: { 'line-color': propertyOperationColor(current.current.operation), 'line-width': 3 } })
       setLoaded(true)
       setMapError('')
     })
@@ -193,6 +196,8 @@ export default function MapboxPropertyLocationMap({ value, onChange, onAddressCh
   useEffect(() => {
     const map = mapRef.current
     if (!map || !loaded) return
+    map.setPaintProperty('location-zone-fill', 'fill-color', operationColor)
+    map.setPaintProperty('location-zone-line', 'line-color', operationColor)
     markerRef.current?.remove()
     markerRef.current = null
     const source = map.getSource('location-zone') as GeoJSONSource | undefined
@@ -206,7 +211,7 @@ export default function MapboxPropertyLocationMap({ value, onChange, onAddressCh
       : { type: 'FeatureCollection', features: [] })
     if (!hasLocation && (value.locationMode === 'EXACT' || !onChange)) return
     if (hasLocation && value.locationMode === 'EXACT') {
-      const marker = new mapboxgl.Marker({ color: '#14243b', draggable: Boolean(onChange) })
+      const marker = new mapboxgl.Marker({ color: operationColor, draggable: Boolean(onChange) })
         .setLngLat([value.longitude!, value.latitude!]).addTo(map)
       marker.on('dragend', () => {
         const point = marker.getLngLat().wrap()
@@ -219,7 +224,7 @@ export default function MapboxPropertyLocationMap({ value, onChange, onAddressCh
       const deltaLng = deltaLat / Math.cos(latitude * Math.PI / 180)
       map.fitBounds([[longitude - deltaLng, latitude - deltaLat], [longitude + deltaLng, latitude + deltaLat]], { padding: 50, maxZoom: 16, duration: 350 })
     }
-  }, [loaded, value.latitude, value.longitude, value.locationMode, value.locationRadiusMeters, Boolean(onChange)])
+  }, [loaded, operationColor, value.latitude, value.longitude, value.locationMode, value.locationRadiusMeters, Boolean(onChange)])
 
   useEffect(() => {
     setPlaces([])

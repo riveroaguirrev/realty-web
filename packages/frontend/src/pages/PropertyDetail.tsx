@@ -177,7 +177,7 @@ export const PropertyDetail = () => {
                   </p>
                 </div>
 
-                {property.latitude != null && property.longitude != null && <PropertyLocationMap value={{ latitude: property.latitude, longitude: property.longitude, locationMode: property.isExclusive && property.locationMode === 'EXACT' ? 'EXACT' : 'RADIUS', locationRadiusMeters: property.locationRadiusMeters ?? 500 }} />}
+                {property.latitude != null && property.longitude != null && <PropertyLocationMap operation={property.operation} value={{ latitude: property.latitude, longitude: property.longitude, locationMode: property.isExclusive && property.locationMode === 'EXACT' ? 'EXACT' : 'RADIUS', locationRadiusMeters: property.locationRadiusMeters ?? 500 }} />}
 
                 <div className="border-t-2 border-blue-200 pt-6">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Operación</p>

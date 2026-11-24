@@ -1,0 +1,57 @@
+.property-search-page { --search-accent: #b9532e; }
+.property-search-page .page-heading { align-items: center; margin-bottom: 22px; }
+.property-search-page .search-title { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.property-search-page .page-heading h1 { font-size: clamp(28px, 3vw, 38px); letter-spacing: -.045em; }
+.property-search-page .search-count { padding: 7px 13px; border-radius: 24px; background: #eee5db; color: var(--swiss-ink); font-size: 12px; }
+.property-search-page .page-heading > .button { min-height: 44px; padding: 10px 18px; border-radius: 12px; background: white; }
+.property-search-page .filter-panel { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; --filter-control-height: 50px; }
+.property-search-page .filter-basic { display: grid; grid-template-columns: 1.25fr 1fr 1.07fr .7fr; gap: 16px; align-items: center; padding: 13px; border: 1px solid #dfe1e4; border-radius: 17px; background: white; box-shadow: 0 5px 14px #14243b0b; }
+.property-search-page .filter-basic > .field { position: relative; min-width: 0; }
+.property-search-page .filter-basic label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.property-search-page .search-field-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none; color: var(--swiss-ink); }
+.property-search-page .filter-panel .filter-basic input,
+.property-search-page .filter-panel .filter-basic select { height: 50px; padding-left: 45px; border-radius: 12px; background-color: #fdfdfc; color: var(--swiss-ink); font-size: 13px; transition: border-color .18s, box-shadow .18s; }
+.property-search-page .filter-panel input:focus,
+.property-search-page .filter-panel select:focus { border-color: var(--swiss-ink); outline: none; box-shadow: 0 0 0 3px #14243b0c; }
+.property-search-page .filter-basic > .button { min-height: 50px; border-radius: 12px; padding-inline: 16px; }
+.property-search-page .filter-toolbar { display: flex; justify-content: flex-start; align-items: center; gap: 22px; margin-top: 22px; padding: 0 4px; border: 0; flex-wrap: wrap; }
+.property-search-page .search-operation-tabs { display: flex; align-items: center; padding: 3px; gap: 2px; border: 1px solid #d6d3d0; border-radius: 28px; }
+.property-search-page .search-operation-tabs button { border: 0; border-radius: 24px; padding: 10px 18px; background: transparent; color: var(--swiss-ink); font-size: 12px; cursor: pointer; transition: background .18s; }
+.property-search-page .search-operation-tabs button:hover { background: #eee7de; }
+.property-search-page .search-operation-tabs button[aria-pressed=true] { background: #ebd8c3; font-weight: 600; }
+.property-search-page .filter-toolbar > .text-link:first-of-type { min-height: 42px; padding: 10px 15px; border: 1px solid #aeb5be; border-radius: 11px; background: #fff8; }
+.property-search-page .filter-toolbar > .text-link[aria-expanded=true] { background: #eee4d8; border-color: #cbb79f; }
+.property-search-page .filter-toolbar > .text-link:last-child { margin-left: auto; text-decoration: underline; text-underline-offset: 4px; }
+.property-search-page .filter-advanced { padding: 20px; margin-top: 20px; border: 1px solid #dfe1e4; border-radius: 16px; background: white; }
+.property-search-page .section-heading { margin: 30px 0 20px; }
+.property-search-page .section-heading h2 { font-size: 20px; letter-spacing: -.025em; }
+.property-search-page .property-grid { gap: 22px; align-items: stretch; }
+.property-search-page .property-card { border-radius: 18px; background: white; box-shadow: 0 3px 12px #14243b09; }
+.property-search-page .property-card-link { height: 100%; }
+.property-search-page .property-card .property-cover { aspect-ratio: 1.95; }
+.property-search-page .property-operation-badge { border-radius: 9px; padding: 6px 12px; font-size: 11px; }
+.property-search-page .property-card .property-body { flex: 1; padding: 16px 18px 18px; }
+.property-search-page .property-card .property-price { font-size: 26px; margin-bottom: 5px; }
+.property-search-page .property-card .property-body h3 { min-height: 42px; font-size: 15px; line-height: 1.4; }
+.property-search-page .property-card .property-location { margin: 6px 0 10px; font-size: 12px; }
+.property-search-page .property-location > svg { color: var(--search-accent); }
+.property-search-page .property-card .property-specs { margin-top: 0; border-top: 0; padding: 9px 0 15px; gap: 8px 14px; color: var(--swiss-ink); }
+.property-search-page .property-card-cta { margin-top: auto; padding: 11px 16px; border: 0; border-radius: 10px; background: var(--swiss-ink); color: white; justify-content: center; gap: 12px; }
+@media (max-width: 1100px) { .property-search-page .filter-basic { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 640px) {
+  .property-search-page .page-heading { gap: 12px; flex-direction: row; }
+  .property-search-page .search-title { gap: 7px; }
+  .property-search-page .search-count { font-size: 10px; padding: 5px 9px; }
+  .property-search-page .page-heading > .button { font-size: 12px; padding: 10px 12px; }
+  .property-search-page .filter-basic { gap: 10px; padding: 12px; }
+  .property-search-page .filter-basic > :first-child,
+  .property-search-page .filter-basic > .button { grid-column: 1 / -1; }
+  .property-search-page .filter-panel .filter-basic input,
+  .property-search-page .filter-panel .filter-basic select { font-size: 12px; padding-left: 36px; }
+  .property-search-page .search-field-icon { left: 10px; width: 17px; }
+  .property-search-page .filter-toolbar { gap: 12px; margin-top: 16px; }
+  .property-search-page .search-operation-tabs { width: 100%; }
+  .property-search-page .search-operation-tabs button { flex: 1; padding: 10px 7px; font-size: 11px; }
+  .property-search-page .filter-advanced { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; padding: 14px; }
+  .property-search-page .property-grid { gap: 16px; }
+}

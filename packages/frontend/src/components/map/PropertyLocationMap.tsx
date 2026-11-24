@@ -6,6 +6,7 @@ const MapboxPropertyLocationMap = lazy(() => import('./MapboxPropertyLocationMap
 
 export function PropertyLocationMap(props: {
   value: LocationValue
+  operation?: string
   onChange?: (coordinates: { latitude: number; longitude: number }) => void
   onAddressChange?: (details: LocationAddress, baseline: LocationAddress) => void
   onRadiusChange?: (meters: number) => void

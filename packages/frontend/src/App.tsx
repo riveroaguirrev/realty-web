@@ -18,7 +18,6 @@ import { PropertySearch } from '@/pages/PropertySearch'
 import { PropertyDetail } from '@/pages/PropertyDetail'
 import { Favorites } from '@/pages/Favorites'
 import { Conversations } from '@/pages/Conversations'
-import { ConversationDetail } from '@/pages/ConversationDetail'
 import { NotificationCenter } from '@/components/notifications/NotificationCenter'
 import { Requirements } from '@/pages/Requirements'
 import { RequirementEditor } from '@/pages/RequirementEditor'
@@ -66,7 +65,7 @@ function App() {
 
           {/* Messaging & Collaboration */}
           <Route path="/messages" element={<Conversations />} />
-          <Route path="/messages/:id" element={<ConversationDetail />} />
+          <Route path="/messages/:id" element={<Conversations />} />
 
           {/* Organization Routes */}
           <Route path="/organization/setup" element={<ProtectedRoute advisorsOnly><OrganizationSetup /></ProtectedRoute>} />

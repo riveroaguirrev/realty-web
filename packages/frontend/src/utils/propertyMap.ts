@@ -1,4 +1,6 @@
 import { validSearchBounds } from './searchLocation'
+import { propertyOperation, propertyOperationColor } from './propertyOperations'
+import { radiusPolygon } from './mapGeometry'
 import type { PropertyCardProps } from '@/components/property/PropertyCard'
 import type { SearchFilters } from '@/components/property/SearchFilters'
 
@@ -39,6 +41,13 @@ export function inMapBounds(property: MapProperty, bounds: MapBounds): boolean {
 export function mapFeatureCollection(properties: MapProperty[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
   return { type: 'FeatureCollection', features: properties.filter(p => Number.isFinite(p.latitude) && Number.isFinite(p.longitude)).map(p => ({
     type: 'Feature', geometry: { type: 'Point', coordinates: [p.longitude, p.latitude] },
-    properties: { id: p.id, exact: p.isExclusive && p.locationMode === 'EXACT', price: new Intl.NumberFormat('es-BO', { maximumFractionDigits: 0, notation: 'compact' }).format(Number(p.price)), currency: p.currency || 'USD' },
+    properties: { id: p.id, operation: propertyOperation(p.operation), color: propertyOperationColor(p.operation), exact: p.isExclusive && p.locationMode === 'EXACT', price: new Intl.NumberFormat('es-BO', { maximumFractionDigits: 0, notation: 'compact' }).format(Number(p.price)), currency: p.currency || 'USD' },
   })) }
+}
+
+export function mapAreaFeature(property: MapProperty): GeoJSON.Feature<GeoJSON.Polygon> {
+  return {
+    ...radiusPolygon(property.longitude, property.latitude, property.locationRadiusMeters || 500),
+    properties: { id: property.id, operation: propertyOperation(property.operation), color: propertyOperationColor(property.operation) },
+  }
 }

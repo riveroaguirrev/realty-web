@@ -337,7 +337,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
             </div>
 
           </div>
-          <PropertyLocationMap value={formData} address={formData.address} neighborhood={formData.region} city={formData.city} onAddressChange={(details, baseline) => setFormData(prev => ({
+          <PropertyLocationMap operation={formData.operation} value={formData} address={formData.address} neighborhood={formData.region} city={formData.city} onAddressChange={(details, baseline) => setFormData(prev => ({
             ...prev,
             address: prev.address === baseline.address ? details.address : prev.address,
             city: prev.city === baseline.city ? details.city : prev.city,
