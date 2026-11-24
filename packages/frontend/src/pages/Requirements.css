@@ -35,7 +35,7 @@
 .req-tags { gap: 8px; font-size: 12px; }
 .req-actions { display: flex; flex-direction: column; gap: 10px; min-width: 190px; }
 .req-suggestions-heading { margin: 24px 0; }
-.req-suggestion { overflow: hidden; }
+.req-suggestion { overflow: hidden; align-self: start; }
 .req-suggestion .property-card { border: none; border-radius: 0; box-shadow: none; }
 .req-match { border-top: 1px solid var(--swiss-line); padding: 20px; font-size: 12px; line-height: 1.7; }
 .req-match ul { padding-left: 18px; margin-top: 8px; }
@@ -46,6 +46,13 @@
 .req-score-meter::-webkit-meter-bar { background: var(--swiss-ground); border: none; border-radius: 6px; }
 .req-score-meter::-webkit-meter-optimum-value { background: #386447; border-radius: 6px; }
 .req-score-meter::-moz-meter-bar { background: #386447; border-radius: 6px; }
+.req-match-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 0; border-top: 1px solid var(--swiss-line); color: var(--swiss-ink); font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; }
+.req-match-details > summary::-webkit-details-marker { display: none; }
+.req-match-details > summary:focus-visible { outline: 2px solid var(--swiss-accent); outline-offset: 3px; border-radius: 4px; }
+.req-match-details > summary svg { flex-shrink: 0; }
+.req-match-details[open] > summary svg { transform: rotate(180deg); }
+.req-match-details .req-match-less, .req-match-details[open] .req-match-more { display: none; }
+.req-match-details[open] .req-match-less { display: inline; }
 .req-match .req-breakdown { list-style: none; padding: 0; }
 .req-breakdown > li { padding: 10px 0; border-bottom: 1px solid var(--swiss-line); }
 .req-breakdown > li > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }

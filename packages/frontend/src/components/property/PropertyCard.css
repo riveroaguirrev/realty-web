@@ -54,7 +54,15 @@
 .managed-property .property-management-edit { min-height: 38px; border-color: #b5c2d0; border-radius: 9px; color: #18324b; font-size: 12px; }
 .managed-property .property-management-delete { width: 34px; min-height: 36px; border-radius: 9px; border: 0; background: #fae4d6; color: #a44b29; }
 .managed-property .property-management-delete:disabled { opacity: .5; }
-.req-suggestion .property-card.realty-property-card { border: 0; border-radius: 0; box-shadow: none; }
+.req-suggestion .property-card.realty-property-card[data-operation] { height: auto; border: 0; border-radius: 0; box-shadow: none; }
+.req-suggestion .property-card.realty-property-card[data-operation] .property-cover { width: 100%; height: clamp(180px, 24vw, 240px); aspect-ratio: auto; }
+.req-suggestion .property-card.realty-property-card[data-operation] .property-body { flex: none; padding: 16px; }
+.req-suggestion .property-card.realty-property-card[data-operation] .property-summary-link { margin-bottom: 12px; }
+.req-suggestion .property-card.realty-property-card[data-operation] .property-price { font-size: 28px; }
+.req-suggestion .property-card.realty-property-card[data-operation] .property-body h3 { min-height: 0; }
+.req-suggestion .property-card.realty-property-card[data-operation] .property-location { margin: 8px 0 0; }
+.req-suggestion .property-card.realty-property-card[data-operation] .property-specs { margin: 0 0 12px; padding: 10px 0; }
+.req-suggestion .property-card.realty-property-card[data-operation] .property-card-cta { margin: 0; }
 .map-selection .property-card.realty-property-card .property-cover { aspect-ratio: 16 / 9; }
 .map-selection .property-card.realty-property-card .property-body { padding: 12px; }
 .map-selection .property-card.realty-property-card .property-price { font-size: 22px; }
