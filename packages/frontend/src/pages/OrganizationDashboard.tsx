@@ -2,7 +2,7 @@ import './OrganizationDashboard.css'
 import { Icon, IconName } from '@/components/ui/Icon'
 import { Permission } from '@shared/types'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
 import { organizationAPI, OrganizationInvite } from '@/services/organization'
@@ -40,6 +40,7 @@ export const OrganizationDashboard = () => {
     if (user.permissions?.includes(Permission.ORG_ADMIN)) setInvites(await organizationAPI.listInvites(accessToken, user.organizationId))
   }
 
+  const isDirector = user?.roleInOrganization === 'DIRECTOR'
   const isAdmin = user?.permissions?.includes(Permission.ORG_ADMIN)
 
   useEffect(() => {
@@ -176,7 +177,7 @@ export const OrganizationDashboard = () => {
           <div id="org-team-content" role="tabpanel" aria-labelledby={activeTab === 'members' ? 'org-members-tab' : 'org-invites-tab'}>
             {activeTab === 'members' ? <div className="org-members">{!advisors.length ? <p className="org-empty">No hay miembros en la organización.</p> : advisors.map(advisor => <div key={advisor.id} className="org-member-row">
               {advisor.profileImage ? <img className="org-avatar" src={advisor.profileImage} alt={advisor.firstName} /> : <span className="org-avatar" aria-hidden="true">{advisor.firstName?.slice(0,1)}{advisor.lastName?.slice(0,1)}</span>}
-              <div className="org-member-info"><strong>{advisor.firstName} {advisor.lastName}</strong><span>{advisor.email}</span></div><span className="org-badge">{roleLabel(advisor.role)}</span>{advisor.id === user?.id && <span className="org-badge">Tú</span>}
+              <div className="org-member-info">{isDirector ? <Link className="org-member-detail-link" to={`/organization/advisors/${advisor.id}`}><strong>{advisor.firstName} {advisor.lastName}</strong><span>Ver detalle <Icon name="arrow" width="15" height="15" /></span></Link> : <strong>{advisor.firstName} {advisor.lastName}</strong>}<span>{advisor.email}</span></div><span className="org-badge">{roleLabel(advisor.role)}</span>{advisor.id === user?.id && <span className="org-badge">Tú</span>}
               {advisor.id !== user?.id && <div className="org-member-actions">
                 <button type="button" className="org-start-conversation" onClick={() => { void startConversation(advisor.id) }} disabled={!accessToken || !!startingConversation || removingAdvisor === advisor.id} aria-label={`Iniciar conversación con ${advisor.firstName} ${advisor.lastName}`}><Icon name="message" width="18" height="18" />{startingConversation === advisor.id ? 'Abriendo…' : 'Iniciar conversación'}</button>
                 {isAdmin && advisor.role !== 'DIRECTOR' && <button type="button" className="org-remove" onClick={() => handleRemoveAdvisor(advisor.id)} disabled={removingAdvisor === advisor.id}><Icon name="trash" width="16" height="16" />{removingAdvisor === advisor.id ? 'Quitando…' : 'Quitar'}</button>}

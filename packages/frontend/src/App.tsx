@@ -13,6 +13,7 @@ import { CreateProperty } from '@/pages/CreateProperty'
 import { EditProperty } from '@/pages/EditProperty'
 import { OrganizationSetup } from '@/pages/OrganizationSetup'
 import { OrganizationDashboard } from '@/pages/OrganizationDashboard'
+import { OrganizationAdvisorDetail } from '@/pages/OrganizationAdvisorDetail'
 import { InviteAccept } from '@/pages/InviteAccept'
 import { PropertySearch } from '@/pages/PropertySearch'
 import { PropertyDetail } from '@/pages/PropertyDetail'
@@ -69,6 +70,7 @@ function App() {
 
           {/* Organization Routes */}
           <Route path="/organization/setup" element={<ProtectedRoute advisorsOnly><OrganizationSetup /></ProtectedRoute>} />
+          <Route path="/organization/advisors/:advisorId" element={<ProtectedRoute advisorsOnly><OrganizationAdvisorDetail /></ProtectedRoute>} />
           <Route path="/organization/dashboard" element={<ProtectedRoute advisorsOnly><OrganizationDashboard /></ProtectedRoute>} />
           </Route>
           <Route path="/invite" element={<InviteAccept />} />

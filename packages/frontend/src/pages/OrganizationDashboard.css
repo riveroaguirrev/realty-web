@@ -85,3 +85,8 @@
 .org-dashboard .org-start-conversation:hover:not(:disabled) { background:#e9eff5; border-color:#a8b9ca; }
 .org-member-actions .org-remove { margin-left:0; }
 @media(max-width:600px) { .org-member-actions { flex-basis:100%; } }
+
+.org-member-detail-link { display:inline-flex; flex-direction:column; align-items:flex-start; gap:5px; padding:4px 0; }
+.org-member-detail-link > span { display:inline-flex; align-items:center; gap:5px; font-size:13px; color:#586576; }
+.org-member-detail-link:hover strong { text-decoration:underline; }
+.org-member-detail-link:focus-visible { outline:2px solid var(--swiss-accent); outline-offset:4px; }

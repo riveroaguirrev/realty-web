@@ -6,6 +6,18 @@ import { requireUser } from '@/middleware/auth'
 import { advisorService } from '@/services/advisor.service'
 import { requireOrgAccess, requirePermission } from '@/lib/permissions'
 import { Errors } from '@/utils/errors'
+import { getOrganizationAdvisorDetail } from '@/services/organizationAdvisor.service'
+import { readPagination } from '@/utils/pagination'
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string; advisorId: string }> }) {
+  try {
+    const user = await requireUser(request)
+    const { id, advisorId } = await params
+    const { page } = readPagination(request.nextUrl.searchParams, 12)
+    const data = await getOrganizationAdvisorDetail(user.id, id, advisorId, page)
+    return NextResponse.json({ success: true, data }, { headers: { 'Cache-Control': 'no-store' } })
+  } catch (error) { return accountErrorResponse(error) }
+}
 
 export async function DELETE(
   request: NextRequest,
@@ -42,7 +54,7 @@ export async function DELETE(
       {
         status: 200,
         headers: {
-          'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
+          'Access-Control-Allow-Methods': 'GET, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
       }
@@ -87,7 +99,7 @@ export async function OPTIONS(): Promise<NextResponse> {
     {
       status: 200,
       headers: {
-        'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     }

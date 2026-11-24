@@ -1,7 +1,15 @@
 import { httpClient as client } from './api'
+import type { OrganizationAdvisorDetail } from '@shared/types/organizationAdvisor'
 import { ApiResponse } from '@shared/types'
 
 export const organizationAPI = {
+  async getAdvisor(token: string, orgId: string, advisorId: string, page = 1) {
+    const response = await client.get<ApiResponse<OrganizationAdvisorDetail>>(`/organizations/${orgId}/advisors/${advisorId}`, {
+      params: { page }, headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!response.data.success || !response.data.data) throw new Error(response.data.error?.message || 'No pudimos cargar el asesor.')
+    return response.data.data
+  },
   async listInvites(token: string, orgId: string) {
     const response = await client.get<ApiResponse<OrganizationInvite[]>>('/organizations/' + orgId + '/invites', { headers: { Authorization: 'Bearer ' + token } })
     return response.data.data ?? []
