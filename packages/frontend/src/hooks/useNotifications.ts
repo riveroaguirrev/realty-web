@@ -28,7 +28,7 @@ export const useNotifications = ({
         type: 'unread_message',
         conversationId: message.conversationId,
         title: '📬 Nuevo mensaje',
-        message: message.content.substring(0, PREVIEW_LENGTH),
+        message: message.content.substring(0, PREVIEW_LENGTH) || 'Archivo adjunto',
       })
     },
     [userId, currentConversationId, addNotification]

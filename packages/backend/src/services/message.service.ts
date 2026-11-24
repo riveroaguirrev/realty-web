@@ -1,23 +1,31 @@
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
+import type { MessageAttachment } from '@shared/messageAttachments'
+import { messageAttachmentService, readAttachments } from './messageAttachment.service'
 
 export class MessageService {
-  async sendMessage(conversationId: string, senderId: string, content: string) {
-    return await prisma.message.create({
-      data: {
-        conversationId,
-        senderId,
-        content,
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            profileImage: true,
+  async sendMessage(conversationId: string, senderId: string, content: string, attachments: MessageAttachment[] = []) {
+    return await prisma.$transaction(async tx => {
+      const message = await tx.message.create({
+        data: {
+          conversationId,
+          senderId,
+          content,
+          attachments: attachments as unknown as Prisma.InputJsonValue,
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              profileImage: true,
+            },
           },
         },
-      },
+      })
+      await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: message.createdAt } })
+      return message
     })
   }
 
@@ -57,14 +65,14 @@ export class MessageService {
           },
         },
         orderBy: {
-          createdAt: 'asc',
+          createdAt: 'desc',
         },
       }),
       prisma.message.count({ where: { conversationId } }),
     ])
 
     return {
-      messages,
+      messages: messages.reverse(),
       total,
       page,
       pageSize,
@@ -92,9 +100,9 @@ export class MessageService {
   }
 
   async deleteMessage(messageId: string) {
-    return await prisma.message.delete({
-      where: { id: messageId },
-    })
+    const message = await prisma.message.delete({ where: { id: messageId } })
+    await messageAttachmentService.remove(readAttachments(message.attachments))
+    return message
   }
 
   async getLastMessage(conversationId: string) {

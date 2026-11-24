@@ -15,6 +15,11 @@ export const useUnreadMessageCount = (accessToken?: string | null) => {
 
   useEffect(refresh, [refresh])
 
+  useEffect(() => {
+    window.addEventListener('messages:read', refresh)
+    return () => window.removeEventListener('messages:read', refresh)
+  }, [refresh])
+
   useRealtimeInbox({ accessToken, onNewMessage: refresh })
 
   return count

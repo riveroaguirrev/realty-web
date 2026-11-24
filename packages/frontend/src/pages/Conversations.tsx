@@ -1,154 +1,83 @@
-import { Link } from 'react-router-dom'
-import { Pagination } from '@/components/ui/Pagination'
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useRealtimeInbox } from '@/hooks/useRealtimeInbox'
-import { UnreadBadge } from '@/components/notifications/UnreadBadge'
 import { conversationsAPI } from '@/services/conversations'
+import { Icon } from '@/components/ui/Icon'
+import { Pagination } from '@/components/ui/Pagination'
+import { ConversationArtwork, ConversationAvatar, conversationContact, conversationTitle } from '@/components/messages/ConversationIdentity'
+import { ConversationDetail } from './ConversationDetail'
+import './Messages.css'
+
+type InboxResult = Awaited<ReturnType<typeof conversationsAPI.list>>
+const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es')
+const previewDate = (value: string) => {
+  const date = new Date(value)
+  const today = new Date()
+  if (date.toDateString() === today.toDateString()) return date.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  return date.toDateString() === yesterday.toDateString() ? 'Ayer' : date.toLocaleDateString('es-BO', { day: 'numeric', month: 'short' })
+}
 
 export const Conversations = () => {
-  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
   const { accessToken, user } = useAuth()
+  const client = useQueryClient()
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [unreadOnly, setUnreadOnly] = useState(false)
+  const query = useQuery({ queryKey: ['conversations', accessToken, page], queryFn: () => conversationsAPI.list(accessToken!, page, 20), enabled: !!accessToken })
+  useRealtimeInbox({ accessToken, onNewMessage: () => { void client.invalidateQueries({ queryKey: ['conversations', accessToken] }) } })
 
-  const [conversations, setConversations] = useState<any[]>([])
-  const [pagination, setPagination] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const markConversationRead = useCallback((conversationId: string) => {
+    client.setQueriesData<InboxResult>({ queryKey: ['conversations', accessToken] }, previous => previous ? {
+      ...previous, conversations: previous.conversations.map(conversation => conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation),
+    } : previous)
+    window.dispatchEvent(new Event('messages:read'))
+  }, [accessToken, client])
 
-  useEffect(() => {
-    if (!accessToken) return
-    loadConversations()
-  }, [accessToken])
-
-  useRealtimeInbox({
-    accessToken,
-    onNewMessage: () => {
-      loadConversations(pagination?.page ?? 1, { showSpinner: false })
-    },
+  const conversations = query.data?.conversations || []
+  const totalPages = Math.ceil((query.data?.pagination?.total || 0) / (query.data?.pagination?.pageSize || 20))
+  const unreadConversations = conversations.filter(conversation => (conversation.unreadCount || 0) > 0).length
+  const needle = normalize(search.trim())
+  const visible = conversations.filter(conversation => {
+    const contact = conversationContact(conversation, user?.id)
+    return (!unreadOnly || (conversation.unreadCount || 0) > 0) &&
+      (!needle || normalize(`${conversationTitle(conversation, user?.id)} ${contact?.organization?.name || ''}`).includes(needle))
   })
 
-  const loadConversations = async (page = 1, { showSpinner = true } = {}) => {
-    if (!accessToken) return
-
-    try {
-      if (showSpinner) setIsLoading(true)
-      setError(null)
-      const result = await conversationsAPI.list(accessToken, page, 20)
-      setConversations(result.conversations)
-      setPagination(result.pagination)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No pudimos cargar tus conversaciones.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const getOtherParticipant = (conv: any) =>
-    conv.participants?.find((p: any) => p.advisorId !== user?.id)
-
-  const formatTime = (date: string) => {
-    const d = new Date(date)
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-
-    if (d.toDateString() === today.toDateString()) {
-      return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-    } else if (d.toDateString() === yesterday.toDateString()) {
-      return 'Ayer'
-    } else {
-      return d.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <>
-        <div className="page-surface flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-600">Cargando conversaciones...</p>
+  return <div className="messages-page">
+    <div className="page-heading messages-heading"><div><h1>Mensajes</h1><p>Conecta con otros asesores y encuentra nuevas oportunidades.</p></div></div>
+    <div className={`messages-workspace ${id ? 'has-conversation' : ''}`}>
+      <aside className="messages-inbox" aria-label="Conversaciones">
+        <div className="messages-inbox-header">
+          <h2>Conversaciones{unreadConversations > 0 && <span className="inbox-count" aria-label={`${unreadConversations} conversaciones sin leer en esta página`}>{unreadConversations > 99 ? '99+' : unreadConversations}</span>}</h2>
+          <div className="inbox-search"><Icon name="search" /><input type="search" aria-label="Buscar conversación" placeholder="Buscar conversación" value={search} onChange={event => setSearch(event.target.value)} /></div>
+          <div className="inbox-filters" role="group" aria-label="Filtrar conversaciones">
+            <button type="button" aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)}>Todas</button>
+            <button type="button" aria-pressed={unreadOnly} onClick={() => setUnreadOnly(true)}>No leídas</button>
           </div>
         </div>
-      </>
-    )
-  }
-
-  return (
-    <>
-      <div className="page-surface">
-
-        <div className="page-content">
-          <div className="page-heading"><div><p className="eyebrow">CONEXIONES QUE ABREN PUERTAS</p>
-            <h2 className="text-4xl font-bold text-gray-900 mb-2">Mensajes</h2>
-            <p className="text-gray-600">Todas tus conversaciones con asesores, en un solo lugar.</p></div>
-          </div>
-
-          {error && (
-            <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 px-6 py-4 rounded-r-lg shadow-sm">
-              <p className="font-medium">Error</p>
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
-
-          {error ? <button className="button button-secondary" onClick={() => loadConversations()}>Reintentar</button> : conversations.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-lg p-16 text-center">
-              <div className="text-6xl mb-4">🗨️</div>
-              <p className="text-gray-600 text-lg mb-2">Sin conversaciones aún</p>
-              <p className="text-gray-500 text-sm mb-6">Abre una propiedad y pulsa “Contactar al asesor” para iniciar una conversación.</p>
-              <button
-                onClick={() => navigate('/search')}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-shadow"
-              >
-                Explorar propiedades
-              </button>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden divide-y divide-gray-200">
-              {conversations.map((conv) => {
-                const otherParticipant = getOtherParticipant(conv)
-                const lastMsg = conv.messages?.[0]
-
-                return (
-                  <Link
-                    key={conv.id}
-                    to={`/messages/${conv.id}`}
-                    className="block p-6 hover:bg-gray-50 cursor-pointer transition relative"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-900">
-                            {otherParticipant?.advisor?.firstName}{' '}
-                            {otherParticipant?.advisor?.lastName}
-                          </h3>
-                          <UnreadBadge count={conv.unreadCount} />
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          {otherParticipant?.advisor?.organization?.name}
-                        </p>
-                        {lastMsg && (
-                          <p className="text-sm text-gray-600 mt-2 truncate">
-                            {lastMsg.sender?.firstName}: {lastMsg.content}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right ml-4">
-                        <p className="text-xs text-gray-500">
-                          {conv.lastMessageAt && formatTime(conv.lastMessageAt)}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-
-          <Pagination page={pagination?.page || 1} totalPages={Math.ceil((pagination?.total || 0) / (pagination?.pageSize || 20))} onChange={loadConversations} disabled={isLoading} />
-        </div>
-      </div>
-    </>
-  )
+        <nav className="inbox-list" aria-label="Lista de conversaciones" aria-busy={query.isFetching}>
+          {query.isPending ? <p className="inbox-status" role="status">Cargando conversaciones…</p> : query.isError ? <div className="inbox-status" role="alert"><p>No pudimos cargar tus conversaciones.</p><button className="text-link" onClick={() => query.refetch()}>Reintentar</button></div> : !visible.length ? <div className="inbox-status"><Icon name="message" width="30" height="30" /><p>{search ? 'No encontramos coincidencias.' : unreadOnly ? 'No tienes conversaciones sin leer.' : 'Todavía no tienes conversaciones.'}</p>{!search && !unreadOnly && <Link to="/search" className="text-link">Explorar propiedades <Icon name="arrow" /></Link>}</div> : visible.map(conversation => {
+            const contact = conversationContact(conversation, user?.id)
+            const title = conversationTitle(conversation, user?.id)
+            const lastMessage = conversation.messages?.[0]
+            const unread = conversation.unreadCount || 0
+            return <Link key={conversation.id} to={`/messages/${conversation.id}`} className={`inbox-conversation ${conversation.id === id ? 'is-selected' : ''} ${unread > 0 ? 'is-unread' : ''}`} aria-current={conversation.id === id ? 'page' : undefined}>
+              <ConversationAvatar advisor={contact} title={title} />
+              <div className="inbox-conversation-copy"><div className="inbox-conversation-title"><h3>{title}</h3>{conversation.lastMessageAt && <time dateTime={conversation.lastMessageAt}>{previewDate(conversation.lastMessageAt)}</time>}</div>
+                <p className="inbox-organization">{contact?.organization?.name || 'Asesor inmobiliario'}</p>
+                <div className="inbox-preview"><p>{lastMessage ? `${lastMessage.senderId === user?.id ? 'Tú' : lastMessage.sender?.firstName || contact?.firstName || 'Mensaje'}: ${lastMessage.content || (lastMessage.attachments?.length ? '📎 Archivo adjunto' : '')}` : 'Inicia la conversación'}</p>{unread > 0 && <span className="inbox-count" aria-label={`${unread} mensajes sin leer`}>{unread > 99 ? '99+' : unread}</span>}</div>
+              </div>
+            </Link>
+          })}
+        </nav>
+        {totalPages > 1 && <div className="inbox-pagination"><p>Los filtros se aplican a esta página.</p><Pagination page={page} totalPages={totalPages} onChange={setPage} disabled={query.isFetching} /></div>}
+      </aside>
+      {id ? <ConversationDetail key={`${accessToken}:${id}`} conversationId={id} onRead={markConversationRead} /> : <section className="conversation-pane messages-placeholder" aria-label="Selecciona una conversación"><ConversationArtwork /><h2>Cada conversación abre una oportunidad.</h2><p>Selecciona una conversación para leer y enviar mensajes.</p></section>}
+    </div>
+  </div>
 }

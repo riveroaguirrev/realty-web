@@ -1,9 +1,10 @@
 import { httpClient as client } from './api'
 import { ApiResponse } from '@shared/types'
+import type { ConversationMessage } from '@/types/messaging'
 
 export const messagesAPI = {
   async list(token: string, conversationId: string, page = 1, pageSize = 20) {
-    const response = await client.get<ApiResponse<any>>(
+    const response = await client.get<ApiResponse<ConversationMessage[]>>(
       `/conversations/${conversationId}/messages?page=${page}&pageSize=${pageSize}`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -16,12 +17,24 @@ export const messagesAPI = {
     }
   },
 
-  async send(token: string, conversationId: string, content: string) {
+  async attachment(token: string, conversationId: string, messageId: string, attachmentId: string) {
+    const response = await client.get<ApiResponse<{ url: string; downloadUrl: string }>>(
+      `/conversations/${conversationId}/messages/${messageId}/attachments/${attachmentId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+    return response.data.data!
+  },
+
+  async send(token: string, conversationId: string, content: string, files: File[] = []) {
+    const form = new FormData()
+    form.set('content', content)
+    files.forEach(file => form.append('files', file))
     const response = await client.post<ApiResponse<any>>(
       `/conversations/${conversationId}/messages`,
-      { content },
+      files.length ? form : { content },
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, ...(files.length ? { 'Content-Type': undefined } : {}) },
+        timeout: 60000,
       }
     )
     if (!response.data.success) throw new Error(response.data.error?.message)

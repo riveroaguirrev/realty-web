@@ -627,6 +627,7 @@ model Message {
   sender            Advisor @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   content           String
+  attachments       Json     @default("[]")
   editedAt          DateTime?
 
   createdAt         DateTime @default(now())

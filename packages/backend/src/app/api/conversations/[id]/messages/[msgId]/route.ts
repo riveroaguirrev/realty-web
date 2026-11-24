@@ -26,7 +26,7 @@ export async function PUT(
       )
     }
 
-    const { msgId } = await params
+    const { id, msgId } = await params
     const body = await request.json() as { content?: string }
     const { content } = body
 
@@ -38,7 +38,7 @@ export async function PUT(
     }
 
     const message = await messageService.getMessage(msgId)
-    if (!message) {
+    if (!message || message.conversationId !== id) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: 'Message not found' } },
         { status: 404 }
@@ -99,10 +99,10 @@ export async function DELETE(
       )
     }
 
-    const { msgId } = await params
+    const { id, msgId } = await params
 
     const message = await messageService.getMessage(msgId)
-    if (!message) {
+    if (!message || message.conversationId !== id) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: 'Message not found' } },
         { status: 404 }

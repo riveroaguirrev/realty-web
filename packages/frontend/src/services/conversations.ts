@@ -1,9 +1,10 @@
 import { httpClient as client } from './api'
 import { ApiResponse } from '@shared/types'
+import type { ConversationRecord } from '@/types/messaging'
 
 export const conversationsAPI = {
   async list(token: string, page = 1, pageSize = 20) {
-    const response = await client.get<ApiResponse<any>>(
+    const response = await client.get<ApiResponse<ConversationRecord[]>>(
       `/conversations?page=${page}&pageSize=${pageSize}`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -29,7 +30,7 @@ export const conversationsAPI = {
   },
 
   async get(token: string, conversationId: string) {
-    const response = await client.get<ApiResponse<any>>(`/conversations/${conversationId}`, {
+    const response = await client.get<ApiResponse<ConversationRecord>>(`/conversations/${conversationId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!response.data.success) throw new Error(response.data.error?.message)

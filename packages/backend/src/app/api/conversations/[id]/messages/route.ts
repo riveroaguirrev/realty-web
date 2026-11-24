@@ -6,6 +6,8 @@ import { messageService } from '@/services/message.service'
 import { conversationService } from '@/services/conversation.service'
 import { supabase } from '@/lib/supabase'
 import { ApiResponse } from '@shared/types'
+import { readMessageForm } from '@/utils/validateMessageFiles'
+import { messageAttachmentService } from '@/services/messageAttachment.service'
 
 export async function GET(
   request: NextRequest,
@@ -99,16 +101,6 @@ export async function POST(
     }
 
     const { id } = await params
-    const body = await request.json() as { content?: string }
-    const { content } = body
-
-    if (typeof content !== 'string' || !content.trim()) {
-      return NextResponse.json(
-        { success: false, error: { code: 'BAD_REQUEST', message: 'content is required' } },
-        { status: 400 }
-      )
-    }
-
     // Verify user is participant
     const conversation = await conversationService.getConversation(id)
     if (!conversation) {
@@ -126,11 +118,30 @@ export async function POST(
       )
     }
 
+    let content: string
+    let files: File[] = []
+    if (request.headers.get('content-type')?.toLowerCase().startsWith('multipart/form-data;')) {
+      const form = await readMessageForm(request)
+      const text = form.get('content')
+      if (text !== null && typeof text !== 'string') throw new AccountApiError(400, 'BAD_REQUEST', 'El texto del mensaje no es válido.')
+      content = text || ''
+      const entries = form.getAll('files')
+      if (entries.some(file => typeof file === 'string')) throw new AccountApiError(400, 'BAD_REQUEST', 'Los adjuntos no son válidos.')
+      files = entries as File[]
+    } else {
+      const body = await request.json() as { content?: unknown; attachments?: unknown }
+      if (body.attachments !== undefined) throw new AccountApiError(400, 'BAD_REQUEST', 'Adjunta los archivos desde el selector.')
+      if (typeof body.content !== 'string') throw new AccountApiError(400, 'BAD_REQUEST', 'El texto del mensaje no es válido.')
+      content = body.content
+    }
+    if (!content.trim() && !files.length) throw new AccountApiError(400, 'EMPTY_MESSAGE', 'Escribe un mensaje o adjunta un archivo.')
     if (content.trim().length > 10000) {
       return NextResponse.json({ success: false, error: { code: 'MESSAGE_TOO_LONG', message: 'El mensaje supera los 10.000 caracteres.' } }, { status: 400 })
     }
-    const message = await messageService.sendMessage(id, user.id, content.trim())
-    await conversationService.updateLastMessageTime(id)
+    const attachments = await messageAttachmentService.upload(id, files)
+    let message
+    try { message = await messageService.sendMessage(id, user.id, content.trim(), attachments) }
+    catch (error) { await messageAttachmentService.remove(attachments); throw error }
 
     return NextResponse.json(
       {

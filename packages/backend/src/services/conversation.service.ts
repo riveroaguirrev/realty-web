@@ -24,6 +24,12 @@ const CONVERSATION_INCLUDE = {
 }
 
 export class ConversationService {
+  async isParticipant(conversationId: string, advisorId: string) {
+    return !!await prisma.conversationParticipant.findUnique({
+      where: { conversationId_advisorId: { conversationId, advisorId } }, select: { id: true },
+    })
+  }
+
   async createConversation(
     createdBy: string,
     participantIds: string[],
