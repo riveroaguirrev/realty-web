@@ -67,6 +67,8 @@ realty/
 
 ## 🚀 Quick Start
 
+Para publicar frontend y backend en Vercel con Supabase Cloud, sigue [DEPLOYMENT.md](./DEPLOYMENT.md). Incluye las variables de cada proyecto, migraciones, correo y almacenamiento.
+
 ### Prerequisites
 - Node.js 18+
 - Supabase CLI (`brew install supabase/tap/supabase`)

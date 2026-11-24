@@ -6,19 +6,18 @@
     "name": "realty-api",
     "url": "https://realty-api-century21urbanbo-9375s-projects.vercel.app",
     "rootDirectory": "packages/backend",
-    "deploymentId": "dpl_7ZhbDiAfL1DBGBrrcYnafHAQ3qBz",
-    "deploymentUrl": "https://realty-rjwrdbspe-century21urbanbo-9375s-projects.vercel.app",
+    "deploymentId": "dpl_3yVFeuafy8HAQirZL1CrF26SzDGi",
+    "deploymentUrl": "https://realty-atlkmkji8-century21urbanbo-9375s-projects.vercel.app",
     "status": "READY",
     "promoted": true,
     "healthVerified": true,
-    "previousDeploymentId": "dpl_D2x6n6xJBkHwcNqmaTELuS8tMntQ",
+    "previousDeploymentId": "dpl_EUkXrZBcJy3hnJbVXQPiqL8KXGhD",
     "nextVersion": "16.4.6",
     "reactVersion": "19.3.1",
     "source": {
-      "baseCommit": "ce9b4bc313cad0c07853dc3b96c7a661ccef0436",
-      "dirty": true,
-      "sha256": "7a89ae22656141821596fe271ccf60e73c1ea43e2037e7fe0f4e6f967163d0e7",
-      "files": 201
+      "baseCommit": "96da6ec2a55e1263bcd281a22b3d4e2e3f7d3e82",
+      "dirty": false,
+      "files": 274
     },
     "signupVerificationRequired": false
   },
@@ -27,8 +26,8 @@
     "name": "realty-web",
     "url": "https://realty-web-century21urbanbo-9375s-projects.vercel.app",
     "rootDirectory": "packages/frontend",
-    "deploymentId": "dpl_5sgEPjYWpQvsDjea7vxa6Rtd71PU",
-    "deploymentUrl": "https://realty-8xwl2fioo-century21urbanbo-9375s-projects.vercel.app",
+    "deploymentId": "dpl_ETHPQyzAn6CreTwpPZzah6v8fHi5",
+    "deploymentUrl": "https://realty-f4ugx3yr5-century21urbanbo-9375s-projects.vercel.app",
     "status": "READY",
     "promoted": true,
     "loginPageVerified": true,
@@ -36,39 +35,44 @@
     "publicRoutesVerified": true,
     "authCookieVerified": true,
     "source": {
-      "baseCommit": "ce9b4bc313cad0c07853dc3b96c7a661ccef0436",
-      "dirty": true,
-      "sha256": "a8b6868526485108b6c2ae3443df9bbb8f3d7360fcb6d7b4068d8d151ab1d889",
-      "files": 201
+      "baseCommit": "96da6ec2a55e1263bcd281a22b3d4e2e3f7d3e82",
+      "dirty": false,
+      "files": 274
     },
-    "previousDeploymentId": "dpl_6boPVAKBbuKKy19xmH4XV2wWpnxt",
+    "previousDeploymentId": "dpl_EvxciYnipjUJndqDCnKxuKtvPKYG",
     "registrationPageVerified": true,
     "userTypeSelectorRemoved": true
   },
   "source": {
-    "baseCommit": "ce9b4bc313cad0c07853dc3b96c7a661ccef0436",
-    "dirty": true,
-    "sha256": "7a89ae22656141821596fe271ccf60e73c1ea43e2037e7fe0f4e6f967163d0e7",
-    "files": 201
+    "baseCommit": "96da6ec2a55e1263bcd281a22b3d4e2e3f7d3e82",
+    "dirty": false,
+    "files": 274
   },
-  "lastVerifiedDate": "2026-11-23",
+  "lastVerifiedDate": "2026-11-24",
   "release": {
-    "date": "2026-11-23",
+    "date": "2026-11-24",
     "status": "PUBLISHED",
     "frontendPublished": true,
     "backendPublished": true,
-    "source": "local-workspace",
-    "directSignupConfigured": true,
-    "signupVerificationEnvironmentVariable": "AUTH_REQUIRE_SIGNUP_VERIFICATION=false",
-    "localTestsPassed": 20,
-    "localIntegrationTestsSkipped": 4,
-    "backendTypeCheckPassed": true,
+    "source": "committed-source-upload",
+    "commit": "96da6ec2a55e1263bcd281a22b3d4e2e3f7d3e82",
+    "localTestsPassed": 43,
     "frontendTypeCheckPassed": true,
-    "frontendRegistrationPageVerified": true,
-    "publicProxyHealthVerified": true,
-    "signupEmailEndToEndVerified": false,
-    "productionSignupEndToEndVerified": false,
-    "note": "Published local UI and direct signup changes. No new production account was created during verification. Automatic Git deployment connection was not changed.",
-    "userTypeSelectorRemoved": true
+    "backendTypeCheckPassed": true,
+    "productionMigrationsApplied": [
+      "20261124060000_message_attachments",
+      "20261124070000_requirement_visibility"
+    ],
+    "productionDatabaseQueriesVerified": true,
+    "temporaryMigrationSandboxStopped": true,
+    "automaticGitDeploymentEnabled": false,
+    "automaticGitDeploymentBlocker": "Vercel GitHub connection lacks write/admin access to riveroaguirrev/realty-web",
+    "authenticatedProductionFlowsVerified": false,
+    "testsPassed": 86,
+    "integrationTestsSkipped": 6,
+    "productionLoginHttpStatus": 200,
+    "productionApiHealthHttpStatus": 200,
+    "productionProxyHealthHttpStatus": 200,
+    "additionalMigrationsRequired": false
   }
 }
