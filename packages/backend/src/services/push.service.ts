@@ -1,5 +1,6 @@
 import webpush from 'web-push'
 import { prisma } from '@/lib/prisma'
+import { getRequirement } from './requirement.service'
 export const pushConfigured = () => Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && process.env.VAPID_SUBJECT)
 export async function deliverPendingPush(requirementId?: string) {
   if (!pushConfigured()) return { sent: 0, configured: false }
@@ -15,6 +16,10 @@ export async function deliverPendingPush(requirementId?: string) {
       const leaseUntil = new Date(Date.now() + 120000)
       const claimed = await prisma.notification.updateMany({ where: { id: notification.id, scheduledFor: { lte: new Date() }, sendAttempts: notification.sendAttempts }, data: { scheduledFor: leaseUntil, sendAttempts: { increment: 1 }, lastAttemptAt: new Date() } })
       if (!claimed.count) return
+      if (!notification.relatedEntityId || !await getRequirement(notification.relatedEntityId, notification.advisorId)) {
+        await prisma.notification.updateMany({ where: { id: notification.id }, data: { scheduledFor: null } })
+        return
+      }
       const subscriptions = await prisma.pushSubscription.findMany({ where: { advisorId: notification.advisorId, advisor: { status: 'ACTIVE' } } })
       let retry = false
       for (let offset = 0; offset < subscriptions.length; offset += 5) {

@@ -3,6 +3,7 @@ const list = z.array(z.string().trim().min(1).max(100)).max(12)
 const amount = z.number().finite().min(0).max(9999999999).nullable().optional()
 const count = z.number().int().min(0).max(100).nullable().optional()
 export const requirementInput = z.object({
+  visibility: z.enum(['PUBLIC', 'ORGANIZATION']).optional(),
   title: z.string().trim().min(5, 'Escribe un título de al menos 5 caracteres.').max(180),
   description: z.string().trim().max(3000).optional(),
   operation: z.enum(['SALE', 'RENTAL', 'ANTICRETIC']),

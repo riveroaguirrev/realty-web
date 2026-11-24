@@ -1,11 +1,11 @@
 import { ApiRequestError, apiClient } from './api'
-import type { RequirementDetail, RequirementInput, RequirementRecord, RequirementStatus, RequirementSuggestionFilters } from '@shared/types/requirements'
+import type { RequirementDetail, RequirementInput, RequirementRecord, RequirementStatus, RequirementSuggestionFilters, RequirementVisibility } from '@shared/types/requirements'
 const config = (token: string) => ({ headers: { Authorization: `Bearer ${token}` } })
 export const requirementsAPI = {
-  list: (token: string, mine = false, page = 1) => apiClient.get<RequirementRecord[]>(`/requirements?mine=${mine}&page=${page}`, config(token)),
+  list: (token: string, mine = false, page = 1, organization = false) => apiClient.get<RequirementRecord[]>(`/requirements?mine=${mine}&page=${page}&organization=${organization}`, config(token)),
   get: (token: string, id: string, filters?: RequirementSuggestionFilters) => apiClient.get<RequirementDetail>(`/requirements/${id}`, { ...config(token), params: filters }),
   create: (token: string, data: RequirementInput) => apiClient.post<RequirementRecord>('/requirements', data, config(token)),
-  update: (token: string, id: string, data: RequirementInput | { status: RequirementStatus }) => apiClient.put<RequirementRecord>(`/requirements/${id}`, data, config(token)),
+  update: (token: string, id: string, data: RequirementInput | { status: RequirementStatus } | { visibility: RequirementVisibility }) => apiClient.put<RequirementRecord>(`/requirements/${id}`, data, config(token)),
 }
 export interface RequirementNotice { id: string; title: string; message: string; actionUrl: string; createdAt: string }
 export const requirementNotifications = {

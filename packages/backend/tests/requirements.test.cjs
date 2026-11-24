@@ -103,6 +103,7 @@ test('validation rejects inverted budgets, empty cities, invalid enums and negat
 })
 
 function loadMocked(relative, mocks) {
+  if (!mocks['@/utils/authenticatedRoute']) mocks['@/utils/authenticatedRoute'] = { RouteError: class extends Error {} }
   const filename = path.resolve(__dirname, relative)
   const source = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText
   const module = { exports: {} }
@@ -187,14 +188,14 @@ test('publication announces to other active advisors within the same transaction
   })
   await service.publishRequirement('author', { ...r, buyerId: 'forged', status: 'FULFILLED' })
   assert.equal(transactionCount, 1)
-  assert.deepEqual(notificationData, ['Andy Velarde: ' + r.title, 'new-req', '/requirements/new-req', 'author'])
+  assert.deepEqual(notificationData, ['Andy Velarde: ' + r.title, 'new-req', '/requirements/new-req', 'author', 'PUBLIC', null])
 })
 test('only the owning advisor can modify a requirement, including status changes', async () => {
   let filter
   const route = loadMocked('../src/app/api/requirements/[id]/route.ts', {
     'next/server': { NextResponse: { json: (body) => body } },
     '@/utils/authenticatedRoute': { authenticatedRoute: (_req, fn) => fn('author'), RouteError: class extends Error {} },
-    '@/services/requirement.service': { getRequirement: async () => r },
+    '@/services/requirement.service': { getRequirement: async () => r, updateRequirement: async (id, buyerId) => { filter = { id, buyerId }; throw new Error('Not owner') } },
     '@/utils/requirementInput': { requirementInput },
     '@/lib/prisma': { prisma: { requirement: { updateMany: async args => { filter = args.where; return { count: 0 } } } } },
   })
@@ -207,9 +208,10 @@ test('push delivery removes expired subscriptions and leaves successful notices 
   let removed, update
   try {
     const service = loadMocked('../src/services/push.service.ts', {
+      './requirement.service': { getRequirement: async () => ({ id: 'r1' }) },
       'web-push': { setVapidDetails: () => {}, sendNotification: async () => { throw { statusCode:410 } } },
       '@/lib/prisma': { prisma: {
-        notification: { findMany: async () => [{id:'n1',advisorId:'other',sendAttempts:0}], updateMany: async () => ({count:1}), update: async args => { update = args.data } },
+        notification: { findMany: async () => [{id:'n1',advisorId:'other',relatedEntityId:'r1',sendAttempts:0}], updateMany: async () => ({count:1}), update: async args => { update = args.data } },
         pushSubscription: { findMany: async () => [{ id:'s1',endpoint:'https://fcm.googleapis.com/a',p256dh:'key',auth:'auth' }], deleteMany: async args => { removed = args.where } },
       } },
     })
@@ -278,13 +280,13 @@ test('push subscriptions can be refreshed by the owner and another account canno
 test('the requirement detail uses the same publication visibility for any advisor except its owner', async () => {
   let query
   const service = loadMocked('../src/services/requirement.service.ts', {
-    '@/lib/prisma': { prisma: { requirement: { findFirst: async args => { query = args } } } },
+    '@/lib/prisma': { prisma: { advisor: { findUnique: async () => ({ organizationId: null }) }, requirement: { findFirst: async args => { query = args } } } },
     '@/utils/requirementInput': { requirementInput },
     '@/utils/requirementMatching': { scoreRequirement },
     '@/utils/propertyView': { propertyCardSelect: {} },
   })
   await service.getRequirement('record', 'viewer')
-  assert.deepEqual(query.where, { id: 'record', OR: [{ status: 'ACTIVE' }, { buyerId: 'viewer' }] })
+  assert.deepEqual(query.where, { id: 'record', AND: [{ OR: [{ buyerId: 'viewer' }, { visibility: 'PUBLIC' }] }, { OR: [{ status: 'ACTIVE' }, { buyerId: 'viewer' }] }] })
   assert.equal(query.select.rejectedProperties, undefined)
 })
 
@@ -320,4 +322,42 @@ test('photo cleanup preserves referenced files and retains rows that need a retr
   assert.deepEqual(storageCalls, ['gone.jpg', 'retry.jpg'])
   assert.deepEqual(cleared, ['gone'])
   assert.deepEqual(deferred, ['linked', 'retry'])
+})
+
+test('organization publication derives the audience from membership and restricts notification recipients', async () => {
+  let notificationValues
+  const tx = {
+    advisor: { findUnique: async () => ({ organizationId: 'org-a' }) },
+    requirement: { create: async ({ data }) => {
+      assert.equal(data.organizationId, 'org-a')
+      return { ...data, id: 'private', buyer: { firstName: 'Ana', lastName: 'Pérez' } }
+    } },
+    $executeRaw: async (sql, ...values) => { assert.match(sql.join('?'), /"organizationId" = \?/); notificationValues = values },
+  }
+  const api = loadMocked('../src/services/requirement.service.ts', {
+    '@/lib/prisma': { prisma: { $transaction: fn => fn(tx) } },
+    '@/utils/requirementInput': { requirementInput }, '@/utils/requirementMatching': {}, '@/utils/propertyView': {},
+  })
+  await api.publishRequirement('author', { ...r, visibility: 'ORGANIZATION', organizationId: 'forged-org' })
+  assert.deepEqual(notificationValues.slice(-2), ['ORGANIZATION', 'org-a'])
+  assert.equal(requirementInput.safeParse({ ...r, visibility: 'INVALID' }).success, false)
+})
+
+test('push delivery discards queued notices after recipient loses access', async () => {
+  const old = { VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY, VAPID_SUBJECT: process.env.VAPID_SUBJECT }
+  Object.assign(process.env, { VAPID_PUBLIC_KEY: 'public', VAPID_PRIVATE_KEY: 'private', VAPID_SUBJECT: 'mailto:a@example.com' })
+  let subscriptions = 0, stopped = false
+  try {
+    const api = loadMocked('../src/services/push.service.ts', {
+      './requirement.service': { getRequirement: async () => null },
+      'web-push': { setVapidDetails: () => {}, sendNotification: async () => assert.fail('Private notice must not be sent') },
+      '@/lib/prisma': { prisma: {
+        notification: { findMany: async () => [{ id: 'n', advisorId: 'outsider', relatedEntityId: 'private', sendAttempts: 0 }], updateMany: async args => { if (args.data.scheduledFor === null) stopped = true; return { count: 1 } } },
+        pushSubscription: { findMany: async () => { subscriptions++; return [] } },
+      } },
+    })
+    await api.deliverPendingPush()
+    assert.equal(subscriptions, 0)
+    assert.equal(stopped, true)
+  } finally { for (const [key, value] of Object.entries(old)) { if (value == null) delete process.env[key]; else process.env[key] = value } }
 })

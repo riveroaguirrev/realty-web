@@ -3,13 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { requirementInput } from '@/utils/requirementInput'
 import { scoreRequirement } from '@/utils/requirementMatching'
 import { propertyCardSelect } from '@/utils/propertyView'
+import { RouteError } from '@/utils/authenticatedRoute'
 import type { RequirementSuggestionFilters } from '@shared/types/requirements'
 const requirementSelect = {
   id: true, title: true, description: true, operation: true, propertyType: true,
   currency: true, priceMin: true, priceMax: true, cities: true, zones: true,
   bedroomsMin: true, bathroomsMin: true, areaMin: true,
   requiresGarage: true, requiresGroundFloor: true, petsRequired: true,
-  buyerId: true, status: true, createdAt: true,
+  buyerId: true, status: true, createdAt: true, visibility: true, organizationId: true,
   buyer: { select: { id: true, firstName: true, lastName: true } },
 } satisfies Prisma.RequirementSelect
 export async function requirementSuggestions(id: string, filters: Partial<RequirementSuggestionFilters> = {}) {
@@ -50,7 +51,8 @@ export async function publishRequirement(advisorId: string, input: unknown) {
   const data = requirementInput.parse(input)
   // The announcement and publication commit together. Push transport failure cannot undo a publication.
   return prisma.$transaction(async tx => {
-    const requirement = await tx.requirement.create({ data: { ...data, buyerId: advisorId }, select: requirementSelect })
+    const scope = await requirementScope(tx, advisorId, data.visibility || 'PUBLIC')
+    const requirement = await tx.requirement.create({ data: { ...data, ...scope, buyerId: advisorId }, select: requirementSelect })
     const message = `${requirement.buyer.firstName} ${requirement.buyer.lastName}: ${requirement.title}`
     const actionUrl = `/requirements/${requirement.id}`
     await tx.$executeRaw`
@@ -63,12 +65,21 @@ export async function publishRequirement(advisorId: string, input: unknown) {
         'requirement', ${requirement.id}, ${actionUrl}, 'Ver requerimiento', CURRENT_TIMESTAMP
       FROM "Advisor"
       WHERE "status" = 'ACTIVE' AND "userRole" = 'ADVISOR' AND "id" <> ${advisorId}
+        AND (${requirement.visibility} = 'PUBLIC' OR "organizationId" = ${requirement.organizationId})
     `
     return requirement
   })
 }
-export async function listRequirements(advisorId: string, mine: boolean, page: number) {
-  const where = mine ? { buyerId: advisorId } : { status: 'ACTIVE' as const }
+export async function listRequirements(advisorId: string, mine: boolean, page: number, organizationOnly = false) {
+  const where: Prisma.RequirementWhereInput = mine ? { buyerId: advisorId } : { status: 'ACTIVE', ...await requirementAccess(prisma, advisorId) }
+  if (organizationOnly) {
+    const advisor = await prisma.advisor.findUnique({ where: { id: advisorId }, select: { organizationId: true } })
+    if (!advisor?.organizationId) throw new RouteError(403, 'Tu cuenta no pertenece a una organización.')
+    where.AND = [{ OR: [
+      { visibility: 'PUBLIC', buyer: { organizationId: advisor.organizationId } },
+      { visibility: 'ORGANIZATION', organizationId: advisor.organizationId },
+    ] }]
+  }
   const [items, total] = await Promise.all([
     prisma.requirement.findMany({ where, orderBy: { createdAt: 'desc' }, take: 20, skip: (page - 1) * 20, select: requirementSelect }),
     prisma.requirement.count({ where }),
@@ -76,5 +87,32 @@ export async function listRequirements(advisorId: string, mine: boolean, page: n
   return { items, total }
 }
 export async function getRequirement(id: string, advisorId: string) {
-  return prisma.requirement.findFirst({ where: { id, OR: [{ status: 'ACTIVE' }, { buyerId: advisorId }] }, select: requirementSelect })
+  return prisma.requirement.findFirst({ where: { id, AND: [await requirementAccess(prisma, advisorId), { OR: [{ status: 'ACTIVE' }, { buyerId: advisorId }] }] }, select: requirementSelect })
+}
+
+// Organization membership comes from the database, never from a client-supplied id.
+export async function requirementScope(db: Prisma.TransactionClient, advisorId: string, visibility: string) {
+  if (visibility === 'PUBLIC') return { visibility, organizationId: null }
+  const advisor = await db.advisor.findUnique({ where: { id: advisorId }, select: { organizationId: true } })
+  if (!advisor?.organizationId) throw new RouteError(400, 'Debes pertenecer a una organización para publicar solo en ella.')
+  return { visibility, organizationId: advisor.organizationId }
+}
+export async function requirementAccess(db: Prisma.TransactionClient, advisorId: string): Promise<Prisma.RequirementWhereInput> {
+  const advisor = await db.advisor.findUnique({ where: { id: advisorId }, select: { organizationId: true } })
+  return { OR: [{ buyerId: advisorId }, { visibility: 'PUBLIC' }, ...(advisor?.organizationId ? [{ visibility: 'ORGANIZATION', organizationId: advisor.organizationId }] : [])] }
+}
+export async function updateRequirement(id: string, advisorId: string, data: Prisma.RequirementUpdateManyMutationInput & { visibility?: string }) {
+  return prisma.$transaction(async tx => {
+    const current = await tx.requirement.findFirst({ where: { id, buyerId: advisorId }, select: { visibility: true, organizationId: true } })
+    if (!current) throw new RouteError(404, 'No puedes modificar este requerimiento.')
+    const scope = data.visibility ? await requirementScope(tx, advisorId, data.visibility) : {}
+    await tx.requirement.update({ where: { id }, data: { ...data, ...scope } })
+    // Remove queued and in-app notices that no longer belong to the chosen audience.
+    const visibility = data.visibility || current.visibility
+    const organizationId = 'organizationId' in scope ? scope.organizationId : current.organizationId
+    if (visibility === 'ORGANIZATION') await tx.notification.deleteMany({ where: {
+      type: 'REQUIREMENT_CREATED', relatedEntityId: id,
+      advisor: { OR: [{ organizationId: null }, ...(organizationId ? [{ organizationId: { not: organizationId } }] : [{}])] },
+    } })
+  })
 }

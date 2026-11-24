@@ -1,6 +1,8 @@
 export type RequirementOperation = 'SALE' | 'RENTAL' | 'ANTICRETIC'
 export type RequirementStatus = 'ACTIVE' | 'PAUSED' | 'FULFILLED' | 'EXPIRED'
+export type RequirementVisibility = 'PUBLIC' | 'ORGANIZATION'
 export interface RequirementInput {
+  visibility?: RequirementVisibility
   title: string
   description?: string
   operation: RequirementOperation
@@ -19,6 +21,7 @@ export interface RequirementInput {
 }
 export interface RequirementRecord extends Omit<RequirementInput, 'priceMin' | 'priceMax'> {
   id: string
+  organizationId?: string | null
   buyerId: string
   priceMin: string | number | null
   priceMax: string | number | null

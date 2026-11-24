@@ -52,6 +52,7 @@ model Organization {
   updatedAt           DateTime  @updatedAt
 
   // Relations
+  requirements        Requirement[]
   advisors            Advisor[]
   properties          Property[]
   commissions         CommissionStructure[]
@@ -336,6 +337,11 @@ model PropertyImage {
 // ============================================================================
 
 model Requirement {
+  visibility              String @default("PUBLIC")
+  organizationId          String?
+  organization            Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([visibility, organizationId])
   id                      String    @id @default(cuid())
   title                   String
   description             String?

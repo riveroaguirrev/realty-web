@@ -1,9 +1,13 @@
 import { FormEvent, useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
+import { RequirementVisibilityControl } from './RequirementVisibilityControl'
 import type { RequirementInput, RequirementRecord } from '@shared/types/requirements'
 import { requirementsAPI, requirementError } from '@/services/requirements'
 import { PROPERTY_TYPES } from '@/utils/propertyPresentation'
 interface Props { token: string; initial?: RequirementRecord; onSaved: (id: string) => void }
 export const RequirementForm = ({ token, initial, onSaved }: Props) => {
+  const { user } = useAuth()
+  const [visibility, setVisibility] = useState<NonNullable<RequirementInput['visibility']>>(initial?.visibility || 'PUBLIC')
   const [title, setTitle] = useState(initial?.title || '')
   const [description, setDescription] = useState(initial?.description || '')
   const [operation, setOperation] = useState<RequirementInput['operation']>(initial?.operation || 'RENTAL')
@@ -29,7 +33,7 @@ export const RequirementForm = ({ token, initial, onSaved }: Props) => {
     if (!openBudget && !min && !max) { setError('Indica un presupuesto o selecciona presupuesto abierto.'); return }
     setBusy(true)
     try {
-      const payload: RequirementInput = { title, description, operation, propertyType: [type], cities: split(city), zones: split(zones), currency,
+      const payload: RequirementInput = { visibility, title, description, operation, propertyType: [type], cities: split(city), zones: split(zones), currency,
         priceMin: openBudget ? null : numeric(min), priceMax: openBudget ? null : numeric(max),
         bedroomsMin: numeric(bedrooms), bathroomsMin: numeric(bathrooms), areaMin: numeric(area),
         requiresGarage: garage, requiresGroundFloor: ground, petsRequired: pets }
@@ -38,6 +42,7 @@ export const RequirementForm = ({ token, initial, onSaved }: Props) => {
     } catch (err) { setError(requirementError(err)) } finally { setBusy(false) }
   }
   return <form className="requirement-form" onSubmit={submit}>
+    {(user?.organizationId || initial?.visibility === 'ORGANIZATION') && <RequirementVisibilityControl value={visibility} onChange={setVisibility} disabled={busy} />}
     <div className="req-form-section"><h2>¿Qué busca tu cliente?</h2><p>Publica la búsqueda para que otros asesores puedan ayudarte.</p>
       <label>Título del requerimiento<input required minLength={5} maxLength={180} value={title} onChange={e => setTitle(e.target.value)} placeholder="Departamento de 3 habitaciones con garaje" /></label>
       <div className="req-fields"><label>Operación<select value={operation} onChange={e => setOperation(e.target.value as RequirementInput['operation'])}><option value="RENTAL">Alquiler</option><option value="SALE">Compra</option><option value="ANTICRETIC">Anticrético</option></select></label>
@@ -53,7 +58,7 @@ export const RequirementForm = ({ token, initial, onSaved }: Props) => {
       <div className="req-checks"><label className="req-check"><input type="checkbox" checked={garage} onChange={e => setGarage(e.target.checked)} />Necesita garaje</label><label className="req-check"><input type="checkbox" checked={ground} onChange={e => setGround(e.target.checked)} />En planta baja</label><label className="req-check"><input type="checkbox" checked={pets} onChange={e => setPets(e.target.checked)} />Debe admitir mascotas</label></div>
     </div>
     {error && <p className="req-error" role="alert">{error}</p>}
-    <p className="req-note">{initial ? 'Al guardar se actualizarán las sugerencias.' : 'Al publicar verás debajo las propiedades con más coincidencias y los demás asesores recibirán un aviso.'} La compatibilidad prioriza habitaciones, zona, presupuesto, parqueo, mascotas, superficie y preferencias adicionales. Las condiciones del texto libre deben confirmarse con el asesor del inmueble.</p>
+    <p className="req-note">{initial ? 'Al guardar se actualizarán las sugerencias.' : 'Al publicar verás debajo las propiedades con más coincidencias y los asesores de la audiencia elegida recibirán un aviso.'} La compatibilidad prioriza habitaciones, zona, presupuesto, parqueo, mascotas, superficie y preferencias adicionales. Las condiciones del texto libre deben confirmarse con el asesor del inmueble.</p>
     <button className="button button-primary" disabled={busy} type="submit">{busy ? 'Guardando…' : initial ? 'Guardar cambios' : 'Publicar requerimiento'}</button>
   </form>
 }

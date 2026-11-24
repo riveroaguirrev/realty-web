@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   return authenticatedRoute(request, async advisorId => {
     const page = Math.max(1, Math.min(10000, Number(request.nextUrl.searchParams.get('page')) || 1))
-    const result = await listRequirements(advisorId, request.nextUrl.searchParams.get('mine') === 'true', Math.floor(page))
+    const result = await listRequirements(advisorId, request.nextUrl.searchParams.get('mine') === 'true', Math.floor(page), request.nextUrl.searchParams.get('organization') === 'true')
     return NextResponse.json({ success: true, data: result.items, meta: { total: result.total, page: Math.floor(page), pageSize: 20 } })
   })
 }
