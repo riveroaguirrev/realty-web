@@ -1,3 +1,4 @@
+import './PropertyDetail.css'
 import { PropertyLocationMap } from '@/components/map/PropertyLocationMap'
 import { formatPrice, PROPERTY_TYPES } from '@/utils/propertyPresentation'
 import { Icon } from '@/components/ui/Icon'
@@ -8,6 +9,7 @@ import { propertyAPI } from '@/services/property'
 import { favoritesAPI } from '@/services/favorites'
 import { conversationsAPI } from '@/services/conversations'
 import { canManageProperty } from '@/utils/propertyPermissions'
+import { PropertyFullDetails } from '@/components/property/PropertyFullDetails'
 import { SimilarProperties } from '@/components/property/SimilarProperties'
 
 export const PropertyDetail = () => {
@@ -119,7 +121,7 @@ export const PropertyDetail = () => {
     <>
       <div className="page-surface">
 
-        <div className="page-content">
+        <div className={`page-content property-detail-page property-detail-${String(property.operation || 'SALE').toLowerCase()}`}>
           <button onClick={() => navigate(-1)} className="text-link mb-4">← Volver</button>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
@@ -132,11 +134,11 @@ export const PropertyDetail = () => {
               </div>
 
               {/* Details */}
-              <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
+              <div className="bg-white rounded-xl shadow-lg p-8 mb-6 pd-information">
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">{property.title}</h1>
                 <p className="text-lg text-gray-600 mb-6">{property.city}, {property.region}</p>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 p-6 bg-gradient-to-r from-blue-50 to-slate-50 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 p-6 rounded-lg pd-highlights">
                   {property.bedrooms != null && (
                     <div className="text-center">
                       <p className="text-4xl font-bold text-blue-600 mb-1">{property.bedrooms}</p>
@@ -179,21 +181,22 @@ export const PropertyDetail = () => {
 
                 {property.latitude != null && property.longitude != null && <PropertyLocationMap operation={property.operation} value={{ latitude: property.latitude, longitude: property.longitude, locationMode: property.isExclusive && property.locationMode === 'EXACT' ? 'EXACT' : 'RADIUS', locationRadiusMeters: property.locationRadiusMeters ?? 500 }} />}
 
-                <div className="border-t-2 border-blue-200 pt-6">
+                <div className="pt-6 pd-price-section">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Operación</p>
                   <p className="text-lg font-bold text-gray-900 mb-4">{property.operation === 'RENTAL' ? 'Alquiler' : property.operation === 'ANTICRETIC' ? 'Anticrético' : 'Venta'}</p>
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Precio</p>
-                  <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
+                  <p className="text-4xl font-bold pd-price">
                     {formatPrice(property.price, property.currency)}
                   </p>
                   {(property.operation === 'RENTAL' || property.operation === 'ANTICRETIC') && <div className="property-conditions mt-5"><span>{property.furnished && property.furnished !== 'UNFURNISHED' ? 'Amoblado' : 'Sin amoblar'}</span><span>{property.petsAllowed ? 'Mascotas permitidas' : 'Sin mascotas'}</span><span>{property.expensesIncluded ? 'Expensas incluidas' : 'Expensas aparte'}</span><span>{property.wifiIncluded ? 'Wifi incluido' : 'Wifi aparte'}</span>{property.commissionPercentage > 0 && <span>Comisión: {property.commissionPercentage}%</span>}</div>}
                 </div>
+                <PropertyFullDetails property={property} canManage={canManageProperty(user, property)} />
               </div>
             </div>
 
             {/* Advisor Info Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-lg p-8 sticky top-20">
+              <div className="bg-white rounded-xl shadow-lg p-8 sticky top-20 pd-advisor">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 pb-4 border-b-2 border-blue-100">
                   Tu asesor
                 </h2>
@@ -253,11 +256,7 @@ export const PropertyDetail = () => {
                     aria-pressed={isFavorite}
                     onClick={handleToggleFavorite}
                     disabled={toggleFavLoading}
-                    className={`w-full py-3 px-4 rounded-lg font-semibold transition-all disabled:opacity-50 ${
-                      isFavorite
-                        ? 'bg-red-500 text-white hover:bg-red-600 shadow-md'
-                        : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                    }`}
+                    className="pd-favorite w-full py-3 px-4 rounded-lg font-semibold transition-all disabled:opacity-50"
                   >
                     {toggleFavLoading ? '...' : isFavorite ? 'Guardado en favoritos' : 'Guardar en favoritos'}
                   </button>

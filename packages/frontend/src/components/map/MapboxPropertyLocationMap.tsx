@@ -170,7 +170,7 @@ export default function MapboxPropertyLocationMap({ value, operation, onChange, 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')
     map.on('load', () => {
       map.addSource('location-zone', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
-      map.addLayer({ id: 'location-zone-fill', type: 'fill', source: 'location-zone', paint: { 'fill-color': propertyOperationColor(current.current.operation), 'fill-opacity': 0.22 } })
+      map.addLayer({ id: 'location-zone-fill', type: 'fill', source: 'location-zone', paint: { 'fill-color': propertyOperationColor(current.current.operation), 'fill-opacity': 0.08 } })
       map.addLayer({ id: 'location-zone-line', type: 'line', source: 'location-zone', paint: { 'line-color': propertyOperationColor(current.current.operation), 'line-width': 3 } })
       setLoaded(true)
       setMapError('')

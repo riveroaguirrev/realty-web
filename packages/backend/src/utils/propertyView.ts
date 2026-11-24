@@ -12,6 +12,10 @@ export const propertyDiscoverySelect = {
   locationMode: true, locationRadiusMeters: true, zipCode: true, mapUrl: true,
   furnished: true, petsAllowed: true, expensesIncluded: true, wifiIncluded: true,
   commissionPercentage: true, hasGarage: true, hasPool: true, hasGarden: true,
+  condition: true, parking: true, lotSize: true, yearBuilt: true, yearRenovated: true,
+  features: true, amenities: true, appliances: true, propertyTax: true, hoaFees: true, utilities: true,
+  rentalMonthlyRate: true, rentalFurnished: true, availableDate: true, petPolicy: true,
+  school: true, distanceToSchool: true, distanceToTransit: true, videoUrl: true, virtualTourUrl: true,
   advisorId: true, organizationId: true,
 } satisfies Prisma.PropertySelect
 

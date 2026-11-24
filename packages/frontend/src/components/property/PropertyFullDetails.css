@@ -1,0 +1,13 @@
+.property-full-details { display: grid; gap: 22px; margin-top: 26px; }
+.property-full-details > section { border-top: 1px solid #e0e5e9; padding-top: 20px; }
+.property-full-details h2 { font-size: 19px; font-weight: 650; margin-bottom: 14px; color: #17283f; }
+.full-detail-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px 20px; }
+.full-detail-grid > div { padding: 10px 12px; border-radius: 10px; background: #f7f8f8; min-width: 0; }
+.full-detail-grid dt { font-size: 12px; color: #667485; margin-bottom: 5px; }
+.full-detail-grid dd { font-size: 14px; color: #17283f; overflow-wrap: anywhere; white-space: pre-wrap; }
+.full-detail-grid a { text-decoration: underline; text-underline-offset: 3px; }
+.full-detail-grid ul { padding-left: 18px; }
+.full-detail-nested > div { margin-top: 8px; }
+@media(max-width:560px) { .full-detail-grid { grid-template-columns: 1fr; } }
+.full-detail-grid > div > dt { display:flex; align-items:center; gap:8px; }
+.full-detail-grid > div > dt > svg { flex-shrink:0; color:var(--swiss-ink,#17283f); }

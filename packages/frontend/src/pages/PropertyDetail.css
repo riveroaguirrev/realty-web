@@ -1,0 +1,26 @@
+.property-detail-page { --pd-accent:#17324d; --pd-border:#cad9e7; }
+.property-detail-rental { --pd-accent:#20756f; --pd-border:#c4ded5; }
+.property-detail-anticretic { --pd-accent:#b9532e; --pd-border:#ecd1c2; }
+.property-detail-page .pd-information { border:1px solid var(--pd-border); border-top:4px solid var(--pd-accent); background:#fff; }
+.property-detail-page .pd-highlights { background:#fff; border:1px solid var(--pd-border); border-left:3px solid var(--pd-accent); }
+.property-detail-page .pd-highlights .text-blue-600 { color:var(--swiss-ink,#17283f); }
+.property-detail-page .pd-price-section { border:1px solid var(--pd-border); border-left:3px solid var(--pd-accent); padding:22px; border-radius:14px; background:#fff; }
+.property-detail-page .pd-price { color:var(--swiss-ink,#17283f); }
+.property-detail-page .property-conditions > span { background:#fff; border:1px solid var(--pd-border); color:var(--swiss-ink,#17283f); }
+.property-detail-page .pd-advisor { background:#fff; border:1px solid var(--pd-border); border-top:4px solid var(--pd-accent); }
+.property-detail-page .pd-advisor > h2 { color:var(--swiss-ink,#17283f); border-color:var(--pd-border); }
+.property-detail-page .property-full-details > section { border-top:0; padding-top:8px; }
+.property-detail-page .property-full-details > section > h2 { padding:10px 13px; border:1px solid var(--pd-border); border-left:3px solid var(--pd-accent); border-radius:10px; background:#fff; color:var(--swiss-ink,#17283f); font-size:18px; }
+.property-detail-page .full-detail-grid > div { background:#fff; border:1px solid #d9dee4; }
+@media(max-width:600px) { .property-detail-page .pd-price-section { padding:16px; } }
+/* Iconos con el color de la operación; recuadros blancos. */
+.property-detail-page .full-detail-grid > div > dt > svg,
+.property-detail-page .pd-highlights svg,
+.property-detail-page .pd-advisor > h2 svg { color:var(--pd-accent); }
+.property-detail-page { --pd-favorite-bg:#e4edf5; --pd-favorite-hover:#d5e3ef; }
+.property-detail-rental { --pd-favorite-bg:#e0eee8; --pd-favorite-hover:#cfe4da; }
+.property-detail-anticretic { --pd-favorite-bg:#f8e6dc; --pd-favorite-hover:#f1d6c6; }
+.property-detail-page .pd-advisor .pd-favorite { background:var(--pd-favorite-bg); color:var(--pd-accent); border:1px solid transparent; }
+.property-detail-page .pd-advisor .pd-favorite:hover:not(:disabled) { background:var(--pd-favorite-hover); }
+.property-detail-page .pd-advisor .pd-favorite[aria-pressed=true] { background:var(--pd-favorite-hover); border-color:var(--pd-accent); }
+.property-detail-page .pd-advisor .pd-favorite:focus-visible { outline:2px solid var(--pd-accent); outline-offset:3px; }
