@@ -2,47 +2,64 @@ import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import type { MessageAttachment } from '@shared/messageAttachments'
 import { messageAttachmentService, readAttachments } from './messageAttachment.service'
+import { ApiError } from '@/utils/errors'
+
+const sender = { select: { id: true, firstName: true, lastName: true, profileImage: true } }
+const historySender = { select: { ...sender.select, email: true } }
+
+function readCursor(cursor: string) {
+  const [date, id, extra] = cursor.split('|')
+  const createdAt = new Date(date)
+  if (!id || id.length > 128 || extra !== undefined || !Number.isFinite(createdAt.getTime()) || createdAt.toISOString() !== date) {
+    throw new ApiError(400, 'INVALID_MESSAGE_CURSOR', 'El marcador del historial de mensajes no es válido.')
+  }
+  return { createdAt, id }
+}
 
 export class MessageService {
   async sendMessage(conversationId: string, senderId: string, content: string, attachments: MessageAttachment[] = []) {
-    return await prisma.$transaction(async tx => {
+    return prisma.$transaction(async (tx) => {
       const message = await tx.message.create({
-        data: {
-          conversationId,
-          senderId,
-          content,
-          attachments: attachments as unknown as Prisma.InputJsonValue,
-        },
-        include: {
-          sender: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              profileImage: true,
-            },
-          },
-        },
+        data: { conversationId, senderId, content, attachments: attachments as unknown as Prisma.InputJsonValue },
+        include: { sender },
       })
-      await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: message.createdAt } })
+      await tx.conversation.updateMany({
+        where: { id: conversationId, OR: [{ lastMessageAt: null }, { lastMessageAt: { lt: message.createdAt } }] },
+        data: { lastMessageAt: message.createdAt },
+      })
       return message
     })
   }
 
   async getMessage(messageId: string) {
-    return await prisma.message.findUnique({
-      where: { id: messageId },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            profileImage: true,
-          },
-        },
-      },
+    return prisma.message.findUnique({ where: { id: messageId }, include: { sender } })
+  }
+
+  async requireMessageSender(conversationId: string, messageId: string, advisorId: string) {
+    const message = await prisma.message.findUnique({
+      where: { id: messageId, conversationId }, select: { senderId: true },
     })
+    if (!message) throw new ApiError(404, 'NOT_FOUND', 'No encontramos el mensaje.')
+    if (message.senderId !== advisorId) throw new ApiError(403, 'FORBIDDEN', 'Solo el autor puede modificar el mensaje.')
+  }
+
+  async listRecentMessages(conversationId: string, pageSize: number, cursor: string | null) {
+    const before = cursor === null ? undefined : readCursor(cursor)
+    const records = await prisma.message.findMany({
+      where: {
+        conversationId,
+        OR: before && [{ createdAt: { lt: before.createdAt } }, { createdAt: before.createdAt, id: { lt: before.id } }],
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: pageSize + 1,
+      include: { sender: historySender },
+    })
+    const messages = records.slice(0, pageSize)
+    const oldest = messages.at(-1)
+    return {
+      messages,
+      nextCursor: records.length > pageSize && oldest ? `${oldest.createdAt.toISOString()}|${oldest.id}` : null,
+    }
   }
 
   async listMessages(conversationId: string, page = 1, pageSize = 20) {
@@ -53,20 +70,8 @@ export class MessageService {
         where: { conversationId },
         skip,
         take: pageSize,
-        include: {
-          sender: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              profileImage: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        include: { sender: historySender },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       }),
       prisma.message.count({ where: { conversationId } }),
     ])
@@ -86,16 +91,7 @@ export class MessageService {
         content,
         editedAt: new Date(),
       },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            profileImage: true,
-          },
-        },
-      },
+      include: { sender },
     })
   }
 

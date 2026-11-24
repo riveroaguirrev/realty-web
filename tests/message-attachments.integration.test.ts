@@ -1,11 +1,13 @@
 import './setup'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import sharp from 'sharp'
 import { NextRequest } from 'next/server'
 import { prisma } from '../packages/backend/src/lib/prisma'
 import { supabase, getSupabaseClient } from '../packages/backend/src/lib/supabase'
+import { authService } from '../packages/backend/src/services/auth.service'
+import { hashSecret } from '../packages/backend/src/services/session.service'
 import { messageService } from '../packages/backend/src/services/message.service'
 import { POST, GET as listMessages } from '../packages/backend/src/app/api/conversations/[id]/messages/route'
 import { GET as getFile } from '../packages/backend/src/app/api/conversations/[id]/messages/[msgId]/attachments/[attachmentId]/route'
@@ -40,7 +42,10 @@ test('real private storage: send photo and PDF, receive them, reject outsiders a
     await prisma.advisor.upsert({ where: { id }, create: { id, email, firstName: 'Archivo', lastName: 'Prueba', specializations: [] }, update: {} })
     const session = await getSupabaseClient().auth.signInWithPassword({ email, password })
     assert.ifError(session.error)
-    return { id, token: session.data.session!.access_token }
+    assert.ok(session.data.session)
+    const browser = randomBytes(32).toString('hex')
+    const authorized = await authService.authorize(session.data.session, id, hashSecret(browser))
+    return { id, token: authorized.accessToken, browser }
   }
   const sender = await createUser()
   const recipient = await createUser()
@@ -52,19 +57,24 @@ test('real private storage: send photo and PDF, receive them, reject outsiders a
   form.append('files', new File(['%PDF-1.7\nLocal attachment test'], 'contrato.pdf', { type: 'application/pdf' }))
   const png = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#14243b' } }).png().toBuffer()
   form.append('files', new File([png], 'foto.png', { type: 'image/png' }))
-  const request = (token: string, method = 'GET', body?: FormData) => new NextRequest('http://localhost/api/conversations/test/messages', { method, headers: { authorization: `Bearer ${token}` }, body })
+  const request = (user: { token: string; browser: string }, method = 'GET', body?: FormData) =>
+    new NextRequest('http://localhost/api/conversations/test/messages', {
+      method,
+      headers: { authorization: `Bearer ${user.token}`, cookie: `realty_browser=${user.browser}` },
+      body,
+    })
   const context = { params: Promise.resolve({ id: conversationId }) }
-  const sent = await POST(request(sender.token, 'POST', form), context)
+  const sent = await POST(request(sender, 'POST', form), context)
   const result = await sent.json()
   assert.equal(sent.status, 201, JSON.stringify(result.error))
   assert.equal(result.data.attachments.length, 2)
-  const received = await listMessages(request(recipient.token), context)
+  const received = await listMessages(request(recipient), context)
   assert.equal((await received.json()).data[0].attachments.length, 2)
-  assert.equal((await listMessages(request(outsider.token), context)).status, 403)
+  assert.equal((await listMessages(request(outsider), context)).status, 403)
   const stored = result.data.attachments[0]
   const fileContext = { params: Promise.resolve({ id: conversationId, msgId: result.data.id, attachmentId: stored.id }) }
-  assert.equal((await getFile(request(outsider.token), fileContext)).status, 403)
-  const linksResponse = await getFile(request(recipient.token), fileContext)
+  assert.equal((await getFile(request(outsider), fileContext)).status, 403)
+  const linksResponse = await getFile(request(recipient), fileContext)
   assert.equal(linksResponse.status, 200)
   const links = (await linksResponse.json()).data
   const downloaded = await fetch(links.downloadUrl)
@@ -74,7 +84,7 @@ test('real private storage: send photo and PDF, receive them, reject outsiders a
   const publicUrl = supabase.storage.from('message-attachments').getPublicUrl(stored.path).data.publicUrl
   assert.ok(!(await fetch(publicUrl)).ok, 'Private documents must not have public access')
   await messageService.deleteMessage(result.data.id)
-  assert.equal((await getFile(request(recipient.token), fileContext)).status, 404)
+  assert.equal((await getFile(request(recipient), fileContext)).status, 404)
   const removed = await supabase.storage.from('message-attachments').download(stored.path)
   assert.ok(removed.error, 'Deleted messages must remove stored files')
 })

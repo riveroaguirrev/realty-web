@@ -17,10 +17,11 @@ test('registration preserves names and normalizes identity, but never alters pas
   assert.equal(registrationFormSchema.safeParse({ ...valid, confirmPassword: 'otra' }).success, false)
 })
 test('rejects malformed API types, whitespace names, missing roles, invalid email and forbidden profile changes', () => {
-  for (const input of [null, [], {}, { ...valid, firstName: 23 }, { ...valid, firstName: '  ' }, { ...valid, email: 'bad' }, { ...valid, role: 'DIRECTOR' }]) {
+  for (const input of [null, [], {}, { ...valid, firstName: 23 }, { ...valid, firstName: '  ' }, { ...valid, email: 'bad' }, { ...valid, role: 'DIRECTOR' }, { ...valid, role: 'BUYER' }]) {
     assert.equal(registrationFormSchema.safeParse(input).success, false)
   }
   assert.equal(profileSchema.safeParse({ firstName: 'A', role: 'DIRECTOR' }).success, false)
+  assert.equal(profileSchema.safeParse({ profileImage: 'https://example.com/photo.png' }).success, false)
   assert.equal(profileSchema.safeParse({ firstName: ' ' }).success, false)
   assert.equal(profileSchema.safeParse({ phone: '+59171234567' }).success, true)
   assert.equal(profileSchema.safeParse({ phone: '123abc' }).success, false)

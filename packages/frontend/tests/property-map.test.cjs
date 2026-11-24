@@ -3,13 +3,23 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
-const source = ts.transpileModule(fs.readFileSync(path.resolve(__dirname, '../src/utils/propertyMap.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
-const loaded = { exports: {} }
-const locationSource = ts.transpileModule(fs.readFileSync(path.resolve(__dirname, '../src/utils/searchLocation.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
-const locations = { exports: {} }
-new Function('module', 'exports', locationSource)(locations, locations.exports)
-new Function('require', 'module', 'exports', source)(id => { if (id === './searchLocation') return locations.exports; throw new Error(id) }, loaded, loaded.exports)
-const { readMapFilters, inMapBounds, mapFeatureCollection } = loaded.exports
+function loadUtility(name, dependencies = {}) {
+  const source = fs.readFileSync(path.resolve(__dirname, '../src/utils', name + '.ts'), 'utf8')
+  const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } })
+  const loaded = { exports: {} }
+  new Function('require', 'module', 'exports', outputText)(id => {
+    if (Object.hasOwn(dependencies, id)) return dependencies[id]
+    throw new Error(id)
+  }, loaded, loaded.exports)
+  return loaded.exports
+}
+
+const locations = loadUtility('searchLocation')
+const { readMapFilters, inMapBounds, mapFeatureCollection } = loadUtility('propertyMap', {
+  './searchLocation': locations,
+  './propertyOperations': loadUtility('propertyOperations'),
+  './mapGeometry': loadUtility('mapGeometry'),
+})
 
 test('map starts with every property type, including residential listings', () => {
   assert.deepEqual(readMapFilters(new URLSearchParams()), {})
@@ -41,7 +51,7 @@ test('selected Mapbox areas retain their bounds across reloads, invalid and part
   }
 })
 test('Mapbox neighborhood search uses its bbox or a geographic fallback around the center', () => {
-  const { boundsForPlace, validSearchBounds } = locations.exports
+  const { boundsForPlace, validSearchBounds } = locations
   assert.deepEqual(boundsForPlace({ center: [-66.15, -17.39], bbox: [-66.2, -17.4, -66.1, -17.3] }), { west: -66.2, south: -17.4, east: -66.1, north: -17.3 })
   const result = boundsForPlace({ center: [-66.15, -17.39], place_type: ['neighborhood'] })
   assert.equal(validSearchBounds(result), true)

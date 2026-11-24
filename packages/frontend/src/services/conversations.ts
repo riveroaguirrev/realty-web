@@ -45,12 +45,13 @@ export const conversationsAPI = {
     return response.data.data?.count ?? 0
   },
 
-  async markAsRead(token: string, conversationId: string) {
+  async markAsRead(token: string, conversationId: string, messageId: string) {
     const response = await client.put<ApiResponse<any>>(
       `/conversations/${conversationId}/mark-read`,
       {},
       {
         headers: { Authorization: `Bearer ${token}` },
+        params: { through: messageId },
       }
     )
     if (!response.data.success) throw new Error(response.data.error?.message)

@@ -8,6 +8,8 @@ import { validateMessageFiles, readMessageForm } from '../packages/backend/src/u
 import { MessageAttachmentService, messageAttachmentService } from '../packages/backend/src/services/messageAttachment.service'
 import { messageService } from '../packages/backend/src/services/message.service'
 import { conversationService } from '../packages/backend/src/services/conversation.service'
+import { authService } from '../packages/backend/src/services/auth.service'
+import { ApiError } from '../packages/backend/src/utils/errors'
 import { supabase } from '../packages/backend/src/lib/supabase'
 import { POST } from '../packages/backend/src/app/api/conversations/[id]/messages/route'
 import { GET } from '../packages/backend/src/app/api/conversations/[id]/messages/[msgId]/attachments/[attachmentId]/route'
@@ -17,7 +19,7 @@ const file = () => new File(['%PDF-1.7\nexample'], 'contrato.pdf', { type: 'appl
 const params = { params: Promise.resolve({ id: 'chat', msgId: 'message', attachmentId: attachment.id }) }
 const request = (method = 'GET', body?: FormData | string) => new NextRequest('http://localhost/api/conversations/chat/messages/message/attachments/file1', { method, headers: { authorization: 'Bearer test', ...(typeof body === 'string' ? { 'content-type': 'application/json' } : {}) }, body })
 function authenticate(t: TestContext) {
-  t.mock.method(supabase.auth, 'getUser', async () => ({ data: { user: { id: 'advisor' } }, error: null }))
+  t.mock.method(authService, 'getUserFromToken', async () => ({ id: 'advisor' }))
 }
 function storage(t: TestContext, failAt = 0) {
   const removed: string[][] = []
@@ -56,9 +58,13 @@ test('valid photos are decoded and re-encoded; PDF keeps a safe original filenam
 })
 
 test('multipart parsing rejects oversized bodies even with no content-length header', async () => {
-  const oversized = new FormData()
-  oversized.append('files', new File([new Uint8Array(MAX_MESSAGE_FILE_BYTES + 140 * 1024)], 'large.pdf'))
-  await assert.rejects(readMessageForm(new Request('http://localhost', { method: 'POST', body: oversized })), { statusCode: 413 })
+  const oversized = new Request('http://localhost', {
+    method: 'POST',
+    headers: { 'content-type': 'multipart/form-data; boundary=test' },
+    body: new Uint8Array(MAX_MESSAGE_FILE_BYTES + 140 * 1024),
+  })
+  assert.equal(oversized.headers.get('content-length'), null)
+  await assert.rejects(readMessageForm(oversized), { statusCode: 413 })
 })
 
 test('uploads clean up previously saved files if a later attachment fails', async t => {
@@ -79,7 +85,9 @@ test('a public bucket fails closed instead of publishing chat files', async t =>
 
 test('only a conversation participant can upload files', async t => {
   authenticate(t)
-  t.mock.method(conversationService, 'getConversation', async () => ({ participants: [{ advisorId: 'other' }] }))
+  t.mock.method(conversationService, 'requireParticipant', async () => {
+    throw new ApiError(403, 'FORBIDDEN', 'Tu cuenta no participa en esta conversación.')
+  })
   const upload = t.mock.method(messageAttachmentService, 'upload', async () => { throw new Error('must not upload') })
   const form = new FormData(); form.append('files', file())
   assert.equal((await POST(request('POST', form), params)).status, 403)
@@ -88,7 +96,7 @@ test('only a conversation participant can upload files', async t => {
 
 test('attachment-only messages are accepted and files are preserved in the saved message', async t => {
   authenticate(t)
-  t.mock.method(conversationService, 'getConversation', async () => ({ participants: [{ advisorId: 'advisor' }] }))
+  t.mock.method(conversationService, 'requireParticipant', async () => undefined)
   t.mock.method(messageAttachmentService, 'upload', async () => [attachment])
   const send = t.mock.method(messageService, 'sendMessage', async () => ({ id: 'message', attachments: [attachment] }))
   const form = new FormData(); form.append('files', file())
@@ -99,7 +107,7 @@ test('attachment-only messages are accepted and files are preserved in the saved
 
 test('a failed database write removes its uploaded files', async t => {
   authenticate(t)
-  t.mock.method(conversationService, 'getConversation', async () => ({ participants: [{ advisorId: 'advisor' }] }))
+  t.mock.method(conversationService, 'requireParticipant', async () => undefined)
   t.mock.method(messageAttachmentService, 'upload', async () => [attachment])
   t.mock.method(messageService, 'sendMessage', async () => { throw new Error('database failure') })
   t.mock.method(console, 'error', () => undefined)
@@ -111,7 +119,7 @@ test('a failed database write removes its uploaded files', async t => {
 
 test('ordinary text messages still work and client-supplied attachment paths are rejected', async t => {
   authenticate(t)
-  t.mock.method(conversationService, 'getConversation', async () => ({ participants: [{ advisorId: 'advisor' }] }))
+  t.mock.method(conversationService, 'requireParticipant', async () => undefined)
   t.mock.method(messageAttachmentService, 'upload', async () => [])
   const send = t.mock.method(messageService, 'sendMessage', async () => ({ id: 'text' }))
   assert.equal((await POST(request('POST', JSON.stringify({ content: ' Hola ' })), params)).status, 201)

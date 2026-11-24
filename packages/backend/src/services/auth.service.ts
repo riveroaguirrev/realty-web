@@ -39,7 +39,7 @@ export class AuthService {
     if (process.env.AUTH_REQUIRE_SIGNUP_VERIFICATION !== 'true') {
       const created = await supabase.auth.admin.createUser({
         email: payload.email, password: payload.password, email_confirm: true,
-        user_metadata: { firstName: payload.firstName, lastName: payload.lastName, role: payload.role },
+        user_metadata: { firstName: payload.firstName, lastName: payload.lastName, role: UserRole.ADVISOR },
       })
       if (created.error) {
         if (['email_exists', 'user_already_exists'].includes(created.error.code ?? '')) throw Errors.USER_ALREADY_EXISTS
@@ -55,7 +55,7 @@ export class AuthService {
     }
     const { data, error } = await getSupabaseClient().auth.signUp({
       email: payload.email, password: payload.password,
-      options: { data: { firstName: payload.firstName, lastName: payload.lastName, role: payload.role } },
+      options: { data: { firstName: payload.firstName, lastName: payload.lastName, role: UserRole.ADVISOR } },
     })
     if (error) {
       if (error.code === 'user_already_exists') return { status: 'EMAIL_VERIFICATION_REQUIRED', email: payload.email }
@@ -193,6 +193,10 @@ export class AuthService {
     const data = profileSchema.parse(input)
     const advisor = await prisma.advisor.update({ where: { id: userId }, data: { ...data, phone: data.phone === '' ? null : data.phone }, include: { organization: true } })
     return this.mapAdvisorToUser(advisor)
+  }
+  async updateProfileImage(userId: string, image: { bytes: Buffer; type: string }): Promise<User> {
+    const { replaceProfileImage } = await import('./profileImage.service')
+    return this.mapAdvisorToUser(await replaceProfileImage(userId, image))
   }
   private async reauthenticate(token: string, password: string, browserHash: string) {
     const user = await this.getUserFromToken(token, browserHash)

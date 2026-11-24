@@ -46,7 +46,7 @@ export interface AuthPayload {
 export interface SignUpPayload extends AuthPayload {
   firstName: string
   lastName: string
-  role: UserRole
+  role: UserRole.ADVISOR
 }
 
 export interface AuthResponse {

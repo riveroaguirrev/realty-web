@@ -31,12 +31,12 @@ export const useRealtimeInbox = ({ accessToken, onNewMessage }: UseRealtimeInbox
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'Message' },
           (payload) => {
-            if (payload.errors) return
+            if (isCancelled || payload.errors?.length) return
             onNewMessageRef.current(payload.new as IncomingMessage)
           }
         )
         .subscribe()
-    })
+    }).catch((error) => console.error('Could not subscribe to inbox updates:', error))
 
     return () => {
       isCancelled = true

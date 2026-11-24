@@ -6,6 +6,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useUnreadMessageCount } from '@/hooks/useUnreadMessageCount'
 import { Icon, IconName } from '@/components/ui/Icon'
+import { Avatar } from '@/components/ui/Avatar'
 import { RequirementNotices } from '@/components/requirements/RequirementNotices'
 import '@/pages/Requirements.css'
 import './Navigation.css'
@@ -103,7 +104,7 @@ export const AppShell = () => {
       </aside>
       <div className="workspace">
         <header className={`topbar ${pathname === '/map' ? 'map-topbar' : ''}`}><button ref={menuTriggerRef} className="navigation-toggle icon-button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="workspace-sidebar" onClick={() => setMenuOpen(value => !value)}><Icon name="menu" /></button><div className="breadcrumb">Mi espacio <span>/</span> <strong>{pathname === '/auth/profile' ? 'Mi perfil' : current?.label || 'Propiedades'}</strong></div>{isAdvisor && <div className="organization-identity" aria-label="Tu organización"><span className="organization-identity-icon"><Icon name="building" /></span><div><span>Tu organización</span><strong title={organization?.name || undefined}>{organization?.name || (user?.organizationId ? 'Mi inmobiliaria' : 'Asesor independiente')}</strong></div></div>}<div className="topbar-actions">{isAdvisor && <RequirementNotices />}{isAdvisor && <Link to="/properties/create" className="button button-primary button-small" aria-label="Publicar propiedad"><Icon name="plus" />Publicar propiedad</Link>}<div className="profile-account" ref={profileRef} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setProfileOpen(false) }}>
-          <button type="button" ref={profileTriggerRef} className="profile-trigger" aria-label="Abrir opciones de cuenta" aria-expanded={profileOpen} aria-controls="profile-account-panel" onClick={() => setProfileOpen(value => !value)}><span className="avatar" aria-hidden="true">{(user?.firstName?.trim()?.[0] || user?.email?.[0] || 'U').toLocaleUpperCase()}</span></button>
+          <button type="button" ref={profileTriggerRef} className="profile-trigger" aria-label="Abrir opciones de cuenta" aria-expanded={profileOpen} aria-controls="profile-account-panel" onClick={() => setProfileOpen(value => !value)}><Avatar user={user} /></button>
           {profileOpen && <div id="profile-account-panel" className="profile-account-panel" aria-label="Opciones de cuenta">
             <div className="profile-account-details"><strong>{user?.firstName} {user?.lastName}</strong><span>{user?.email}</span></div>
             <div className="profile-account-actions"><Link to="/auth/profile" onClick={() => setProfileOpen(false)}><Icon name="user" />Ver perfil</Link><button type="button" onClick={() => { setProfileOpen(false); void logout().catch(() => {}) }}><Icon name="logout" />Cerrar sesión</button></div>

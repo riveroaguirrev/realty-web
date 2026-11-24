@@ -1,5 +1,6 @@
 import { ConversationType, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { ApiError } from '@/utils/errors'
 
 const CONVERSATION_INCLUDE = {
   participants: {
@@ -107,6 +108,15 @@ export class ConversationService {
     })
   }
 
+  async requireParticipant(conversationId: string, advisorId: string) {
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { participants: { where: { advisorId }, select: { id: true } } },
+    })
+    if (!conversation) throw new ApiError(404, 'NOT_FOUND', 'No encontramos la conversación.')
+    if (!conversation.participants.length) throw new ApiError(403, 'FORBIDDEN', 'Tu cuenta no participa en esta conversación.')
+  }
+
   async listConversations(advisorId: string, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize
 
@@ -208,7 +218,15 @@ export class ConversationService {
     return new Map(rows.map((row) => [row.conversationId, row.unread]))
   }
 
-  async markAsRead(conversationId: string, advisorId: string) {
+  async markAsRead(conversationId: string, advisorId: string, through: string | null = null) {
+    if (through !== null) {
+      const message = await prisma.message.findUnique({ where: { id: through, conversationId }, select: { createdAt: true } })
+      if (!message) throw new ApiError(404, 'NOT_FOUND', 'No encontramos el mensaje.')
+      return prisma.conversationParticipant.updateMany({
+        where: { conversationId, advisorId, lastReadAt: { lt: message.createdAt } },
+        data: { lastReadAt: message.createdAt },
+      })
+    }
     return await prisma.conversationParticipant.update({
       where: {
         conversationId_advisorId: {
@@ -249,15 +267,6 @@ export class ConversationService {
           conversationId,
           advisorId,
         },
-      },
-    })
-  }
-
-  async updateLastMessageTime(conversationId: string) {
-    return await prisma.conversation.update({
-      where: { id: conversationId },
-      data: {
-        lastMessageAt: new Date(),
       },
     })
   }

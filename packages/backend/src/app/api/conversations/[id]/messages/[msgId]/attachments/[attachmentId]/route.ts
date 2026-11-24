@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { bearerToken, errorResponse } from '@/lib/auth-route'
-import { supabase } from '@/lib/supabase'
+import { errorResponse } from '@/lib/auth-route'
+import { requireUser } from '@/middleware/auth'
 import { conversationService } from '@/services/conversation.service'
 import { ApiError } from '@/utils/errors'
 import { messageService } from '@/services/message.service'
@@ -8,10 +8,7 @@ import { messageAttachmentService, readAttachments } from '@/services/messageAtt
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string; msgId: string; attachmentId: string }> }) {
   try {
-    const token = bearerToken(request)
-    if (!token) throw new ApiError(401, 'UNAUTHORIZED', 'Inicia sesión para abrir este archivo.')
-    const { data: { user }, error } = await supabase.auth.getUser(token)
-    if (error || !user) throw new ApiError(401, 'UNAUTHORIZED', 'Tu sesión no es válida.')
+    const user = await requireUser(request)
     const { id, msgId, attachmentId } = await params
     const participant = await conversationService.isParticipant(id, user.id)
     if (!participant) throw new ApiError(403, 'FORBIDDEN', 'Solo los participantes pueden abrir los adjuntos.')

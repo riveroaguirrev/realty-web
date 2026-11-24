@@ -11,7 +11,7 @@ import { visiblePropertyWhere } from '../packages/backend/src/lib/permissions'
 import { propertyImageService } from '../packages/backend/src/services/propertyImage.service'
 import { readPagination } from '../packages/backend/src/utils/pagination'
 import { propertyCardSelect, propertyDiscoverySelect } from '../packages/backend/src/utils/propertyView'
-import { MAX_IMAGE_BYTES, normalizePropertyImage, readPropertyImageForm } from '../packages/backend/src/utils/validatePropertyImage'
+import { MAX_IMAGE_BYTES, normalizeImage, readImageForm, readImageUpload } from '../packages/backend/src/utils/validateImage'
 
 const { NextRequest } = createRequire(resolve('packages/backend/package.json'))('next/server')
 
@@ -70,8 +70,7 @@ test('valid JPEG, PNG and WebP survive image normalization and output has no EXI
     const form = new FormData()
     form.append('file', file)
     const request = new Request('http://localhost/api/properties/images', { method: 'POST', body: form })
-    const parsed = await readPropertyImageForm(request)
-    const output = await normalizePropertyImage(parsed.get('file') as File)
+    const output = await readImageUpload(request)
     const metadata = await sharp(output.bytes).metadata()
     assert.equal(output.type, 'image/' + format)
     assert.equal(metadata.width, 10)
@@ -81,14 +80,16 @@ test('valid JPEG, PNG and WebP survive image normalization and output has no EXI
 })
 
 test('uploads reject unreadable files and enforce the body limit without relying on Content-Length', async () => {
-  await assert.rejects(normalizePropertyImage(new File(['not a photo'], 'photo.png', { type: 'image/png' })), {
+  await assert.rejects(normalizeImage(new File(['not a photo'], 'photo.png', { type: 'image/png' })), {
     code: 'INVALID_IMAGE',
   })
-  const form = new FormData()
-  form.append('file', new File([new Uint8Array(MAX_IMAGE_BYTES + 100000)], 'photo.png', { type: 'image/png' }))
-  const request = new Request('http://localhost/api/properties/images', { method: 'POST', body: form })
+  const request = new Request('http://localhost/api/properties/images', {
+    method: 'POST',
+    headers: { 'content-type': 'multipart/form-data; boundary=test' },
+    body: new Uint8Array(MAX_IMAGE_BYTES + 100000),
+  })
   assert.equal(request.headers.get('content-length'), null)
-  await assert.rejects(readPropertyImageForm(request), { statusCode: 413 })
+  await assert.rejects(readImageForm(request), { statusCode: 413 })
 })
 
 test('pagination keeps standard page sizes and bounds abusive or invalid values', () => {

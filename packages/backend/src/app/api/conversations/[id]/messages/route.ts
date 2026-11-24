@@ -4,7 +4,7 @@ import { readPagination } from '@/utils/pagination'
 import { NextRequest, NextResponse } from 'next/server'
 import { messageService } from '@/services/message.service'
 import { conversationService } from '@/services/conversation.service'
-import { supabase } from '@/lib/supabase'
+import { requireUser } from '@/middleware/auth'
 import { ApiResponse } from '@shared/types'
 import { readMessageForm } from '@/utils/validateMessageFiles'
 import { messageAttachmentService } from '@/services/messageAttachment.service'
@@ -14,41 +14,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } },
-        { status: 401 }
-      )
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
+    const user = await requireUser(request)
 
     const { id } = await params
     const { searchParams } = new URL(request.url)
     const { page, pageSize } = readPagination(searchParams, 20)
 
-    // Verify user is participant
-    const conversation = await conversationService.getConversation(id)
-    if (!conversation) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Conversation not found' } },
-        { status: 404 }
-      )
-    }
+    await conversationService.requireParticipant(id, user.id)
 
-    const isParticipant = conversation.participants.some((p) => p.advisorId === user.id)
-    if (!isParticipant) {
-      return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Not a participant' } },
-        { status: 403 }
-      )
+    if (searchParams.get('order') === 'recent') {
+      const history = await messageService.listRecentMessages(id, pageSize, searchParams.get('before'))
+      return NextResponse.json({ success: true, data: history }, { headers: { 'Cache-Control': 'no-store' } })
     }
 
     const result = await messageService.listMessages(id, page, pageSize)
@@ -84,39 +60,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } },
-        { status: 401 }
-      )
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
+    const user = await requireUser(request)
 
     const { id } = await params
-    // Verify user is participant
-    const conversation = await conversationService.getConversation(id)
-    if (!conversation) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Conversation not found' } },
-        { status: 404 }
-      )
-    }
-
-    const isParticipant = conversation.participants.some((p) => p.advisorId === user.id)
-    if (!isParticipant) {
-      return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Not a participant' } },
-        { status: 403 }
-      )
-    }
+    await conversationService.requireParticipant(id, user.id)
 
     let content: string
     let files: File[] = []

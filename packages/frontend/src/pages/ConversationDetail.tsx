@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages'
 import { conversationsAPI } from '@/services/conversations'
@@ -8,6 +8,7 @@ import { messagesAPI } from '@/services/messages'
 import { Icon } from '@/components/ui/Icon'
 import { ConversationArtwork, ConversationAvatar, conversationContact, conversationTitle } from '@/components/messages/ConversationIdentity'
 import { getErrorMessage } from '@/utils/errorMessage'
+import { authSessionIdentity } from '@/utils/sessionIdentity'
 import { DraftAttachment, MessageAttachmentCard } from '@/components/messages/MessageAttachments'
 import { MESSAGE_FILE_ACCEPT, messageFilesError } from '@shared/messageAttachments'
 
@@ -21,34 +22,48 @@ export const ConversationDetail = ({ conversationId, onRead }: { conversationId:
   const fileInputRef = useRef<HTMLInputElement>(null)
   const streamRef = useRef<HTMLDivElement>(null)
   const nearBottom = useRef(true)
+  const session = accessToken && (authSessionIdentity(accessToken) ?? accessToken)
+  const historyKey = ['conversation-history', conversationId, session]
   const query = useQuery({
-    queryKey: ['conversation', accessToken, conversationId], enabled: !!accessToken,
-    queryFn: async () => {
-      const [conversation, result] = await Promise.all([
-        conversationsAPI.get(accessToken!, conversationId), messagesAPI.list(accessToken!, conversationId, 1, 50),
-      ])
-      if (!conversation) throw new Error('No encontramos esta conversación.')
-      return { conversation, messages: result.messages }
-    },
+    queryKey: ['conversation', conversationId, session],
+    queryFn: () => conversationsAPI.get(accessToken!, conversationId),
+    enabled: !!accessToken,
   })
-  useRealtimeMessages({ conversationId, accessToken, onChange: () => { void query.refetch() } })
+  const refreshHistory = () => client.invalidateQueries({ queryKey: historyKey, exact: true })
+  const isLive = useRealtimeMessages({
+    conversationId: query.data ? conversationId : undefined,
+    accessToken,
+    onChange: () => { void refreshHistory() },
+    includesMessage: (messageId) => history.data?.pages.some(page => page.messages.some(message => message.id === messageId)) ?? false,
+  })
+  const history = useInfiniteQuery({
+    queryKey: historyKey,
+    queryFn: ({ pageParam, signal }) => messagesAPI.listRecent(accessToken!, conversationId, pageParam, signal),
+    enabled: !!accessToken && !!query.data,
+    initialPageParam: null as string | null,
+    getNextPageParam: page => page.nextCursor,
+    refetchInterval: isLive ? false : 3000,
+  })
+  const messages = history.data?.pages.flatMap(page => page.messages).reverse() ?? []
+  const newestId = messages.at(-1)?.id
+  const [readRetry, setReadRetry] = useState(0)
 
   useEffect(() => {
-    if (!query.data || !accessToken) return
+    if (!newestId || !accessToken) return
     let current = true
-    conversationsAPI.markAsRead(accessToken, conversationId).then(() => {
+    conversationsAPI.markAsRead(accessToken, conversationId, newestId).then(() => {
       if (current) { setReadError(''); onRead(conversationId) }
     }).catch(() => { if (current) setReadError('No pudimos actualizar el estado de lectura.') })
     return () => { current = false }
-  }, [accessToken, conversationId, query.dataUpdatedAt, onRead])
+  }, [accessToken, conversationId, newestId, onRead, readRetry])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const stream = streamRef.current
     if (stream && nearBottom.current) stream.scrollTop = stream.scrollHeight
-  }, [query.data?.messages])
+  }, [newestId])
 
   const refresh = async () => {
-    await Promise.all([query.refetch(), client.invalidateQueries({ queryKey: ['conversations', accessToken] })])
+    await Promise.all([refreshHistory(), client.invalidateQueries({ queryKey: ['conversations', accessToken] })])
   }
   const send = useMutation({
     mutationFn: ({ content, attachments }: { content: string; attachments: File[] }) => messagesAPI.send(accessToken!, conversationId, content, attachments),
@@ -57,19 +72,25 @@ export const ConversationDetail = ({ conversationId, onRead }: { conversationId:
   const remove = useMutation({ mutationFn: (messageId: string) => messagesAPI.delete(accessToken!, conversationId, messageId), onSuccess: refresh })
 
   const back = <Link to="/messages" className="conversation-back icon-button" aria-label="Volver a conversaciones"><Icon name="back" /></Link>
-  if (query.isPending) return <section className="conversation-pane"><header className="conversation-header">{back}<p role="status">Cargando conversación…</p></header><div className="conversation-loading" role="status"><Icon name="message" width="34" height="34" /><p>Preparando tus mensajes…</p></div></section>
+  if (query.isPending || history.isLoading) return <section className="conversation-pane"><header className="conversation-header">{back}<p role="status">Cargando conversación…</p></header><div className="conversation-loading" role="status"><Icon name="message" width="34" height="34" /><p>Preparando tus mensajes…</p></div></section>
   if (!query.data) return <section className="conversation-pane"><header className="conversation-header">{back}<h2>Conversación</h2></header><div className="conversation-loading" role="alert"><p>{getErrorMessage(query.error, 'No pudimos cargar la conversación.')}</p><button className="button button-secondary" onClick={() => query.refetch()}>Reintentar</button></div></section>
 
-  const { conversation, messages } = query.data
+  const conversation = query.data
   const contact = conversationContact(conversation, user?.id)
   const title = conversationTitle(conversation, user?.id)
-  const actionError = send.error || remove.error || query.error
+  const actionError = send.error || remove.error || query.error || (history.isFetchNextPageError ? null : history.error)
   const time = (value: string) => new Date(value).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })
 
   return <section className="conversation-pane" aria-label={`Conversación con ${title}`}>
     <header className="conversation-header">{back}<ConversationAvatar advisor={contact} title={title} /><div><h2>{title}</h2><p>{contact?.organization?.name || 'Asesor inmobiliario'}</p></div></header>
-    {(actionError || readError) && <div className="conversation-error" role="alert"><p>{actionError ? getErrorMessage(actionError, 'No pudimos completar la acción. Inténtalo de nuevo.') : readError}</p><button type="button" onClick={() => { send.reset(); remove.reset(); void query.refetch() }}>Reintentar</button></div>}
+    {(actionError || readError) && <div className="conversation-error" role="alert"><p>{actionError ? getErrorMessage(actionError, 'No pudimos completar la acción. Inténtalo de nuevo.') : readError}</p><button type="button" onClick={() => { send.reset(); remove.reset(); void query.refetch(); void refreshHistory(); if (readError) setReadRetry(count => count + 1) }}>Reintentar</button></div>}
     <div className="conversation-stream" ref={streamRef} role="log" aria-label="Mensajes de la conversación" aria-live="polite" aria-relevant="additions text" onScroll={event => { const stream = event.currentTarget; nearBottom.current = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 100 }}>
+      {history.hasNextPage && (
+        <button type="button" className="button button-secondary mx-auto" disabled={history.isFetching}
+          onClick={() => { void history.fetchNextPage({ cancelRefetch: false }) }}>
+          {history.isFetchingNextPage ? 'Cargando mensajes…' : history.isFetchNextPageError ? 'Reintentar cargar mensajes anteriores' : 'Cargar mensajes anteriores'}
+        </button>
+      )}
       {messages.map((message, index) => {
         const own = message.senderId === user?.id
         const newDay = index === 0 || new Date(messages[index - 1].createdAt).toDateString() !== new Date(message.createdAt).toDateString()

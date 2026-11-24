@@ -301,7 +301,7 @@ test('photo cleanup preserves referenced files and retains rows that need a retr
   const cleared = []
   const deferred = []
   const { propertyImageService } = loadMocked('../src/services/propertyImage.service.ts', {
-    '@/utils/validatePropertyImage': { MAX_IMAGE_BYTES: 4 * 1024 * 1024 },
+    '@/lib/imageStorage': {},
     '@/utils/errors': {},
     '@/lib/prisma': { prisma: {
       propertyImage: {

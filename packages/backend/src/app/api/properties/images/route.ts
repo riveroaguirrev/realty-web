@@ -7,7 +7,7 @@ import { Permission } from '@shared/types'
 import { rateLimit } from '@/services/session.service'
 import { requirePermission } from '@/lib/permissions'
 import { propertyImageService } from '@/services/propertyImage.service'
-import { normalizePropertyImage, readPropertyImageForm } from '@/utils/validatePropertyImage'
+import { readImageUpload } from '@/utils/validateImage'
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,14 +16,7 @@ export async function POST(req: NextRequest) {
 
     requirePermission(auth.user.permissions, Permission.PROPERTY_CREATE)
     await rateLimit(`properties:images:${auth.user.id}`, 100, 600)
-    const form = await readPropertyImageForm(req)
-    const files = form.getAll('file')
-    const file = files[0]
-    if (files.length !== 1 || typeof file === 'string' || !file) {
-      throw new AccountApiError(400, 'INVALID_IMAGE_FORM', 'Envía una sola imagen por solicitud.')
-    }
-
-    const url = await propertyImageService.upload(await normalizePropertyImage(file), auth.user.id)
+    const url = await propertyImageService.upload(await readImageUpload(req), auth.user.id)
     return NextResponse.json({ success: true, data: { url } })
   } catch (error) {
     if (error instanceof AccountApiError) return accountErrorResponse(error)

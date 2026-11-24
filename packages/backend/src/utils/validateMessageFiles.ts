@@ -1,6 +1,6 @@
 import { MAX_MESSAGE_FILE_BYTES, MESSAGE_FILE_TYPES, messageFileExtension, messageFilesError } from '@shared/messageAttachments'
 import { ApiError } from '@/utils/errors'
-import { normalizePropertyImage } from './validatePropertyImage'
+import { normalizeImage } from './validateImage'
 
 const MAX_REQUEST_BYTES = MAX_MESSAGE_FILE_BYTES + 128 * 1024
 export async function readMessageForm(request: Request): Promise<FormData> {
@@ -36,7 +36,7 @@ export async function validateMessageFiles(files: File[]) {
       return character === '/' || character === '\\' || code < 32 || code === 127 ? '_' : character
     }).join('').slice(0, 180)
     if (type.startsWith('image/')) {
-      const normalized = await normalizePropertyImage(new File([new Uint8Array(await file.arrayBuffer())], name, { type }))
+      const normalized = await normalizeImage(new File([new Uint8Array(await file.arrayBuffer())], name, { type }))
       return { ...normalized, name, extension: normalized.type === 'image/webp' ? 'webp' : extension }
     }
     const bytes = Buffer.from(await file.arrayBuffer())

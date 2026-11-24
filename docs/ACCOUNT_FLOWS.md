@@ -23,11 +23,12 @@ Para volver a levantar los servicios, ejecutar `npx --yes supabase start -x logf
 
 ## Flujos y contratos
 
-- `POST /api/auth/register`: nombres, apellidos, correo, contraseña y tipo de usuario. Devuelve `EMAIL_VERIFICATION_REQUIRED`, sin token de sesión.
+- `POST /api/auth/register` recibe nombres, apellidos, correo, contraseña y el rol `ADVISOR`. Con `AUTH_REQUIRE_SIGNUP_VERIFICATION=true`, devuelve `EMAIL_VERIFICATION_REQUIRED`. En el modo temporal de registro directo, devuelve una sesión autorizada.
 - `POST /api/auth/login`: devuelve `AUTHENTICATED` con perfil y tokens de acceso/renovación, o un estado pendiente de verificación. El desafío de navegador incluye `challengeId`.
 - `POST /api/auth/verify`: recibe `purpose` (signup, device, recovery, email_change), correo, código y challengeId cuando corresponda. Recuperación devuelve un permiso temporal que solo sirve para cambiar la contraseña, no para acceder a datos.
 - `POST /api/auth/resend`, `/recovery`, `/reset-password`, `/password`, `/email` y `/logout` completan los flujos. Los cambios de credenciales y el cierre de sesión requieren Bearer. La recuperación exige el permiso ligado al navegador y a la sesión nativa.
 - `GET/PUT /api/auth/profile`: perfil validado. La contraseña nueva admite de 12 caracteres a 72 bytes UTF-8; bcrypt no trunca contraseñas silenciosamente. El acceso admite contraseñas anteriores.
+- `POST /api/auth/profile/photo` recibe una imagen JPEG, PNG o WebP de hasta 4 MB en el campo multipart `file`. Supabase Storage sirve la foto de perfil desde el bucket público `profile-images`.
 - Errores: `VALIDATION_ERROR` incluye `fieldErrors`; `SESSION_REPLACED`, `DEVICE_VERIFICATION_REQUIRED`, `INVALID_CODE`, `RATE_LIMITED` y `SEAT_LIMIT_REACHED` distinguen resultados esperados.
 
 La API verifica el usuario con Supabase, el identificador de su sesión nativa, la autorización persistida y la cookie HttpOnly ligada a ese navegador. Realtime aplica la misma autorización mediante RLS. Sustituir una sesión retira de inmediato su acceso a nuevas solicitudes y eventos. No se puede retirar información que ya fue descargada. La cookie identifica un navegador autorizado; no es una identidad física del aparato ni impide compartir cuentas por turnos junto con el correo.
@@ -38,7 +39,13 @@ Cada Organization es una sucursal independiente. Cuenta cada miembro vinculado, 
 
 Las invitaciones existentes para el mismo correo se reutilizan. La aceptación exige el correo verificado del destinatario, se ejecuta en una transacción y admite reintentos del mismo usuario. Retirar miembros y cancelar/vencer invitaciones libera cupos. No se traslada una cuenta automáticamente entre sucursales.
 
+La reserva, aceptación y cancelación de invitaciones, el retiro de miembros y los cambios de cupo toman el mismo bloqueo por sucursal antes de actualizar la ocupación.
+
 El operador asigna cupos con `npm run accounts:seats -- <sucursalId> <cupo>`. El comando rechaza un cupo menor que la ocupación y las reservas, y registra el resultado en su salida. Ninguna API pública permite ampliarlo. Cobros, precios y renovaciones quedan fuera de esta entrega.
+
+## Pendiente de producto
+
+Crear una dirección separada para el panel de superadmin del propietario de la plataforma. Desde ese panel podrá consultar el total de cuentas, gestionar cuentas y organizaciones e iniciar restablecimientos de contraseña cuando haga falta.
 
 ## Comprobación
 

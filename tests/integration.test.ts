@@ -6,6 +6,7 @@ import { prisma } from '../packages/backend/src/lib/prisma'
 import { authService } from '../packages/backend/src/services/auth.service'
 import { advisorService } from '../packages/backend/src/services/advisor.service'
 import { organizationService } from '../packages/backend/src/services/organization.service'
+import { messageService } from '../packages/backend/src/services/message.service'
 import { activateSession, hashSecret, rateLimit, consumeChallenge } from '../packages/backend/src/services/session.service'
 import { serializable } from '../packages/backend/src/lib/transactions'
 import { UserRole } from '../packages/shared/src/types'
@@ -29,6 +30,7 @@ const expireMail = async (recipient: string) => {
 }
 async function readableMessages(token: string, conversationId: string) {
   const jwt = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
+  assert.equal(jwt.role, 'authenticated')
   return prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe('SET LOCAL ROLE authenticated')
     await tx.$queryRaw`SELECT set_config('request.jwt.claims', ${JSON.stringify(jwt)}, true), set_config('request.jwt.claim.sub', ${jwt.sub}, true)`
@@ -146,16 +148,20 @@ test('concurrent invitations cannot overbook; expiry, cancellation, matching ema
   await advisorService.removeAdvisor(org.id, recipient.id)
   assert.equal((await organizationService.getOrganization(org.id)).seats.available, 1)
 })
-test('a profile is recovered from signup metadata; buyers retain multiple browsers and password change revokes old sessions', { skip: !integration }, async () => {
+test('existing buyers retain multiple browsers and password change revokes old sessions', { skip: !integration }, async () => {
   const buyerEmail = 'buyer-' + unique + '@example.com'
   const native = await getSupabaseClient().auth.signUp({
     email: buyerEmail, password,
     options: { data: { firstName: 'Comprador', lastName: 'Test', role: UserRole.BUYER } },
   })
   assert.equal(native.error, null)
-  assert.equal(await prisma.advisor.findUnique({ where: { id: native.data.user!.id } }), null)
+  const account = native.data.user!
+  await assert.rejects(authService.ensureProfile(account), { code: 'PROFILE_INCOMPLETE' })
+  await prisma.advisor.create({ data: {
+    id: account.id, email: buyerEmail, firstName: 'Comprador', lastName: 'Test', userRole: 'BUYER', specializations: [],
+  } })
   const first = await authService.verify({ purpose: 'signup', email: buyerEmail, code: await codeFor(buyerEmail) }, browserA)
-  if (first.status !== 'AUTHENTICATED') throw new Error('Buyer signup failed')
+  if (first.status !== 'AUTHENTICATED') throw new Error('Existing buyer authorization failed')
   assert.equal(first.user.role, UserRole.BUYER)
   assert.ok(!first.user.permissions?.includes('property:create' as never))
   const second = await authService.signIn({ email: buyerEmail, password }, browserB)
@@ -171,6 +177,22 @@ test('a profile is recovered from signup metadata; buyers retain multiple browse
   const limits = await Promise.allSettled([rateLimit('concurrent-rate-' + unique, 1, 60), rateLimit('concurrent-rate-' + unique, 1, 60)])
   assert.equal(limits.filter((result) => result.status === 'fulfilled').length, 1)
   assert.equal(limits.find((result) => result.status === 'rejected')?.status, 'rejected')
+})
+
+test('recent chat history starts at the newest messages and older pages survive sends and cursor deletion', { skip: !integration }, async () => {
+  const advisor = await prisma.advisor.create({ data: { id: randomUUID(), email: 'history-' + unique + '@example.com', firstName: 'Asesor', lastName: 'QA', specializations: [] } })
+  const conversation = await prisma.conversation.create({ data: { createdBy: advisor.id } })
+  const createdAt = new Date('2026-01-01T12:00:00Z')
+  const ids = Array.from({ length: 53 }, (_, index) => 'history-' + unique + '-' + String(index).padStart(2, '0'))
+  await prisma.message.createMany({ data: ids.map(id => ({ id, conversationId: conversation.id, senderId: advisor.id, content: id, createdAt })) })
+  const first = await messageService.listRecentMessages(conversation.id, 50, null)
+  assert.deepEqual(first.messages.map(message => message.id), ids.slice(3).reverse())
+  const sent = await messageService.sendMessage(conversation.id, advisor.id, 'Nuevo mensaje')
+  await messageService.deleteMessage(ids[3])
+  const earlier = await messageService.listRecentMessages(conversation.id, 50, first.nextCursor)
+  assert.deepEqual(earlier.messages.map(message => message.id), ids.slice(0, 3).reverse())
+  assert.equal(earlier.nextCursor, null)
+  assert.equal((await messageService.listRecentMessages(conversation.id, 50, null)).messages[0].id, sent.id)
 })
 test('concurrent session handovers yield exactly one active advisor session and invalidate old challenges', { skip: !integration }, async () => {
   const user = await prisma.advisor.create({ data: { id: randomUUID(), email: 'sessions-' + unique + '@example.com', firstName: 'Sessions', lastName: 'Test', specializations: [] } })

@@ -3,26 +3,12 @@ import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { readPagination } from '@/utils/pagination'
 import { NextRequest, NextResponse } from 'next/server'
 import { conversationService } from '@/services/conversation.service'
-import { supabase } from '@/lib/supabase'
+import { requireUser } from '@/middleware/auth'
 import { ApiResponse } from '@shared/types'
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } },
-        { status: 401 }
-      )
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
+    const user = await requireUser(request)
 
     const { searchParams } = new URL(request.url)
     const { page, pageSize } = readPagination(searchParams, 20)
@@ -57,21 +43,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } },
-        { status: 401 }
-      )
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
+    const user = await requireUser(request)
 
     const body = await request.json() as {
       participantIds?: string[]

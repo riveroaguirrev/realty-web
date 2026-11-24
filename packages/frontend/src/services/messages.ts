@@ -1,8 +1,22 @@
-import { httpClient as client } from './api'
+import { apiClient, httpClient as client } from './api'
 import { ApiResponse } from '@shared/types'
 import type { ConversationMessage } from '@/types/messaging'
 
+interface MessageHistory {
+  messages: ConversationMessage[]
+  nextCursor: string | null
+}
+
 export const messagesAPI = {
+  async listRecent(token: string, conversationId: string, before: string | null, signal: AbortSignal) {
+    const params = new URLSearchParams({ order: 'recent', pageSize: '50' })
+    if (before) params.set('before', before)
+    const result = await apiClient.get<MessageHistory>(`/conversations/${conversationId}/messages?${params}`, {
+      headers: { Authorization: `Bearer ${token}` }, signal,
+    })
+    return result.data
+  },
+
   async list(token: string, conversationId: string, page = 1, pageSize = 20) {
     const response = await client.get<ApiResponse<ConversationMessage[]>>(
       `/conversations/${conversationId}/messages?page=${page}&pageSize=${pageSize}`,

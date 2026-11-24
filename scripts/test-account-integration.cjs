@@ -84,6 +84,7 @@ async function main() {
     GOTRUE_SITE_URL: env.NEXT_PUBLIC_APP_URL, GOTRUE_DB_DRIVER: 'postgres',
     GOTRUE_DB_DATABASE_URL: 'postgres://supabase_auth_admin:' + password + '@' + db + ':5432/postgres?sslmode=disable',
     GOTRUE_DB_NAMESPACE: 'auth', GOTRUE_JWT_SECRET: secret, GOTRUE_JWT_ADMIN_ROLES: 'service_role', GOTRUE_JWT_AUD: 'authenticated',
+    GOTRUE_JWT_DEFAULT_GROUP_NAME: 'authenticated',
     GOTRUE_EXTERNAL_EMAIL_ENABLED: 'true', GOTRUE_MAILER_AUTOCONFIRM: 'false',
     GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED: 'true', GOTRUE_PASSWORD_MIN_LENGTH: '12',
     GOTRUE_SMTP_ADMIN_EMAIL: 'noreply@example.com', GOTRUE_SMTP_HOST: 'host.docker.internal', GOTRUE_SMTP_PORT: '59944',

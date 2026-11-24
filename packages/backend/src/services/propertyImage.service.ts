@@ -2,24 +2,16 @@ import { randomUUID } from 'crypto'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ApiError } from '@/utils/errors'
-import { MAX_IMAGE_BYTES } from '@/utils/validatePropertyImage'
 import { supabase } from '@/lib/supabase'
+import { ensurePublicImageBucket, imageExtensions } from '@/lib/imageStorage'
 
 const BUCKET_NAME = 'properties'
 
-const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-}
-
 export class PropertyImageService {
-  private bucketReady = false
-
   async upload(image: { bytes: Buffer; type: string }, advisorId: string): Promise<string> {
-    await this.ensureBucket()
+    await ensurePublicImageBucket(BUCKET_NAME)
 
-    const path = `${advisorId}/${randomUUID()}.${EXTENSION_BY_MIME_TYPE[image.type]}`
+    const path = `${advisorId}/${randomUUID()}.${imageExtensions[image.type]}`
     const bucket = supabase.storage.from(BUCKET_NAME)
     const url = bucket.getPublicUrl(path).data.publicUrl
     const { error } = await bucket.upload(path, image.bytes, { contentType: image.type })
@@ -95,23 +87,6 @@ export class PropertyImageService {
       removed += result.count
     }
     return removed
-  }
-
-  private async ensureBucket(): Promise<void> {
-    if (this.bucketReady) return
-
-    const { data: existing } = await supabase.storage.getBucket(BUCKET_NAME)
-    if (!existing) {
-      const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
-        public: true,
-        fileSizeLimit: MAX_IMAGE_BYTES,
-        allowedMimeTypes: Object.keys(EXTENSION_BY_MIME_TYPE),
-      })
-      if (error && !(await supabase.storage.getBucket(BUCKET_NAME)).data) {
-        throw new Error(`Failed to create storage bucket: ${error.message}`)
-      }
-    }
-    this.bucketReady = true
   }
 }
 

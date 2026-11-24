@@ -2,7 +2,8 @@ import { ApiError as AccountApiError } from '@/utils/errors'
 import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
 import { messageService } from '@/services/message.service'
-import { supabase } from '@/lib/supabase'
+import { conversationService } from '@/services/conversation.service'
+import { requireUser } from '@/middleware/auth'
 import { ApiResponse } from '@shared/types'
 
 export async function PUT(
@@ -10,21 +11,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string; msgId: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } },
-        { status: 401 }
-      )
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
+    const user = await requireUser(request)
 
     const { id, msgId } = await params
     const body = await request.json() as { content?: string }
@@ -37,25 +24,11 @@ export async function PUT(
       )
     }
 
-    const message = await messageService.getMessage(msgId)
-    if (!message || message.conversationId !== id) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Message not found' } },
-        { status: 404 }
-      )
-    }
-
-    // Only sender can edit message
-    if (message.senderId !== user.id) {
-      return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Only sender can edit' } },
-        { status: 403 }
-      )
-    }
-
     if (content.trim().length > 10000) {
       return NextResponse.json({ success: false, error: { code: 'MESSAGE_TOO_LONG', message: 'El mensaje supera los 10.000 caracteres.' } }, { status: 400 })
     }
+    await conversationService.requireParticipant(id, user.id)
+    await messageService.requireMessageSender(id, msgId, user.id)
     const updated = await messageService.editMessage(msgId, content.trim())
 
     return NextResponse.json(
@@ -83,39 +56,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; msgId: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
   try {
-    const token = request.headers.get('authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Missing token' } },
-        { status: 401 }
-      )
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } },
-        { status: 401 }
-      )
-    }
+    const user = await requireUser(request)
 
     const { id, msgId } = await params
 
-    const message = await messageService.getMessage(msgId)
-    if (!message || message.conversationId !== id) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Message not found' } },
-        { status: 404 }
-      )
-    }
-
-    // Only sender can delete message
-    if (message.senderId !== user.id) {
-      return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Only sender can delete' } },
-        { status: 403 }
-      )
-    }
+    await conversationService.requireParticipant(id, user.id)
+    await messageService.requireMessageSender(id, msgId, user.id)
 
     await messageService.deleteMessage(msgId)
 

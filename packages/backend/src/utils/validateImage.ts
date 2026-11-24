@@ -10,7 +10,7 @@ const invalidImage = () => new ApiError(400, 'INVALID_IMAGE', 'No pudimos leer l
 const oversizedImage = () => new ApiError(413, 'IMAGE_TOO_LARGE', 'La imagen debe pesar 4 MB o menos.')
 const mimeByFormat = { jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' } as const
 
-export async function readPropertyImageForm(request: Request): Promise<FormData> {
+export async function readImageForm(request: Request): Promise<FormData> {
   const type = request.headers.get('content-type')
   if (!type?.toLowerCase().startsWith('multipart/form-data;') || !request.body) {
     throw new ApiError(400, 'INVALID_IMAGE_FORM', 'Envía una imagen en un formulario multipart.')
@@ -42,7 +42,7 @@ export async function readPropertyImageForm(request: Request): Promise<FormData>
   }
 }
 
-export async function normalizePropertyImage(file: File) {
+export async function normalizeImage(file: File, maxSide = MAX_OUTPUT_SIDE) {
   if (file.size > MAX_IMAGE_BYTES) throw oversizedImage()
   const bytes = Buffer.from(await file.arrayBuffer())
   // Check the input signature before invoking native decoders.
@@ -57,7 +57,7 @@ export async function normalizePropertyImage(file: File) {
     const metadata = await image.metadata()
     if (metadata.format !== format) throw invalidImage()
     const normalized = image.autoOrient().resize({
-      width: MAX_OUTPUT_SIDE, height: MAX_OUTPUT_SIDE, fit: 'inside', withoutEnlargement: true,
+      width: maxSide, height: maxSide, fit: 'inside', withoutEnlargement: true,
     })
     const output = await normalized.clone().toFormat(format).toBuffer()
     if (output.byteLength <= MAX_IMAGE_BYTES) return { bytes: output, type: mimeByFormat[format] }
@@ -69,4 +69,13 @@ export async function normalizePropertyImage(file: File) {
     if (error instanceof ApiError) throw error
     throw invalidImage()
   }
+}
+
+export async function readImageUpload(request: Request, maxSide?: number) {
+  const files = (await readImageForm(request)).getAll('file')
+  const file = files[0]
+  if (files.length !== 1 || !file || typeof file === 'string') {
+    throw new ApiError(400, 'INVALID_IMAGE_FORM', 'Envía una sola imagen por solicitud.')
+  }
+  return normalizeImage(file, maxSide)
 }

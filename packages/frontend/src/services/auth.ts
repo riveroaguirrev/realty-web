@@ -32,13 +32,21 @@ export const authAPI = {
     return res.data
   },
 
+  uploadProfilePhoto: async (token: string, file: File): Promise<User> => {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await apiClient.post<User>('/auth/profile/photo', form, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': false },
+    })
+    return res.data
+  },
+
   updateProfile: async (
     token: string,
     data: Partial<{
       firstName: string
       lastName: string
       bio: string
-      profileImage: string
       phone: string
     }>
   ): Promise<User> => {

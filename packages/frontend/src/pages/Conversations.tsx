@@ -8,6 +8,7 @@ import { Icon } from '@/components/ui/Icon'
 import { Pagination } from '@/components/ui/Pagination'
 import { ConversationArtwork, ConversationAvatar, conversationContact, conversationTitle } from '@/components/messages/ConversationIdentity'
 import { ConversationDetail } from './ConversationDetail'
+import { authSessionIdentity } from '@/utils/sessionIdentity'
 import './Messages.css'
 
 type InboxResult = Awaited<ReturnType<typeof conversationsAPI.list>>
@@ -77,7 +78,7 @@ export const Conversations = () => {
         </nav>
         {totalPages > 1 && <div className="inbox-pagination"><p>Los filtros se aplican a esta página.</p><Pagination page={page} totalPages={totalPages} onChange={setPage} disabled={query.isFetching} /></div>}
       </aside>
-      {id ? <ConversationDetail key={`${accessToken}:${id}`} conversationId={id} onRead={markConversationRead} /> : <section className="conversation-pane messages-placeholder" aria-label="Selecciona una conversación"><ConversationArtwork /><h2>Cada conversación abre una oportunidad.</h2><p>Selecciona una conversación para leer y enviar mensajes.</p></section>}
+      {id ? <ConversationDetail key={`${accessToken && (authSessionIdentity(accessToken) ?? accessToken)}:${id}`} conversationId={id} onRead={markConversationRead} /> : <section className="conversation-pane messages-placeholder" aria-label="Selecciona una conversación"><ConversationArtwork /><h2>Cada conversación abre una oportunidad.</h2><p>Selecciona una conversación para leer y enviar mensajes.</p></section>}
     </div>
   </div>
 }

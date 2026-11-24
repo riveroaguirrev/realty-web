@@ -14,7 +14,7 @@ export const registerSchema = loginSchema.extend({
   password: passwordSchema,
   firstName: nameSchema,
   lastName: nameSchema,
-  role: z.nativeEnum(UserRole),
+  role: z.literal(UserRole.ADVISOR, { errorMap: () => ({ message: 'El registro está disponible para asesores inmobiliarios.' }) }),
 }).strict()
 export const registrationFormSchema = registerSchema.extend({ confirmPassword: z.string().min(1, 'Repite tu contraseña') })
   .refine((data) => data.password === data.confirmPassword, { path: ['confirmPassword'], message: 'Las contraseñas no coinciden' })
@@ -25,7 +25,6 @@ export const profileSchema = z.object({
   lastName: nameSchema.optional(),
   bio: z.string().trim().max(1000, 'Máximo 1000 caracteres').optional(),
   phone: z.string().trim().regex(/^(\+[1-9]\d{6,14})?$/, 'Usa el prefijo internacional y entre 7 y 15 dígitos').optional(),
-  profileImage: z.string().url().max(2048).optional(),
 }).strict()
 export const codeSchema = z.string().trim().regex(/^\d{6}$/, 'Escribe el código de 6 dígitos')
 export const verifySchema = z.object({

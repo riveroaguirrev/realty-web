@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { authAPI } from '@/services/auth'
 import { acceptSession, clearSession } from '@/services/authSession'
 import { SignUpPayload, AuthPayload, User } from '@shared/types'
+import { canRefreshRequest } from '@/utils/sessionIdentity'
 
 export const useAuth = () => {
   const state = useAuthStore()
@@ -39,6 +40,16 @@ export const useAuth = () => {
     useAuthStore.getState().setUser(user)
     return user
   }), [run])
+  const uploadProfilePhoto = useCallback((file: File) => run(async () => {
+    const token = useAuthStore.getState().accessToken
+    if (!token) throw new Error('Inicia sesión para continuar.')
+    const profile = await authAPI.uploadProfilePhoto(token, file)
+    const current = useAuthStore.getState()
+    if (current.user?.id === profile.id && current.accessToken && canRefreshRequest(token, current.accessToken)) {
+      current.setUser({ ...current.user, profileImage: profile.profileImage })
+    }
+    return profile
+  }), [run])
   const logout = useCallback(async () => {
     const token = useAuthStore.getState().accessToken
     try { if (token) await authAPI.logout(token) }
@@ -47,5 +58,5 @@ export const useAuth = () => {
       await clearSession()
     }
   }, [])
-  return { ...state, isAuthenticated: !!state.user && !!state.accessToken, register, login, getProfile, updateProfile, logout }
+  return { ...state, isAuthenticated: !!state.user && !!state.accessToken, register, login, getProfile, updateProfile, uploadProfilePhoto, logout }
 }
