@@ -36,12 +36,14 @@ export class AuthService {
   }
   async signUp(payload: SignUpPayload): Promise<SignupPendingAuth> {
     await rateLimit('mail:' + payload.email, 1, 60)
+    const existing = await prisma.advisor.findUnique({ where: { email: payload.email.toLowerCase() }, select: { id: true } })
+    if (existing) throw Errors.USER_ALREADY_EXISTS
     const { data, error } = await getSupabaseClient().auth.signUp({
       email: payload.email, password: payload.password,
       options: { data: { firstName: payload.firstName, lastName: payload.lastName, role: UserRole.ADVISOR, phone: payload.phone } },
     })
     if (error) {
-      if (['email_exists', 'user_already_exists'].includes(error.code ?? '')) return { status: 'EMAIL_VERIFICATION_REQUIRED', email: payload.email }
+      if (['email_exists', 'user_already_exists'].includes(error.code ?? '')) throw Errors.USER_ALREADY_EXISTS
       throw deliveryError()
     }
     if (data.session) {
@@ -49,6 +51,8 @@ export class AuthService {
       throw new ApiError(503, 'AUTH_CONFIGURATION_ERROR', 'La confirmación de correo debe estar activada antes de registrar usuarios.')
     }
     if (!data.user) throw deliveryError()
+    // Supabase can hide duplicate signups behind a successful response with no identities.
+    if (data.user.identities?.length === 0) throw Errors.USER_ALREADY_EXISTS
     return { status: 'EMAIL_VERIFICATION_REQUIRED', email: payload.email }
   }
   async signIn(payload: AuthPayload, browserHash: string): Promise<LoginResult> {
