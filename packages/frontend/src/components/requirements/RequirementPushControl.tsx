@@ -24,5 +24,5 @@ export const RequirementPushControl = ({ token }: { token: string }) => {
       setMessage(enabled ? 'Avisos desactivados' : 'Avisos activados')
     } catch (error) { setFailed(true); setMessage(requirementError(error)) } finally { setBusy(false) }
   }
-  return <div className="req-push-compact"><span>Avisos</span><button type="button" className="req-push-switch" role="switch" aria-checked={enabled} aria-label="Avisos de nuevos requerimientos" disabled={busy} onClick={toggle}><span /></button>{busy && <small role="status">Actualizando…</small>}{message && <p className={failed ? 'req-push-feedback is-error' : 'req-push-feedback'} role={failed ? 'alert' : 'status'}>{message}</p>}</div>
+  return <div className="req-push-compact"><span>Avisos</span><button type="button" className="req-push-switch" role="switch" aria-checked={enabled} aria-label="Avisos de mensajes y requerimientos" disabled={busy} onClick={toggle}><span /></button>{busy && <small role="status">Actualizando…</small>}{message && <p className={failed ? 'req-push-feedback is-error' : 'req-push-feedback'} role={failed ? 'alert' : 'status'}>{message}</p>}</div>
 }

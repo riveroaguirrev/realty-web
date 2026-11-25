@@ -154,3 +154,7 @@
 .req-toolbar .req-segments button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .req-toolbar .req-segments button svg { width: 16px; height: 16px; }
 @media (max-width: 600px) { .req-toolbar .req-segments { width: 100%; } .req-toolbar .req-segments button { flex: 1 1 auto; } }
+.req-notice-link { display:flex; align-items:flex-start; gap:10px; flex:1; min-width:0; }
+.req-notice-link > svg { flex-shrink:0; margin-top:3px; color:var(--swiss-ink); }
+.req-notice-link > span { min-width:0; overflow-wrap:anywhere; }
+.req-notice-link strong { font-weight:600; }

@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect } from 'react'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { IncomingMessage, useRealtimeInbox } from './useRealtimeInbox'
@@ -15,11 +16,13 @@ export const useNotifications = ({
   userId,
   currentConversationId,
 }: UseNotificationsParams) => {
+  const client = useQueryClient()
   const addNotification = useNotificationStore((state) => state.addNotification)
   const markConversationAsRead = useNotificationStore((state) => state.markConversationAsRead)
 
   const handleNewMessage = useCallback(
     (message: IncomingMessage) => {
+      void client.invalidateQueries({ queryKey: ['requirement-notifications'] })
       const isOwnMessage = message.senderId === userId
       const isViewingConversation = message.conversationId === currentConversationId
       if (isOwnMessage || isViewingConversation) return
@@ -31,7 +34,7 @@ export const useNotifications = ({
         message: message.content.substring(0, PREVIEW_LENGTH) || 'Archivo adjunto',
       })
     },
-    [userId, currentConversationId, addNotification]
+    [userId, currentConversationId, addNotification, client]
   )
 
   useRealtimeInbox({ accessToken, onNewMessage: handleNewMessage })

@@ -1,8 +1,8 @@
 self.addEventListener('push', event => {
   if (!event.data) return
   const data = event.data.json()
-  event.waitUntil(self.registration.showNotification(data.title || 'Nuevo requerimiento', {
-    body: data.body, tag: data.tag, icon: '/favicon.svg', data: { url: data.url || '/requirements' },
+  event.waitUntil(self.registration.showNotification(data.title || 'Nueva notificación', {
+    body: data.kind === 'message' ? undefined : data.body, tag: data.tag, icon: '/notification-icon.png', data: { url: data.url || '/requirements' },
   }))
 })
 self.addEventListener('notificationclick', event => {

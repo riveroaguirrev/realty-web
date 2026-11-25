@@ -7,7 +7,7 @@ export const requirementsAPI = {
   create: (token: string, data: RequirementInput) => apiClient.post<RequirementRecord>('/requirements', data, config(token)),
   update: (token: string, id: string, data: RequirementInput | { status: RequirementStatus } | { visibility: RequirementVisibility }) => apiClient.put<RequirementRecord>(`/requirements/${id}`, data, config(token)),
 }
-export interface RequirementNotice { id: string; title: string; message: string; actionUrl: string; createdAt: string }
+export interface RequirementNotice { actor?: { firstName: string; lastName: string; profileImage?: string | null }; kind?: 'message' | 'requirement'; id: string; title: string; message: string; actionUrl: string; createdAt: string }
 export const requirementNotifications = {
   list: (token: string) => apiClient.get<RequirementNotice[]>('/notifications', config(token)),
   read: (token: string, id: string) => apiClient.put(`/notifications/${id}`, {}, config(token)),
