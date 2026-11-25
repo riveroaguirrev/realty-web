@@ -1,3 +1,4 @@
+import { useAuth } from '@/hooks/useAuth'
 import { PROPERTY_STEPS, validatePropertyStep } from '@/utils/propertyWizard'
 import './PropertyForm.css'
 import { CityAutocomplete } from './CityAutocomplete'
@@ -16,6 +17,7 @@ const INPUT_CLASS = 'property-control'
 const LABEL_CLASS = 'property-label'
 
 export interface EditableProperty {
+  visibility?: 'PUBLIC' | 'ORGANIZATION'
   id: string
   title: string
   description?: string | null
@@ -50,6 +52,7 @@ interface PropertyFormProps {
 }
 
 const EMPTY_FORM = {
+  visibility: 'PUBLIC' as 'PUBLIC' | 'ORGANIZATION',
   title: '',
   operation: 'SALE' as 'SALE' | 'RENTAL' | 'ANTICRETIC',
   description: '',
@@ -78,6 +81,7 @@ const EMPTY_FORM = {
 const toFormData = (property?: EditableProperty) =>
   property
     ? {
+        visibility: property.visibility ?? 'PUBLIC',
         title: property.title,
         operation: property.operation ?? 'SALE',
         description: property.description ?? '',
@@ -105,6 +109,7 @@ const toFormData = (property?: EditableProperty) =>
     : EMPTY_FORM
 
 export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) => {
+  const { user } = useAuth()
   const isEditing = Boolean(property)
   const [step, setStep] = useState(0)
   const stepStatus = useRef<HTMLParagraphElement>(null)
@@ -268,6 +273,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
     {success && <p role="status" className="text-green-700 mb-4">Propiedad guardada correctamente.</p>}
     <fieldset disabled={isLoading || success}>
       {(isEditing || step === 0) && <section className="form-section"><div className="form-section-heading"><span className="step-number">01</span><div><h3>Información principal</h3><p>Un título claro ayuda a encontrar tu propiedad.</p></div></div>
+        {(user?.organizationId || formData.visibility === 'ORGANIZATION') && <fieldset className="property-visibility"><legend>Visibilidad de la publicación</legend><p>{formData.visibility === 'ORGANIZATION' ? 'Solo los miembros de tu organización podrán ver esta propiedad.' : 'Todos los asesores podrán ver esta propiedad.'}</p><div role="group" aria-label="Visibilidad de la propiedad"><button type="button" aria-pressed={formData.visibility === 'PUBLIC'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'PUBLIC' }))}>Todos</button>{user?.organizationId && <button type="button" aria-pressed={formData.visibility === 'ORGANIZATION'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'ORGANIZATION' }))}>Solo mi organización</button>}</div></fieldset>}
         <div className="property-fields">
           <div className="property-title-field">{field('title', 'Título de la publicación', true, 'Ej. Departamento luminoso en Sopocachi')}</div>
           <div>
@@ -345,6 +351,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
           }))} onRadiusChange={radius => setFormData(prev => ({ ...prev, locationRadiusMeters: radius }))} onChange={coordinates => setFormData(prev => ({ ...prev, ...coordinates }))} />
           {!formData.isExclusive && <p className="location-privacy-note">La dirección escrita queda disponible para gestionar tu publicación. Los demás usuarios verán la zona.</p>}
         </div>
+        {(user?.organizationId || formData.visibility === 'ORGANIZATION') && <fieldset className="property-visibility"><legend>Visibilidad de la publicación</legend><p>{formData.visibility === 'ORGANIZATION' ? 'Solo los miembros de tu organización podrán ver esta propiedad.' : 'Todos los asesores podrán ver esta propiedad.'}</p><div role="group" aria-label="Visibilidad de la propiedad"><button type="button" aria-pressed={formData.visibility === 'PUBLIC'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'PUBLIC' }))}>Todos</button>{user?.organizationId && <button type="button" aria-pressed={formData.visibility === 'ORGANIZATION'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'ORGANIZATION' }))}>Solo mi organización</button>}</div></fieldset>}
         <div className="property-fields">{field('address','Dirección',true)}<CityAutocomplete value={formData.city} onChange={city => setFormData(prev => ({ ...prev, city }))} />{field('region','Zona o barrio',true)}{field('areaSquareMeters','Superficie (m²)')}{field('bedrooms','Habitaciones')}{field('bathrooms','Baños')}</div>
       </section>}
       {(isEditing || step === 2) && <section className="form-section property-photos-section"><div className="form-section-heading"><span className="step-number">03</span><div><h3>Fotografías</h3><p>Muestra lo mejor de tu propiedad. Puedes ampliar cada foto y ajustar su encuadre.</p></div></div>
@@ -375,7 +382,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
         <div className="wizard-review-overview">{previews[0] ? <img src={previews[0]} alt="Portada de la propiedad" /> : <span className="wizard-review-placeholder"><Icon name="home" width="38" height="38" /></span>}<div><span className="eyebrow">{formData.operation === 'RENTAL' ? 'Alquiler' : formData.operation === 'ANTICRETIC' ? 'Anticrético' : 'Venta'} · {PROPERTY_TYPES[formData.type] || formData.type}</span><h3>{formData.title}</h3><strong>{formatPrice(formData.price, formData.currency)}</strong><p>{formData.city} · {formData.region}</p></div></div>
         <div className="wizard-review-grid">
           <div className="wizard-review-card"><div className="wizard-review-card-heading"><h4>Información principal</h4><button type="button" className="text-link" onClick={() => goToStep(0)}><Icon name="edit" width="15" height="15" />Editar</button></div><p className="wizard-review-description">{formData.description || 'Sin descripción adicional.'}</p><dl><div><dt>Comisión</dt><dd>{formData.commissionPercentage}%</dd></div>{formData.operation !== 'SALE' && <><div><dt>Amoblado</dt><dd>{formData.furnished === 'UNFURNISHED' ? 'No' : 'Sí'}</dd></div><div><dt>Mascotas</dt><dd>{formData.petsAllowed ? 'Permitidas' : 'No permitidas'}</dd></div><div><dt>Expensas incluidas</dt><dd>{formData.expensesIncluded ? 'Sí' : 'No'}</dd></div><div><dt>Wifi incluido</dt><dd>{formData.wifiIncluded ? 'Sí' : 'No'}</dd></div></>}</dl></div>
-          <div className="wizard-review-card"><div className="wizard-review-card-heading"><h4>Ubicación y características</h4><button type="button" className="text-link" onClick={() => goToStep(1)}><Icon name="edit" width="15" height="15" />Editar</button></div><p>{formData.address}<br />{formData.region}, {formData.city}</p><dl><div><dt>Ubicación pública</dt><dd>{formData.isExclusive && formData.locationMode === 'EXACT' ? 'Exacta' : `Zona de ${formData.locationRadiusMeters} m`}</dd></div><div><dt>Exclusiva</dt><dd>{formData.isExclusive ? 'Sí' : 'No'}</dd></div><div><dt>Superficie</dt><dd>{formData.areaSquareMeters ? `${formData.areaSquareMeters} m²` : 'Sin especificar'}</dd></div><div><dt>Habitaciones</dt><dd>{formData.bedrooms || 'Sin especificar'}</dd></div><div><dt>Baños</dt><dd>{formData.bathrooms || 'Sin especificar'}</dd></div></dl></div>
+          <div className="wizard-review-card"><div className="wizard-review-card-heading"><h4>Ubicación y características</h4><button type="button" className="text-link" onClick={() => goToStep(1)}><Icon name="edit" width="15" height="15" />Editar</button></div><p>{formData.address}<br />{formData.region}, {formData.city}</p><dl><div><dt>Visibilidad</dt><dd>{formData.visibility === 'ORGANIZATION' ? 'Solo mi organización' : 'Todos'}</dd></div><div><dt>Ubicación pública</dt><dd>{formData.isExclusive && formData.locationMode === 'EXACT' ? 'Exacta' : `Zona de ${formData.locationRadiusMeters} m`}</dd></div><div><dt>Exclusiva</dt><dd>{formData.isExclusive ? 'Sí' : 'No'}</dd></div><div><dt>Superficie</dt><dd>{formData.areaSquareMeters ? `${formData.areaSquareMeters} m²` : 'Sin especificar'}</dd></div><div><dt>Habitaciones</dt><dd>{formData.bedrooms || 'Sin especificar'}</dd></div><div><dt>Baños</dt><dd>{formData.bathrooms || 'Sin especificar'}</dd></div></dl></div>
           <div className="wizard-review-card wizard-review-photos"><div className="wizard-review-card-heading"><h4>Fotografías · {images.length}</h4><button type="button" className="text-link" onClick={() => goToStep(2)}><Icon name="edit" width="15" height="15" />Editar</button></div>{previews.length ? <div className="wizard-review-thumbnails">{previews.map((src, index) => <img key={src} src={src} alt={`Fotografía ${index + 1}${index === 0 ? ' · Portada' : ''}`} />)}</div> : <p>Publicarás sin fotografías. Podrás agregarlas al editar la propiedad.</p>}</div>
         </div>
         <p className="wizard-publish-hint"><Icon name="check" />Al publicar, la propiedad aparecerá en Explorar y en el mapa.</p>

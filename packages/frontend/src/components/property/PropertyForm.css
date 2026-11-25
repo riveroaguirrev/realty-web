@@ -50,3 +50,10 @@
   .wizard-review-grid { grid-template-columns: minmax(0, 1fr); }
   .wizard-review-card { padding: 16px; }
 }
+
+.property-visibility { border:0; border-bottom:1px solid var(--swiss-line,#dce2e8); padding:0 0 20px; margin:0 0 24px; }
+.property-visibility legend { font-weight:600; font-size:15px; }
+.property-visibility p { color:var(--swiss-muted,#667588); font-size:14px; margin:8px 0 12px; }
+.property-visibility [role="group"] { display:flex; gap:6px; flex-wrap:wrap; }
+.property-visibility button { border:1px solid #dce2e8; border-radius:9px; padding:10px 16px; background:white; color:#526174; cursor:pointer; font:inherit; }
+.property-visibility button[aria-pressed="true"] { background:#14243b; border-color:#14243b; color:white; }
