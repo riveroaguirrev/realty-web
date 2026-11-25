@@ -219,24 +219,23 @@ export class ConversationService {
   }
 
   async markAsRead(conversationId: string, advisorId: string, through: string | null = null) {
+    let readAt = new Date()
     if (through !== null) {
       const message = await prisma.message.findUnique({ where: { id: through, conversationId }, select: { createdAt: true } })
       if (!message) throw new ApiError(404, 'NOT_FOUND', 'No encontramos el mensaje.')
-      return prisma.conversationParticipant.updateMany({
-        where: { conversationId, advisorId, lastReadAt: { lt: message.createdAt } },
-        data: { lastReadAt: message.createdAt },
-      })
+      readAt = message.createdAt
     }
-    return await prisma.conversationParticipant.update({
-      where: {
-        conversationId_advisorId: {
-          conversationId,
-          advisorId,
-        },
-      },
-      data: {
-        lastReadAt: new Date(),
-      },
+    return prisma.$transaction(async tx => {
+      const result = through !== null ? await tx.conversationParticipant.updateMany({
+        where: { conversationId, advisorId, lastReadAt: { lt: readAt } }, data: { lastReadAt: readAt },
+      }) : await tx.conversationParticipant.update({
+        where: { conversationId_advisorId: { conversationId, advisorId } }, data: { lastReadAt: readAt },
+      })
+      await tx.notification.updateMany({
+        where: { advisorId, relatedEntityType: 'message', isRead: false, createdAt: { lte: readAt }, data: { path: ['conversationId'], equals: conversationId } },
+        data: { isRead: true, readAt: new Date(), scheduledFor: null },
+      })
+      return result
     })
   }
 

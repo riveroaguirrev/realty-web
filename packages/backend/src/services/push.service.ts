@@ -6,7 +6,7 @@ export async function deliverPendingPush(requirementId?: string) {
   if (!pushConfigured()) return { sent: 0, configured: false }
   webpush.setVapidDetails(process.env.VAPID_SUBJECT!, process.env.VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!)
   const pending = await prisma.notification.findMany({
-    where: { channel: 'PUSH', type: 'REQUIREMENT_CREATED', scheduledFor: { lte: new Date() }, sendAttempts: { lt: 3 }, ...(requirementId ? { relatedEntityId: requirementId } : {}) },
+    where: { channel: 'PUSH', isRead: false, OR: [{ type: 'REQUIREMENT_CREATED' }, { type: 'SYSTEM', relatedEntityType: 'message' }], scheduledFor: { lte: new Date() }, sendAttempts: { lt: 3 }, ...(requirementId ? { relatedEntityId: requirementId } : {}) },
     orderBy: { createdAt: 'asc' }, take: 100,
   })
   let sent = 0
@@ -16,7 +16,16 @@ export async function deliverPendingPush(requirementId?: string) {
       const leaseUntil = new Date(Date.now() + 120000)
       const claimed = await prisma.notification.updateMany({ where: { id: notification.id, scheduledFor: { lte: new Date() }, sendAttempts: notification.sendAttempts }, data: { scheduledFor: leaseUntil, sendAttempts: { increment: 1 }, lastAttemptAt: new Date() } })
       if (!claimed.count) return
-      if (!notification.relatedEntityId || !await getRequirement(notification.relatedEntityId, notification.advisorId)) {
+      let allowed = false
+      if (notification.relatedEntityId && notification.relatedEntityType === 'message') {
+        const message = await prisma.message.findUnique({ where: { id: notification.relatedEntityId }, select: { conversationId: true, senderId: true, createdAt: true } })
+        if (message && message.senderId !== notification.advisorId) allowed = Boolean(await prisma.conversationParticipant.findFirst({
+          where: { conversationId: message.conversationId, advisorId: notification.advisorId, lastReadAt: { lt: message.createdAt } }, select: { id: true },
+        }))
+      } else if (notification.relatedEntityId && notification.type === 'REQUIREMENT_CREATED') {
+        allowed = Boolean(await getRequirement(notification.relatedEntityId, notification.advisorId))
+      }
+      if (!allowed) {
         await prisma.notification.updateMany({ where: { id: notification.id }, data: { scheduledFor: null } })
         return
       }
@@ -25,7 +34,7 @@ export async function deliverPendingPush(requirementId?: string) {
       for (let offset = 0; offset < subscriptions.length; offset += 5) {
         await Promise.all(subscriptions.slice(offset, offset + 5).map(async subscription => {
           try {
-            await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, JSON.stringify({ title: notification.title, body: notification.message, url: notification.actionUrl, tag: notification.id }), { TTL: 86400, timeout: 4000 })
+            await webpush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, JSON.stringify({ title: notification.title, body: notification.relatedEntityType === 'message' ? undefined : notification.message, kind: notification.relatedEntityType === 'message' ? 'message' : 'requirement', url: notification.actionUrl, tag: notification.id }), { TTL: 86400, timeout: 4000 })
             sent++
           } catch (error) {
             const status = (error as { statusCode?: number }).statusCode

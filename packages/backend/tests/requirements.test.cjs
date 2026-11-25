@@ -212,7 +212,7 @@ test('push delivery removes expired subscriptions and leaves successful notices 
       './requirement.service': { getRequirement: async () => ({ id: 'r1' }) },
       'web-push': { setVapidDetails: () => {}, sendNotification: async () => { throw { statusCode:410 } } },
       '@/lib/prisma': { prisma: {
-        notification: { findMany: async () => [{id:'n1',advisorId:'other',relatedEntityId:'r1',sendAttempts:0}], updateMany: async () => ({count:1}), update: async args => { update = args.data } },
+        notification: { findMany: async () => [{id:'n1',advisorId:'other',type:'REQUIREMENT_CREATED',relatedEntityType:'requirement',relatedEntityId:'r1',sendAttempts:0}], updateMany: async () => ({count:1}), update: async args => { update = args.data } },
         pushSubscription: { findMany: async () => [{ id:'s1',endpoint:'https://fcm.googleapis.com/a',p256dh:'key',auth:'auth' }], deleteMany: async args => { removed = args.where } },
       } },
     })

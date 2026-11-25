@@ -27,6 +27,16 @@ export class MessageService {
         where: { id: conversationId, OR: [{ lastMessageAt: null }, { lastMessageAt: { lt: message.createdAt } }] },
         data: { lastMessageAt: message.createdAt },
       })
+      const recipients = await tx.conversationParticipant.findMany({
+        where: { conversationId, advisorId: { not: senderId }, advisor: { status: 'ACTIVE' } }, select: { advisorId: true },
+      })
+      const name = `${message.sender.firstName} ${message.sender.lastName}`.trim()
+      if (recipients.length) await tx.notification.createMany({ data: recipients.map(recipient => ({
+        advisorId: recipient.advisorId, type: 'SYSTEM', channel: 'PUSH', title: `Mensaje de ${name}`,
+        message: content.slice(0, 100) || 'Archivo adjunto', relatedEntityType: 'message', relatedEntityId: message.id,
+        actionUrl: `/messages/${conversationId}`, actionLabel: 'Abrir conversación',
+        data: { conversationId }, createdAt: message.createdAt, scheduledFor: new Date(),
+      })) })
       return message
     })
   }
@@ -97,6 +107,7 @@ export class MessageService {
 
   async deleteMessage(messageId: string) {
     const message = await prisma.message.delete({ where: { id: messageId } })
+    await prisma.notification.deleteMany({ where: { relatedEntityType: 'message', relatedEntityId: messageId } })
     await messageAttachmentService.remove(readAttachments(message.attachments))
     return message
   }

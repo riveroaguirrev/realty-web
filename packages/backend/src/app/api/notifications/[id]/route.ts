@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { authenticatedRoute } from '@/utils/authenticatedRoute'
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return authenticatedRoute(request, async advisorId => {
-    await prisma.notification.updateMany({ where: { id: (await params).id, advisorId }, data: { isRead: true, readAt: new Date() } })
+    await prisma.notification.updateMany({ where: { id: (await params).id, advisorId }, data: { isRead: true, readAt: new Date(), scheduledFor: null } })
     return NextResponse.json({ success: true, data: {} })
   })
 }

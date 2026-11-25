@@ -2,6 +2,7 @@ import { ApiError as AccountApiError } from '@/utils/errors'
 import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { readPagination } from '@/utils/pagination'
 import { NextRequest, NextResponse } from 'next/server'
+import { deliverPendingPush } from '@/services/push.service'
 import { messageService } from '@/services/message.service'
 import { conversationService } from '@/services/conversation.service'
 import { requireUser } from '@/middleware/auth'
@@ -90,6 +91,9 @@ export async function POST(
     try { message = await messageService.sendMessage(id, user.id, content.trim(), attachments) }
     catch (error) { await messageAttachmentService.remove(attachments); throw error }
 
+    if (process.env.PUSH_DELIVERY_SCHEDULED !== 'true') {
+      try { await deliverPendingPush(message.id) } catch (error) { console.error('Message push delivery deferred', error) }
+    }
     return NextResponse.json(
       {
         success: true,
