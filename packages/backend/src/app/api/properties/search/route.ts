@@ -1,6 +1,7 @@
 import { ApiError as AccountApiError } from '@/utils/errors'
 import { errorResponse as accountErrorResponse } from '@/lib/auth-route'
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuth } from '@/middleware/auth'
 import { propertyService } from '@/services/property.service'
 import { ApiResponse } from '@shared/types'
 
@@ -32,7 +33,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1
     const pageSize = searchParams.get('pageSize') ? parseInt(searchParams.get('pageSize')!) : 20
 
+    const auth = await verifyAuth(request)
     const result = await propertyService.searchProperties({
+      viewer: auth.user,
       ...bounds,
       mapView: searchParams.get('view') === 'map',
       operation: searchParams.get('operation') || undefined,

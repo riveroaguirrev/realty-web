@@ -19,7 +19,9 @@ export async function GET(req: NextRequest) {
     const priceMin = url.searchParams.get('priceMin') ? parseInt(url.searchParams.get('priceMin')!) : undefined
     const priceMax = url.searchParams.get('priceMax') ? parseInt(url.searchParams.get('priceMax')!) : undefined
 
+    const auth = await verifyAuth(req)
     const result = await propertyService.listProperties({
+      viewer: auth.user,
       city,
       region,
       type,

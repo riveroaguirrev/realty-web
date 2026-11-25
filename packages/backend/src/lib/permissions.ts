@@ -62,7 +62,7 @@ export const requirePropertyManagement = (actor: PropertyActor, property: Proper
 }
 
 export const visiblePropertyWhere = (actor: PropertyActor): Prisma.PropertyWhereInput => {
-  const published: Prisma.PropertyWhereInput = { status: { not: 'ARCHIVED' } }
+  const published: Prisma.PropertyWhereInput = { status: { not: 'ARCHIVED' }, ...propertyAudienceWhere(actor) }
   if (actor.role === UserRole.BUYER) return published
 
   const accessible: Prisma.PropertyWhereInput[] = [published, { advisorId: actor.id }]
@@ -71,3 +71,12 @@ export const visiblePropertyWhere = (actor: PropertyActor): Prisma.PropertyWhere
   }
   return { OR: accessible }
 }
+
+// Membership is supplied by verified authentication, never by search parameters.
+export const propertyAudienceWhere = (actor?: Pick<PropertyActor, 'id' | 'organizationId'> | null): Prisma.PropertyWhereInput => ({
+  OR: [
+    { visibility: 'PUBLIC' },
+    ...(actor ? [{ advisorId: actor.id }] : []),
+    ...(actor?.organizationId ? [{ visibility: 'ORGANIZATION', organizationId: actor.organizationId }] : []),
+  ],
+})

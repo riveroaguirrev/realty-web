@@ -34,6 +34,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     if (!property) return sendError(PROPERTY_NOT_FOUND, 404)
 
     const canManage = canManageProperty(auth.user, property)
+    if (!canManage && property.visibility === 'ORGANIZATION' && (!auth.user.organizationId || property.organizationId !== auth.user.organizationId)) return sendError(PROPERTY_NOT_FOUND, 404)
     if (!canManage && property.status === 'ARCHIVED') return sendError(PROPERTY_NOT_FOUND, 404)
 
     const { status, userRole, ...advisor } = property.advisor

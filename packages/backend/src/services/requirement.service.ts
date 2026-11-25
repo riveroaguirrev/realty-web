@@ -1,3 +1,4 @@
+import { propertyAudienceWhere } from '@/lib/permissions'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requirementInput } from '@/utils/requirementInput'
@@ -14,10 +15,12 @@ const requirementSelect = {
   buyerId: true, status: true, createdAt: true, visibility: true, organizationId: true,
   buyer: { select: { id: true, firstName: true, lastName: true } },
 } satisfies Prisma.RequirementSelect
-export async function requirementSuggestions(id: string, filters: Partial<RequirementSuggestionFilters> = {}) {
+export async function requirementSuggestions(id: string, filters: Partial<RequirementSuggestionFilters> = {}, viewerId?: string) {
   const requirement = await prisma.requirement.findUnique({ where: { id } })
   if (!requirement || requirement.status !== 'ACTIVE') return []
+  const viewer = viewerId ? await prisma.advisor.findUnique({ where: { id: viewerId }, select: { id: true, organizationId: true } }) : null
   const where: Prisma.PropertyWhereInput = {
+    ...propertyAudienceWhere(viewer ? { id: viewer.id, organizationId: viewer.organizationId ?? undefined } : null),
     status: 'AVAILABLE', operation: requirement.operation, currency: requirement.currency,
     type: { in: requirement.propertyType },
     ...(filters.withinBudget ? { price: {

@@ -16,7 +16,7 @@ export const propertyDiscoverySelect = {
   features: true, amenities: true, appliances: true, propertyTax: true, hoaFees: true, utilities: true,
   rentalMonthlyRate: true, rentalFurnished: true, availableDate: true, petPolicy: true,
   school: true, distanceToSchool: true, distanceToTransit: true, videoUrl: true, virtualTourUrl: true,
-  advisorId: true, organizationId: true,
+  advisorId: true, organizationId: true, visibility: true,
 } satisfies Prisma.PropertySelect
 
 type DiscoveryFields = Prisma.PropertyGetPayload<{ select: typeof propertyDiscoverySelect }>

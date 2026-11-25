@@ -1,7 +1,7 @@
 import { publicPropertyLocation } from '@/utils/propertyLocation'
 import { propertyDiscoverySelect } from '@/utils/propertyView'
 import { serializable } from '@/lib/transactions'
-import { requirePropertyManagement } from '@/lib/permissions'
+import { propertyAudienceWhere, requirePropertyManagement } from '@/lib/permissions'
 import { ApiError } from '@/utils/errors'
 import { prisma } from '@/lib/prisma'
 import { PropertyStatus } from '@shared/types'
@@ -34,6 +34,12 @@ const isSlugUniqueConstraintError = (error: unknown): error is Prisma.PrismaClie
 }
 
 export class PropertyService {
+  private async publicationOrganization(tx: Prisma.TransactionClient, advisorId: string, visibility: string) {
+    const advisor = await tx.advisor.findUnique({ where: { id: advisorId }, select: { organizationId: true } })
+    if (visibility === 'ORGANIZATION' && !advisor?.organizationId) throw new ApiError(400, 'ORGANIZATION_REQUIRED', 'Debes pertenecer a una organización para publicar solo en ella.')
+    return advisor?.organizationId ?? null
+  }
+
   private async generateAvailableSlug(title: string) {
     const base = slugify(title) || 'property'
     const existingProperties = await prisma.property.findMany({
@@ -63,9 +69,11 @@ export class PropertyService {
     const { propertyImageService } = await import('@/services/propertyImage.service')
 
     const createWithSlug = (propertySlug: string) => serializable(async tx => {
+      const organizationId = await this.publicationOrganization(tx, data.advisorId, data.visibility || 'PUBLIC')
       const property = await tx.property.create({
         data: {
           ...data,
+          organizationId,
           slug: propertySlug,
           status: 'AVAILABLE',
         },
@@ -115,6 +123,7 @@ export class PropertyService {
 
   async listProperties(
     filters?: {
+      viewer?: Parameters<typeof propertyAudienceWhere>[0]
       city?: string
       region?: string
       type?: string
@@ -130,7 +139,7 @@ export class PropertyService {
     const region = normalizeTextFilter(filters?.region)
     const type = normalizeTextFilter(filters?.type)
 
-    const where: any = { status: 'AVAILABLE' }
+    const where: any = { status: 'AVAILABLE', ...propertyAudienceWhere(filters?.viewer) }
 
     if (city) where.city = { contains: city, mode: 'insensitive' }
     if (region) where.region = { contains: region, mode: 'insensitive' }
@@ -164,6 +173,7 @@ export class PropertyService {
   }
 
   async searchProperties(filters?: {
+    viewer?: Parameters<typeof propertyAudienceWhere>[0]
     west?: number
     south?: number
     east?: number
@@ -193,7 +203,7 @@ export class PropertyService {
     const type = normalizeTextFilter(filters?.type)
     const organizationId = normalizeTextFilter(filters?.organizationId)
 
-    const where: any = { status: 'AVAILABLE' }
+    const where: any = { status: 'AVAILABLE', ...propertyAudienceWhere(filters?.viewer) }
 
     if (city) where.city = { contains: city, mode: 'insensitive' }
     if (region) where.region = { contains: region, mode: 'insensitive' }
@@ -300,11 +310,14 @@ export class PropertyService {
       const existing = await tx.property.findUnique({ where: { id } })
       if (!existing) throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found')
       requirePropertyManagement(actor, existing)
+      const organizationId = data.visibility ? await this.publicationOrganization(tx, existing.advisorId, data.visibility) : existing.organizationId
       await propertyImageService.attach(tx, id, actor.id, existing.images, data.images)
 
       return tx.property.update({
         where: { id },
         data: {
+          visibility: data.visibility,
+          organizationId,
           title: data.title,
           description: data.description ?? null,
           type: data.type,

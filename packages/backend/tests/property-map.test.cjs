@@ -9,11 +9,13 @@ function load(relative, dependencies) {
   new Function('require', 'module', 'exports', source)(id => dependencies[id] || {}, loaded, loaded.exports)
   return loaded.exports
 }
+const permissions = load('../src/lib/permissions.ts', { '@shared/types': { UserRole: { BUYER: 'BUYER' }, Permission: { ORG_ADMIN: 'ORG_ADMIN' } } })
 const location = load('../src/utils/propertyLocation.ts', {})
 test('map discovery covers the filtered search independently of pagination and protects approximate addresses', async () => {
   let query
   const counts = []
   const { propertyService } = load('../src/services/property.service.ts', {
+    '@/lib/permissions': permissions,
     '@/utils/propertyLocation': location,
     '@/lib/prisma': { prisma: { property: {
       findMany: async args => { query = args; return [{ id: 'residential', isExclusive: false, locationMode: 'RADIUS', address: 'Private street', latitude: -17.39, longitude: -66.15 }] },
@@ -43,6 +45,7 @@ test('Mapbox geographic bounds constrain discovery and counts in both map and gr
     let query
     const counts = []
     const { propertyService } = load('../src/services/property.service.ts', {
+      '@/lib/permissions': permissions,
       '@/utils/propertyLocation': location,
       '@/lib/prisma': { prisma: { property: {
         findMany: async args => { query = args; return [] },

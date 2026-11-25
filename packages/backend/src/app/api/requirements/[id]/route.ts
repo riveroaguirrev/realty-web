@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       minScore: request.nextUrl.searchParams.get('minScore') ?? 0,
       withinBudget: request.nextUrl.searchParams.get('withinBudget') ?? 'false',
     })
-    return NextResponse.json({ success: true, data: { ...requirement, suggestions: await requirementSuggestions(id, filters) } }, { headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json({ success: true, data: { ...requirement, suggestions: await requirementSuggestions(id, filters, advisorId) } }, { headers: { 'Cache-Control': 'no-store' } })
   })
 }
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

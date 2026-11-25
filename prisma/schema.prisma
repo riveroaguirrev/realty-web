@@ -208,6 +208,8 @@ enum PropertyLocationMode {
 }
 
 model Property {
+  visibility String @default("PUBLIC")
+  @@index([visibility, organizationId])
   id                    String    @id @default(cuid())
   title                 String
   description           String?

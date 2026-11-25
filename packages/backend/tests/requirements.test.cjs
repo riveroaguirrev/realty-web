@@ -10,6 +10,10 @@ function load(relative) {
   new Function('require', 'module', 'exports', source)(require, module, module.exports)
   return module.exports
 }
+const propertyPermissionsSource = ts.transpileModule(fs.readFileSync(path.resolve(__dirname, '../src/lib/permissions.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
+const permissionsModule = { exports: {} }
+new Function('require', 'module', 'exports', propertyPermissionsSource)(id => id === '@shared/types' ? { UserRole: { BUYER: 'BUYER' }, Permission: { ORG_ADMIN: 'ORG_ADMIN' } } : {}, permissionsModule, permissionsModule.exports)
+const propertyPermissions = permissionsModule.exports
 const { scoreRequirement, REQUIREMENT_MATCH_WEIGHTS } = load('../src/utils/requirementMatching.ts')
 const { requirementInput } = load('../src/utils/requirementInput.ts')
 const r = { title: 'Oficina en planta baja', description: '', operation: 'RENTAL', propertyType: ['OFFICE'], currency: 'BOB', priceMin: null, priceMax: 4000, cities: ['Cochabamba'], zones: ['Norte', 'Beijing'], bedroomsMin: null, bathroomsMin: null, areaMin: null, requiresGarage: false, requiresGroundFloor: true, petsRequired: false }
@@ -103,6 +107,7 @@ test('validation rejects inverted budgets, empty cities, invalid enums and negat
 })
 
 function loadMocked(relative, mocks) {
+  if (!mocks['@/lib/permissions']) mocks['@/lib/permissions'] = propertyPermissions
   if (!mocks['@/utils/authenticatedRoute']) mocks['@/utils/authenticatedRoute'] = { RouteError: class extends Error {} }
   if (!mocks['@/utils/whatsappContact']) mocks['@/utils/whatsappContact'] = { whatsappPhoneFor: () => null }
   const filename = path.resolve(__dirname, relative)
@@ -160,7 +165,7 @@ test('requirement detail validates score filters and forwards them to suggestion
   })
   const request=search=>({nextUrl:new URL('https://realty.test/api/requirements/q'+search)})
   await route.GET(request('?minScore=80&withinBudget=true'),{params:Promise.resolve({id:'q'})})
-  assert.deepEqual(calls,[['q',{minScore:80,withinBudget:true}]])
+  assert.deepEqual(calls,[['q',{minScore:80,withinBudget:true},'viewer']])
   for(const search of ['?minScore=101','?minScore=NaN','?withinBudget=anything']) {
     await assert.rejects(()=>route.GET(request(search),{params:Promise.resolve({id:'q'})}))
   }

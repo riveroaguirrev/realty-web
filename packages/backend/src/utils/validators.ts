@@ -15,6 +15,7 @@ const PROPERTY_STATUSES = ['AVAILABLE', 'UNDER_OFFER', 'SOLD', 'RENT', 'ARCHIVED
 const MAX_PROPERTY_IMAGES = 20
 
 export interface PropertyInput {
+  visibility?: 'PUBLIC' | 'ORGANIZATION'
   title: string
   description?: string
   type: PropertyType
@@ -59,6 +60,7 @@ const validateOptionalCount = (value: unknown, label: string, errors: string[]):
 export const validatePropertyInput = (payload: any) => {
   const errors: string[] = []
   const body = payload ?? {}
+  if (body.visibility !== undefined && !['PUBLIC', 'ORGANIZATION'].includes(body.visibility)) errors.push('Selecciona una visibilidad válida')
   const operation = body.operation ?? 'SALE'
   const currency = body.currency ?? 'USD'
   const furnished = body.furnished ?? 'UNFURNISHED'
@@ -120,6 +122,7 @@ export const validatePropertyInput = (payload: any) => {
   if (errors.length > 0) return { isValid: false as const, errors }
 
   const data: PropertyInput = {
+    visibility: body.visibility,
     title: body.title.trim(),
     description: isNonEmptyString(body.description) ? body.description.trim() : undefined,
     type: body.type,

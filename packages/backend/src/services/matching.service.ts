@@ -51,6 +51,7 @@ export class MatchingService {
     const allProperties = await prisma.property.findMany({
       where: {
         id: { not: propertyId },
+        AND: [visibility],
         status: 'AVAILABLE',
       },
       select: { ...scoringSelect, id: true },
@@ -126,7 +127,7 @@ export class MatchingService {
 
     const ranked = scores.sort((a, b) => b.score - a.score).slice(0, limit)
     const visibleProperties = await prisma.property.findMany({
-      where: { id: { in: ranked.map(match => match.propertyId) }, status: 'AVAILABLE' },
+      where: { id: { in: ranked.map(match => match.propertyId) }, status: 'AVAILABLE', AND: [visibility] },
       select: propertyCardSelect,
     })
     const byId = new Map(visibleProperties.map(property => [property.id, property]))
