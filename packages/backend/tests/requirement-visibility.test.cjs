@@ -33,9 +33,11 @@ test('list and direct detail both enforce audience; owner can still see paused r
   await api.listRequirements('a', false, 1)
   assert.equal(calls[0].where.status, 'ACTIVE')
   assert.deepEqual(calls[0].where.OR[2], { visibility: 'ORGANIZATION', organizationId: 'org-a' })
-  await api.getRequirement('private-id', 'a')
+  await api.getRequirementDetail('private-id', 'a')
   assert.equal(calls[1].where.id, 'private-id')
   assert.equal(calls[1].where.AND.length, 2)
+  assert.equal(calls[0].select.buyer.select.phone, undefined)
+  assert.equal(calls[1].select.buyer.select.phone, true)
 })
 test('visibility changes reject non-owners and clear notices to outsiders when restricting', async () => {
   const deleted = []; const updated = []

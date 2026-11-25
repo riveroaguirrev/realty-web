@@ -15,6 +15,7 @@ import './Requirements.css'
 import './RequirementDetail.css'
 import { Icon } from '@/components/ui/Icon'
 import { FilterSelect } from '@/components/ui/FilterSelect'
+import { WhatsAppContact } from '@/components/ui/WhatsAppContact'
 export const RequirementDetail = () => {
   const { id } = useParams()
   const { hash } = useLocation()
@@ -29,7 +30,8 @@ export const RequirementDetail = () => {
     queryKey: ['requirement', id, accessToken, minScore, withinBudget],
     queryFn: () => requirementsAPI.get(accessToken!, id!, { minScore, withinBudget }),
     enabled: !!id && !!accessToken,
-    placeholderData: previous => previous?.data.id === id ? previous : undefined,
+    retry: false,
+    placeholderData: (previous, previousQuery) => previous?.data.id === id && previousQuery?.queryKey[2] === accessToken ? previous : undefined,
   })
   const r = query.data?.data
   useEffect(() => {
@@ -69,7 +71,11 @@ export const RequirementDetail = () => {
     <div className="rd-specs">{r.bedroomsMin != null && <span><Icon name="bed" />{r.bedroomsMin}+ dorm.</span>}{r.bathroomsMin != null && <span><Icon name="bath" />{r.bathroomsMin}+ baños</span>}{r.areaMin != null && <span><Icon name="area" />{r.areaMin}+ m²</span>}{r.requiresGarage && <span><Icon name="car" />Garaje</span>}{r.requiresGroundFloor && <span><Icon name="building" />Planta baja</span>}{r.petsRequired && <span><Icon name="paw" />Mascotas</span>}</div>
     {r.description && <details className="rd-description"><summary>Ver descripción y preferencias <span aria-hidden="true">⌄</span></summary><p>{r.description}</p></details>}
     </section>
-    <div className="rd-actions">{owner ? <><button className="button button-secondary" disabled={busy} onClick={() => updateStatus(r.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE')}><span aria-hidden="true">{r.status === 'ACTIVE' ? 'Ⅱ' : '▷'}</span>{r.status === 'ACTIVE' ? 'Pausar' : 'Reactivar búsqueda'}</button>{r.status !== 'FULFILLED' && <button className="button button-primary" disabled={busy} onClick={() => updateStatus('FULFILLED')}><Icon name="check" />Marcar atendido</button>}</> : <button className="button button-primary" disabled={busy} onClick={contact}><Icon name="message" />Contactar al asesor</button>}</div>
+    <div className="rd-actions">{owner ? <><button className="button button-secondary" disabled={busy} onClick={() => updateStatus(r.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE')}><span aria-hidden="true">{r.status === 'ACTIVE' ? 'Ⅱ' : '▷'}</span>{r.status === 'ACTIVE' ? 'Pausar' : 'Reactivar búsqueda'}</button>{r.status !== 'FULFILLED' && <button className="button button-primary" disabled={busy} onClick={() => updateStatus('FULFILLED')}><Icon name="check" />Marcar atendido</button>}</> : <>
+      <WhatsAppContact phone={r.buyer.whatsappPhone} recipient={r.buyer.firstName}
+        context={{ kind: 'requirement', title: r.title, url: new URL(`/requirements/${encodeURIComponent(r.id)}`, window.location.origin).href }} />
+      <button className="button button-primary" disabled={busy} onClick={contact}><Icon name="message" />Contactar al asesor</button>
+    </>}</div>
     {error && <p className="req-error" role="alert">{error}</p>}
     <div className="rd-matches-heading" id="coincidencias"><h2>Coincidencias <span>{r.suggestions.length}</span></h2><details className="rd-match-help"><summary>Cómo se calcula <span aria-hidden="true">⌄</span></summary><div><p>Hasta 12 opciones, de mayor a menor compatibilidad. Prioridad: habitaciones, zona, presupuesto, parqueo, mascotas, superficie y preferencias adicionales.</p><p>Solo cuentan los criterios solicitados. La zona se compara con lo escrito en el anuncio; las condiciones del texto libre deben confirmarse con el asesor.</p></div></details></div>
     <div className="req-match-filters rd-match-filters">

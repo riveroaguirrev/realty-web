@@ -1,9 +1,9 @@
-import { SignUpPayload, AuthPayload, AuthResponse, User, LoginResult, RecoveryGrant } from '@shared/types'
+import { SignUpPayload, SignupPendingAuth, AuthPayload, AuthResponse, User, LoginResult, RecoveryGrant } from '@shared/types'
 import { apiClient } from './api'
 
 export const authAPI = {
-  register: async (payload: SignUpPayload): Promise<LoginResult> => {
-    const res = await apiClient.post<LoginResult>('/auth/register', payload)
+  register: async (payload: SignUpPayload): Promise<SignupPendingAuth> => {
+    const res = await apiClient.post<SignupPendingAuth>('/auth/register', payload)
     return res.data
   },
 

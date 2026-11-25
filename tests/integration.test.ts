@@ -52,13 +52,16 @@ test('real Supabase signup, device handover, recovery, bcrypt storage and double
   const url = new URL(process.env.DATABASE_URL!)
   assert.equal(url.hostname, '127.0.0.1')
   assert.equal(url.port, '59941', 'Integration tests must use the isolated test database')
-  const signup = await authService.signUp({ email, password, firstName: 'María José', lastName: 'Pérez', role: UserRole.ADVISOR }, browserA)
+  const signup = await authService.signUp({ email, password, firstName: 'María José', lastName: 'Pérez', role: UserRole.ADVISOR, phone: '+59171234567' })
   assert.equal(signup.status, 'EMAIL_VERIFICATION_REQUIRED')
+  assert.equal(await prisma.advisor.findUnique({ where: { email } }), null)
+  assert.equal((await authService.signIn({ email, password }, browserA)).status, 'EMAIL_VERIFICATION_REQUIRED')
   const signupCode = await codeFor(email)
   await assert.rejects(authService.verify({ purpose: 'signup', email, code: '000000' }, browserA), { code: 'INVALID_CODE' })
   const first = await authService.verify({ purpose: 'signup', email, code: signupCode }, browserA)
   assert.equal(first.status, 'AUTHENTICATED')
   if (first.status !== 'AUTHENTICATED') throw new Error('No authorized session')
+  assert.equal(first.user.phone, '+59171234567')
   const stored = await prisma.$queryRaw<{ encrypted_password: string }[]> `SELECT encrypted_password FROM auth.users WHERE id::text = ${first.user.id}`
   assert.match(stored[0].encrypted_password, /^\$2[aby]\$/)
   await assert.rejects(authService.verify({ purpose: 'signup', email, code: signupCode }, browserA), { code: 'INVALID_CODE' })
@@ -69,8 +72,8 @@ test('real Supabase signup, device handover, recovery, bcrypt storage and double
   })
   await prisma.message.create({ data: { conversationId: conversation.id, senderId: first.user.id, content: 'Private test message' } })
   assert.equal((await readableMessages(first.accessToken, conversation.id)).length, 1)
-  await authService.updateProfile(first.user.id, { phone: '+59171234567', bio: 'Asesora' })
-  assert.equal((await authService.getUserFromToken(first.accessToken)).phone, '+59171234567')
+  await authService.updateProfile(first.user, { phone: '+591 7234-5678', bio: 'Asesora' })
+  assert.equal((await authService.getUserFromToken(first.accessToken)).phone, '+59172345678')
   await assert.rejects(authService.signIn({ email, password }, browserB), { code: 'RATE_LIMITED' })
   await expireMail(email)
   const pending = await authService.signIn({ email, password }, browserB)
@@ -115,6 +118,20 @@ test('real Supabase signup, device handover, recovery, bcrypt storage and double
   await assert.rejects(authService.getUserFromToken(current.accessToken))
 })
 
+test('an expired signup code can be resent without provisioning the advisor', { skip: !integration }, async () => {
+  const email = 'resend-' + unique + '@example.com'
+  await authService.signUp({ email, password, firstName: 'Ana', lastName: 'Prueba', role: UserRole.ADVISOR, phone: '+59171234567' })
+  const expired = await codeFor(email)
+  await prisma.$executeRaw`UPDATE auth.users SET confirmation_sent_at = NOW() - INTERVAL '11 minutes' WHERE email = ${email}`
+  await prisma.$executeRaw`UPDATE auth.one_time_tokens SET created_at = NOW() - INTERVAL '11 minutes' WHERE user_id = (SELECT id FROM auth.users WHERE email = ${email})`
+  await assert.rejects(authService.verify({ purpose: 'signup', email, code: expired }, browserA), { code: 'INVALID_CODE' })
+  assert.equal(await prisma.advisor.findUnique({ where: { email } }), null)
+  await expireMail(email)
+  await authService.resend({ purpose: 'signup', email }, browserA)
+  const result = await authService.verify({ purpose: 'signup', email, code: await codeFor(email) }, browserA)
+  assert.equal(result.status, 'AUTHENTICATED')
+})
+
 test('concurrent invitations cannot overbook; expiry, cancellation, matching email and acceptance preserve seats', { skip: !integration }, async () => {
   const owner = await prisma.advisor.create({ data: { id: randomUUID(), email: 'owner-' + unique + '@example.com', firstName: 'Owner', lastName: 'Test', specializations: [] } })
   const org = await organizationService.createOrganization(owner.id, { name: 'Sucursal ' + unique, city: 'La Paz', region: 'La Paz' })
@@ -156,7 +173,7 @@ test('existing buyers retain multiple browsers and password change revokes old s
   })
   assert.equal(native.error, null)
   const account = native.data.user!
-  await assert.rejects(authService.ensureProfile(account), { code: 'PROFILE_INCOMPLETE' })
+  await assert.rejects(authService.ensureProfile(account), { code: 'EMAIL_NOT_VERIFIED' })
   await prisma.advisor.create({ data: {
     id: account.id, email: buyerEmail, firstName: 'Comprador', lastName: 'Test', userRole: 'BUYER', specializations: [],
   } })
@@ -196,11 +213,14 @@ test('recent chat history starts at the newest messages and older pages survive 
 })
 test('concurrent session handovers yield exactly one active advisor session and invalidate old challenges', { skip: !integration }, async () => {
   const user = await prisma.advisor.create({ data: { id: randomUUID(), email: 'sessions-' + unique + '@example.com', firstName: 'Sessions', lastName: 'Test', specializations: [] } })
-  const ids = [randomUUID(), randomUUID()]
-  await Promise.all(ids.map((id, index) => serializable((tx) => activateSession(tx, user.id, id, 'browser-' + index))))
-  const sessions = await prisma.accountSession.findMany({ where: { advisorId: user.id, revokedAt: null } })
-  assert.equal(sessions.length, 1)
-  assert.equal((await prisma.advisor.findUniqueOrThrow({ where: { id: user.id } })).activeSessionId, sessions[0].id)
+  for (let round = 0; round < 8; round++) {
+    const ids = [randomUUID(), randomUUID()]
+    await Promise.all(ids.map((id, index) => serializable((tx) => activateSession(tx, user.id, id, 'browser-' + index))))
+    const sessions = await prisma.accountSession.findMany({ where: { advisorId: user.id, revokedAt: null } })
+    assert.equal(sessions.length, 1)
+    assert.ok(ids.includes(sessions[0].id))
+    assert.equal((await prisma.advisor.findUniqueOrThrow({ where: { id: user.id } })).activeSessionId, sessions[0].id)
+  }
   const challenge = await prisma.authChallenge.create({ data: { userId: user.id, email: user.email, purpose: 'device', browserHash: 'browser', expiresAt: new Date(Date.now() + 60000) } })
   await prisma.advisor.update({ where: { id: user.id }, data: { credentialsVersion: { increment: 1 } } })
   await assert.rejects(serializable((tx) => consumeChallenge(tx, challenge.id, 'browser', 'device')), { code: 'INVALID_CODE' })

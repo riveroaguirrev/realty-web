@@ -18,7 +18,6 @@ const env = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: jwt.sign({ role: 'anon' }, secret, { expiresIn: '1h' }),
   SUPABASE_SERVICE_ROLE_KEY: jwt.sign({ role: 'service_role' }, secret, { expiresIn: '1h' }),
   RUN_ACCOUNT_INTEGRATION: '1',
-  AUTH_REQUIRE_SIGNUP_VERIFICATION: 'true',
   TSX_TSCONFIG_PATH: path.join(root, 'packages/backend/tsconfig.json'),
   CORS_ALLOWED_ORIGINS: 'http://127.0.0.1:59943,http://localhost:59943',
   NEXT_PUBLIC_APP_URL: 'http://127.0.0.1:59943',

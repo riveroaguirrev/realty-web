@@ -14,6 +14,6 @@ export async function PUT(req: NextRequest) {
     const token = bearerToken(req)
     if (!token) throw Errors.UNAUTHORIZED
     const user = await authService.getUserFromToken(token, browserHashFromRequest(req))
-    return NextResponse.json({ success: true, data: await authService.updateProfile(user.id, await req.json()) })
+    return NextResponse.json({ success: true, data: await authService.updateProfile(user, await req.json()) })
   } catch (error) { return errorResponse(error) }
 }

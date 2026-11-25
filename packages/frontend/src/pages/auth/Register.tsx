@@ -5,13 +5,13 @@ import { registrationFormSchema } from '@shared/validation/auth'
 import { AuthLayout } from '@/components/layout/AuthLayout'
 import { AuthField, FormError } from '@/components/ui/AuthField'
 import { useAuth } from '@/hooks/useAuth'
-import { authLink, clearPending, formErrors, safeNext, savePending } from '@/utils/authFlow'
+import { authLink, formErrors, safeNext, savePending } from '@/utils/authFlow'
 export function Register() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = safeNext(params.get('next'), '/auth/profile')
   const { register, isLoading } = useAuth()
-  const [data, setData] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' })
+  const [data, setData] = useState({ firstName: '', lastName: '', email: '', phone: '+591 ', password: '', confirmPassword: '' })
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const change = (event: React.ChangeEvent<HTMLInputElement>) => {
     setData({ ...data, [event.target.name]: event.target.value })
@@ -22,13 +22,8 @@ export function Register() {
     try {
       const { confirmPassword: _confirm, ...payload } = registrationFormSchema.parse({ ...data, role: UserRole.ADVISOR })
       const result = await register(payload)
-      if (result.status === 'AUTHENTICATED') {
-        clearPending()
-        navigate(next, { replace: true })
-      } else {
-        savePending(result, next)
-        navigate(authLink('/auth/verify', next))
-      }
+      savePending(result, next)
+      navigate(authLink('/auth/verify', next))
     } catch (error) { setErrors(formErrors(error)) }
   }
   return <AuthLayout title="Crea tu cuenta" description="Una cuenta personal para cada usuario.">
@@ -39,6 +34,7 @@ export function Register() {
         <AuthField label="Apellidos" name="lastName" autoComplete="family-name" required value={data.lastName} onChange={change} error={errors.lastName} disabled={isLoading} />
       </div>
       <AuthField label="Correo electrónico" name="email" type="email" autoComplete="email" required value={data.email} onChange={change} error={errors.email} disabled={isLoading} />
+      <AuthField label="Celular con WhatsApp" name="phone" type="tel" autoComplete="tel" hint="Otros usuarios podrán contactarte a este número desde Realty." required value={data.phone} onChange={change} error={errors.phone} disabled={isLoading} />
       <AuthField label="Contraseña" name="password" type="password" autoComplete="new-password" hint="Usa al menos 12 caracteres. Puedes usar una frase." required value={data.password} onChange={change} error={errors.password} disabled={isLoading} />
       <AuthField label="Confirmar contraseña" name="confirmPassword" type="password" autoComplete="new-password" required value={data.confirmPassword} onChange={change} error={errors.confirmPassword} disabled={isLoading} />
       <button className="button button-primary w-full" disabled={isLoading}>{isLoading ? 'Creando cuenta…' : 'Crear cuenta'}</button>

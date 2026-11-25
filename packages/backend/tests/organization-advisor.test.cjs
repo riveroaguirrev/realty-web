@@ -24,6 +24,7 @@ function setup({ director = true, member = true } = {}) {
   const service = load('../src/services/organizationAdvisor.service.ts', {
     '@/lib/prisma': { prisma: db }, '@/utils/errors': { ApiError, Errors: { FORBIDDEN: forbidden } },
     '@/utils/propertyView': { propertyCardSelect: { id: true, title: true, price: true, images: true } },
+    '@/utils/whatsappContact': { whatsappPhoneFor: () => null },
   })
   return { calls, profile, service }
 }

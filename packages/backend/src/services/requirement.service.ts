@@ -5,6 +5,7 @@ import { scoreRequirement } from '@/utils/requirementMatching'
 import { propertyCardSelect } from '@/utils/propertyView'
 import { RouteError } from '@/utils/authenticatedRoute'
 import type { RequirementSuggestionFilters } from '@shared/types/requirements'
+import { whatsappPhoneFor } from '@/utils/whatsappContact'
 const requirementSelect = {
   id: true, title: true, description: true, operation: true, propertyType: true,
   currency: true, priceMin: true, priceMax: true, cities: true, zones: true,
@@ -86,8 +87,22 @@ export async function listRequirements(advisorId: string, mine: boolean, page: n
   ])
   return { items, total }
 }
+async function requirementDetailWhere(id: string, advisorId: string): Promise<Prisma.RequirementWhereInput> {
+  return { id, AND: [await requirementAccess(prisma, advisorId), { OR: [{ status: 'ACTIVE' }, { buyerId: advisorId }] }] }
+}
+
 export async function getRequirement(id: string, advisorId: string) {
-  return prisma.requirement.findFirst({ where: { id, AND: [await requirementAccess(prisma, advisorId), { OR: [{ status: 'ACTIVE' }, { buyerId: advisorId }] }] }, select: requirementSelect })
+  return prisma.requirement.findFirst({ where: await requirementDetailWhere(id, advisorId), select: requirementSelect })
+}
+
+export async function getRequirementDetail(id: string, advisorId: string) {
+  const requirement = await prisma.requirement.findFirst({
+    where: await requirementDetailWhere(id, advisorId),
+    select: { ...requirementSelect, buyer: { select: { ...requirementSelect.buyer.select, phone: true, status: true, userRole: true } } },
+  })
+  if (!requirement) return null
+  const { id: buyerId, firstName, lastName } = requirement.buyer
+  return { ...requirement, buyer: { id: buyerId, firstName, lastName, whatsappPhone: whatsappPhoneFor(requirement.buyer, advisorId) } }
 }
 
 // Organization membership comes from the database, never from a client-supplied id.

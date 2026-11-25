@@ -103,6 +103,8 @@ export class PropertyService {
             lastName: true,
             email: true,
             phone: true,
+            status: true,
+            userRole: true,
             profileImage: true,
             organization: { select: { id: true, name: true } },
           },

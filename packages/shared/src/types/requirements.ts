@@ -55,5 +55,6 @@ export interface RequirementSuggestion {
   }
 }
 export interface RequirementDetail extends RequirementRecord {
+  buyer: RequirementRecord['buyer'] & { whatsappPhone: string | null }
   suggestions: RequirementSuggestion[]
 }

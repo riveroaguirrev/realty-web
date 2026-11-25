@@ -6,6 +6,7 @@ import { propertyService } from '@/services/property.service'
 import { requireUser, sendError, verifyAuth } from '@/middleware/auth'
 import { ApiError, Errors } from '@/utils/errors'
 import { validatePropertyInput } from '@/utils/validators'
+import { whatsappPhoneFor } from '@/utils/whatsappContact'
 
 const PROPERTY_NOT_FOUND = new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found')
 const PROPERTY_IN_USE = new ApiError(
@@ -35,7 +36,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const canManage = canManageProperty(auth.user, property)
     if (!canManage && property.status === 'ARCHIVED') return sendError(PROPERTY_NOT_FOUND, 404)
 
-    return NextResponse.json({ success: true, data: canManage ? property : publicPropertyLocation(propertyDiscoveryView(property)) })
+    const { status, userRole, ...advisor } = property.advisor
+    const detail = {
+      ...property,
+      advisor: { ...advisor, whatsappPhone: whatsappPhoneFor({ ...advisor, status, userRole }, auth.user.id) },
+    }
+    return NextResponse.json({ success: true, data: canManage ? detail : publicPropertyLocation(propertyDiscoveryView(detail)) }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     return handleError(error, 'fetching')
   }

@@ -104,6 +104,7 @@ test('validation rejects inverted budgets, empty cities, invalid enums and negat
 
 function loadMocked(relative, mocks) {
   if (!mocks['@/utils/authenticatedRoute']) mocks['@/utils/authenticatedRoute'] = { RouteError: class extends Error {} }
+  if (!mocks['@/utils/whatsappContact']) mocks['@/utils/whatsappContact'] = { whatsappPhoneFor: () => null }
   const filename = path.resolve(__dirname, relative)
   const source = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText
   const module = { exports: {} }
@@ -154,7 +155,7 @@ test('requirement detail validates score filters and forwards them to suggestion
   const route=loadMocked('../src/app/api/requirements/[id]/route.ts', {
     'next/server':{NextResponse:{json:body=>body}},
     '@/utils/authenticatedRoute':{authenticatedRoute:(_request,handler)=>handler('viewer'),RouteError:class extends Error{}},
-    '@/services/requirement.service':{getRequirement:async()=>r,requirementSuggestions:async(...args)=>{calls.push(args);return[]}},
+    '@/services/requirement.service':{getRequirementDetail:async()=>r,requirementSuggestions:async(...args)=>{calls.push(args);return[]}},
     '@/utils/requirementInput':{requirementInput},'@/lib/prisma':{prisma:{}},
   })
   const request=search=>({nextUrl:new URL('https://realty.test/api/requirements/q'+search)})

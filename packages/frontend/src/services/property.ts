@@ -31,8 +31,9 @@ export const propertyAPI = {
     return { properties: res.data, total: res.meta?.total || 0, totalPages: Math.ceil((res.meta?.total || 0) / pageSize) }
   },
 
-  get: async (token: string, id: string) => {
+  get: async (token: string, id: string, signal?: AbortSignal) => {
     const res = await apiClient.get(`/properties/${id}`, {
+      signal,
       headers: {
         Authorization: `Bearer ${token}`,
       },

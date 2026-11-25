@@ -46,7 +46,13 @@ export interface AuthPayload {
 export interface SignUpPayload extends AuthPayload {
   firstName: string
   lastName: string
+  phone: string
   role: UserRole.ADVISOR
+}
+
+export interface SignupPendingAuth {
+  status: 'EMAIL_VERIFICATION_REQUIRED'
+  email: string
 }
 
 export interface AuthResponse {

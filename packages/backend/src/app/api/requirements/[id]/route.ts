@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authenticatedRoute, RouteError } from '@/utils/authenticatedRoute'
-import { getRequirement, requirementSuggestions, updateRequirement } from '@/services/requirement.service'
+import { getRequirement, getRequirementDetail, requirementSuggestions, updateRequirement } from '@/services/requirement.service'
 import { requirementInput } from '@/utils/requirementInput'
 export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return authenticatedRoute(request, async advisorId => {
     const { id } = await params
-    const requirement = await getRequirement(id, advisorId)
+    const requirement = await getRequirementDetail(id, advisorId)
     if (!requirement) throw new RouteError(404, 'Requerimiento no encontrado.')
     const filters = z.object({
       minScore: z.coerce.number().int().min(0).max(100),
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       minScore: request.nextUrl.searchParams.get('minScore') ?? 0,
       withinBudget: request.nextUrl.searchParams.get('withinBudget') ?? 'false',
     })
-    return NextResponse.json({ success: true, data: { ...requirement, suggestions: await requirementSuggestions(id, filters) } })
+    return NextResponse.json({ success: true, data: { ...requirement, suggestions: await requirementSuggestions(id, filters) } }, { headers: { 'Cache-Control': 'no-store' } })
   })
 }
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

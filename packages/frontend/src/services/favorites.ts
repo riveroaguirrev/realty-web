@@ -22,10 +22,11 @@ export const favoritesAPI = {
     return response.data.data
   },
 
-  async isFavorite(token: string, propertyId: string): Promise<boolean> {
+  async isFavorite(token: string, propertyId: string, signal?: AbortSignal): Promise<boolean> {
     const response = await client.get<ApiResponse<{ isFavorite: boolean }>>(
       `/favorites/${propertyId}`,
       {
+        signal,
         headers: { Authorization: `Bearer ${token}` },
       }
     )

@@ -23,7 +23,8 @@ Para volver a levantar los servicios, ejecutar `npx --yes supabase start -x logf
 
 ## Flujos y contratos
 
-- `POST /api/auth/register` recibe nombres, apellidos, correo, contraseña y el rol `ADVISOR`. Con `AUTH_REQUIRE_SIGNUP_VERIFICATION=true`, devuelve `EMAIL_VERIFICATION_REQUIRED`. En el modo temporal de registro directo, devuelve una sesión autorizada.
+- `POST /api/auth/register` recibe nombres, apellidos, correo, contraseña, celular con prefijo internacional y el rol `ADVISOR`. Devuelve `EMAIL_VERIFICATION_REQUIRED`. Al verificar el código por correo se crea el perfil de asesor y se autoriza la sesión.
+- El celular guardado en el perfil habilita WhatsApp en el detalle autorizado de propiedades, asesores de la organización y requerimientos. Los asesores con cuenta previa pueden agregar el celular desde **Mi perfil**.
 - `POST /api/auth/login`: devuelve `AUTHENTICATED` con perfil y tokens de acceso/renovación, o un estado pendiente de verificación. El desafío de navegador incluye `challengeId`.
 - `POST /api/auth/verify`: recibe `purpose` (signup, device, recovery, email_change), correo, código y challengeId cuando corresponda. Recuperación devuelve un permiso temporal que solo sirve para cambiar la contraseña, no para acceder a datos.
 - `POST /api/auth/resend`, `/recovery`, `/reset-password`, `/password`, `/email` y `/logout` completan los flujos. Los cambios de credenciales y el cierre de sesión requieren Bearer. La recuperación exige el permiso ligado al navegador y a la sesión nativa.

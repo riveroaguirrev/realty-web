@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { ApiError, Errors } from '@/utils/errors'
 import { propertyCardSelect } from '@/utils/propertyView'
+import { whatsappPhoneFor } from '@/utils/whatsappContact'
 
 export const organizationAdvisorProfileSelect = {
   id: true, firstName: true, lastName: true, email: true, phone: true,
@@ -31,7 +32,7 @@ export async function getOrganizationAdvisorDetail(requesterId: string, organiza
   const count = (status: string) => groups.find(group => group.status === status)?._count._all ?? 0
   const total = groups.reduce((sum, group) => sum + group._count._all, 0)
   return {
-    advisor, properties,
+    advisor: { ...advisor, whatsappPhone: whatsappPhoneFor({ ...advisor, userRole: 'ADVISOR' }, requesterId) }, properties,
     summary: { total, available: count('AVAILABLE'), closed: count('SOLD') + count('RENT'), archived: count('ARCHIVED') },
     pagination: { page: safePage, pageSize, total, pages: Math.ceil(total / pageSize) },
   }

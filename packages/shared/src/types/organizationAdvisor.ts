@@ -4,6 +4,7 @@ export interface OrganizationAdvisorProfile {
   lastName: string
   email: string
   phone: string | null
+  whatsappPhone: string | null
   profileImage: string | null
   bio: string | null
   role: string

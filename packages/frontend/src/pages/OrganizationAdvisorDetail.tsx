@@ -8,6 +8,7 @@ import { getErrorMessage } from '@/utils/errorMessage'
 import { PROPERTY_TYPES } from '@/utils/propertyPresentation'
 import { PropertyCard } from '@/components/property/PropertyCard'
 import { Icon } from '@/components/ui/Icon'
+import { WhatsAppContact } from '@/components/ui/WhatsAppContact'
 import './OrganizationAdvisorDetail.css'
 
 const PROPERTY_STATUS: Record<string, string> = { AVAILABLE: 'Disponible', UNDER_OFFER: 'En negociación', SOLD: 'Vendido', RENT: 'Alquilado', ARCHIVED: 'Archivado' }
@@ -59,6 +60,8 @@ export const OrganizationAdvisorDetail = () => {
       <section className="agent-info-section"><h3>Contacto</h3><dl><div><dt>Correo electrónico</dt><dd><a href={`mailto:${encodeURIComponent(advisor.email)}`}>{advisor.email}</a></dd></div><div><dt>Teléfono</dt><dd>{advisor.phone ? <a href={`tel:${advisor.phone.replace(/[^+\d]/g, '')}`}>{advisor.phone}</a> : 'No registrado'}</dd></div></dl></section>
       <section className="agent-info-section"><h3>Información profesional</h3><dl><div><dt>Experiencia</dt><dd>{advisor.yearsExperience == null ? 'No registrada' : `${advisor.yearsExperience} ${advisor.yearsExperience === 1 ? 'año' : 'años'}`}</dd></div><div><dt>Matrícula / licencia</dt><dd>{advisor.licenseNumber || 'No registrada'}</dd></div><div><dt>Idiomas</dt><dd>{advisor.language.length ? advisor.language.map(value => LANGUAGES[value] || value).join(', ') : 'No registrados'}</dd></div><div><dt>Valoraciones</dt><dd>{advisor.reviewCount ? `${Number(advisor.rating || 0).toFixed(1)} / 5 · ${advisor.reviewCount} valoraciones` : 'Sin valoraciones'}</dd></div><div><dt>Cuenta creada</dt><dd>{new Date(advisor.createdAt).toLocaleDateString('es-BO', { year: 'numeric', month: 'long', day: 'numeric' })}</dd></div></dl>{advisor.specializations.length > 0 && <div className="agent-specializations">{advisor.specializations.map(value => <span className="agent-badge" key={value}>{PROPERTY_TYPES[value] || value}</span>)}</div>}</section>
       {advisor.id !== user?.id && <button className="button button-primary agent-contact-button" disabled={contactBusy} onClick={contact}><Icon name="message" />{contactBusy ? 'Abriendo…' : 'Iniciar conversación'}</button>}
+      {user && advisor.id !== user.id && <WhatsAppContact phone={advisor.whatsappPhone} recipient={advisor.firstName}
+        context={{ kind: 'advisor', sender: `${user.firstName} ${user.lastName}` }} className="agent-contact-button" />}
       {contactError && <p role="alert" className="form-error">{contactError}</p>}
     </aside><main className="agent-properties-panel">
       <div className="agent-stats" aria-label="Resumen de propiedades">{[['Propiedades', summary.total], ['Disponibles', summary.available], ['Vendidas / alquiladas', summary.closed], ['Archivadas', summary.archived]].map(([label, value]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>

@@ -26,6 +26,8 @@ export function sessionIsAllowed(
 export async function activateSession(
   tx: Prisma.TransactionClient, userId: string, id: string, browserHash: string, revokeAll = false, trustedBrowserOnly = false,
 ) {
+  // Lock the advisor before reading or revoking any of its sessions.
+  await tx.$queryRaw`SELECT "id" FROM "Advisor" WHERE "id" = ${userId} FOR UPDATE`
   const advisor = await tx.advisor.findUniqueOrThrow({ where: { id: userId } })
   if (advisor.status === 'BLOCKED' || advisor.status === 'INACTIVE') throw Errors.ACCOUNT_BLOCKED
   if (trustedBrowserOnly && advisor.userRole === 'ADVISOR' && advisor.authorizedBrowserHash !== browserHash) {

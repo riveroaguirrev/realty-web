@@ -3,8 +3,8 @@ import type { Prisma } from '@prisma/client'
 import { getSupabaseClient, supabase } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
 import { serializable } from '@/lib/transactions'
-import { User, SignUpPayload, AuthPayload, AdvisorRole, Permission, UserRole, AuthResponse, LoginResult } from '@shared/types'
-import { emailSchema, profileSchema, registerSchema } from '@shared/validation/auth'
+import { User, SignUpPayload, SignupPendingAuth, AuthPayload, AdvisorRole, Permission, UserRole, AuthResponse, LoginResult } from '@shared/types'
+import { advisorProfileSchema, emailSchema, profileSchema, registerSchema, type ResendInput } from '@shared/validation/auth'
 import { ApiError, Errors } from '@/utils/errors'
 import { activateSession, consumeChallenge, getChallenge, rateLimit, sessionId, sessionIsAllowed } from './session.service'
 
@@ -21,53 +21,34 @@ export class AuthService {
       }
       return existing
     }
+    if (!authUser.email_confirmed_at || !authUser.confirmation_sent_at) throw Errors.EMAIL_NOT_VERIFIED
     const metadata = authUser.user_metadata
     const parsed = registerSchema.omit({ password: true }).safeParse({
-      email: authUser.email, firstName: metadata.firstName, lastName: metadata.lastName, role: metadata.role,
+      email: authUser.email, firstName: metadata.firstName, lastName: metadata.lastName, role: metadata.role, phone: metadata.phone,
     })
     if (!parsed.success) throw new ApiError(409, 'PROFILE_INCOMPLETE', 'Tu perfil está incompleto. Contacta a soporte.')
     const data = parsed.data
     return prisma.advisor.upsert({
       where: { id: authUser.id }, update: {},
-      create: { id: authUser.id, email: data.email, firstName: data.firstName, lastName: data.lastName, userRole: data.role, specializations: [] },
+      create: { id: authUser.id, email: data.email, firstName: data.firstName, lastName: data.lastName, userRole: data.role, phone: data.phone, specializations: [] },
       include: { organization: true },
     })
   }
-  async signUp(payload: SignUpPayload, browserHash: string): Promise<LoginResult> {
+  async signUp(payload: SignUpPayload): Promise<SignupPendingAuth> {
     await rateLimit('mail:' + payload.email, 1, 60)
-    // Temporary direct registration. Set this flag to true to restore signup codes.
-    if (process.env.AUTH_REQUIRE_SIGNUP_VERIFICATION !== 'true') {
-      const created = await supabase.auth.admin.createUser({
-        email: payload.email, password: payload.password, email_confirm: true,
-        user_metadata: { firstName: payload.firstName, lastName: payload.lastName, role: UserRole.ADVISOR },
-      })
-      if (created.error) {
-        if (['email_exists', 'user_already_exists'].includes(created.error.code ?? '')) throw Errors.USER_ALREADY_EXISTS
-        throw new ApiError(503, 'REGISTRATION_FAILED', 'No pudimos crear la cuenta. Inténtalo de nuevo más tarde.')
-      }
-      if (!created.data.user) throw new ApiError(503, 'REGISTRATION_FAILED', 'No pudimos crear la cuenta. Inténtalo de nuevo más tarde.')
-      const advisor = await this.ensureProfile(created.data.user)
-      const signed = await getSupabaseClient().auth.signInWithPassword({ email: payload.email, password: payload.password })
-      if (signed.error || !signed.data.session || signed.data.user?.id !== advisor.id) {
-        throw new ApiError(503, 'REGISTRATION_LOGIN_FAILED', 'Tu cuenta se creó. Inicia sesión con tu correo y contraseña.')
-      }
-      return this.authorize(signed.data.session, advisor.id, browserHash)
-    }
     const { data, error } = await getSupabaseClient().auth.signUp({
       email: payload.email, password: payload.password,
-      options: { data: { firstName: payload.firstName, lastName: payload.lastName, role: UserRole.ADVISOR } },
+      options: { data: { firstName: payload.firstName, lastName: payload.lastName, role: UserRole.ADVISOR, phone: payload.phone } },
     })
     if (error) {
-      if (error.code === 'user_already_exists') return { status: 'EMAIL_VERIFICATION_REQUIRED', email: payload.email }
+      if (['email_exists', 'user_already_exists'].includes(error.code ?? '')) return { status: 'EMAIL_VERIFICATION_REQUIRED', email: payload.email }
       throw deliveryError()
     }
-    if (!data.user) throw deliveryError()
-    // Supabase can return an obfuscated user for an existing account.
-    if (data.user.identities?.length) await this.ensureProfile(data.user)
     if (data.session) {
       await supabase.auth.admin.signOut(data.session.access_token, 'local')
       throw new ApiError(503, 'AUTH_CONFIGURATION_ERROR', 'La confirmación de correo debe estar activada antes de registrar usuarios.')
     }
+    if (!data.user) throw deliveryError()
     return { status: 'EMAIL_VERIFICATION_REQUIRED', email: payload.email }
   }
   async signIn(payload: AuthPayload, browserHash: string): Promise<LoginResult> {
@@ -140,11 +121,14 @@ export class AuthService {
     }
     return this.authorize(data.session, advisor.id, browserHash)
   }
-  async resend(input: { purpose: string; email: string; challengeId?: string }, browserHash: string, token?: string) {
-    if (input.purpose === 'device' || input.purpose === 'email_change') {
-      const challenge = await getChallenge(input.challengeId, browserHash, input.purpose)
+  async resend(input: ResendInput, browserHash: string, token?: string) {
+    const challenge = input.purpose === 'device' || input.purpose === 'email_change'
+      ? await getChallenge(input.challengeId, browserHash, input.purpose) : null
+    if (challenge) {
       if (challenge.email !== input.email) throw Errors.INVALID_CODE
       if (input.purpose === 'email_change' && (!token || (await this.getUserFromToken(token, browserHash)).id !== challenge.userId)) throw Errors.UNAUTHORIZED
+      const advisor = await prisma.advisor.findUnique({ where: { id: challenge.userId }, select: { credentialsVersion: true, status: true } })
+      if (!advisor || advisor.credentialsVersion !== challenge.credentialsVersion || advisor.status === 'BLOCKED' || advisor.status === 'INACTIVE') throw Errors.INVALID_CODE
     }
     await rateLimit('mail:' + input.email, 1, 60)
     await rateLimit('mail-hour:' + input.email, 10, 3600)
@@ -155,7 +139,16 @@ export class AuthService {
         ? await client.auth.signInWithOtp({ email: input.email, options: { shouldCreateUser: false } })
         : await client.auth.resend({ type: input.purpose === 'signup' ? 'signup' : 'email_change', email: input.email })
     if (result.error && !['user_not_found', 'user_already_exists'].includes(result.error.code ?? '')) throw deliveryError()
-    if (input.challengeId) await prisma.authChallenge.update({ where: { id: input.challengeId }, data: { expiresAt: expiry() } })
+    if (challenge && !result.error) {
+      const updated = await prisma.authChallenge.updateMany({
+        where: {
+          id: challenge.id, userId: challenge.userId, purpose: input.purpose, browserHash,
+          credentialsVersion: challenge.credentialsVersion, consumedAt: null, expiresAt: { gt: new Date() },
+        },
+        data: { expiresAt: expiry() },
+      })
+      if (updated.count !== 1) throw Errors.INVALID_CODE
+    }
     return { message: 'Si la cuenta corresponde, recibirás un código en tu correo.' }
   }
   async resetPassword(input: { challengeId: string; recoveryToken: string; password: string }, browserHash: string) {
@@ -189,9 +182,9 @@ export class AuthService {
     if (!native[0]?.active) throw Errors.INVALID_TOKEN
     return this.mapAdvisorToUser(advisor)
   }
-  async updateProfile(userId: string, input: unknown): Promise<User> {
-    const data = profileSchema.parse(input)
-    const advisor = await prisma.advisor.update({ where: { id: userId }, data: { ...data, phone: data.phone === '' ? null : data.phone }, include: { organization: true } })
+  async updateProfile(user: Pick<User, 'id' | 'role'>, input: unknown): Promise<User> {
+    const data = (user.role === UserRole.ADVISOR ? advisorProfileSchema : profileSchema).parse(input)
+    const advisor = await prisma.advisor.update({ where: { id: user.id }, data: { ...data, phone: data.phone === '' ? null : data.phone }, include: { organization: true } })
     return this.mapAdvisorToUser(advisor)
   }
   async updateProfileImage(userId: string, image: { bytes: Buffer; type: string }): Promise<User> {

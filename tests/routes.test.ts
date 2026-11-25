@@ -30,12 +30,26 @@ test('register rejects a new buyer before invoking the registration service', as
   const signUp = t.mock.method(authService, 'signUp', () => { throw new Error('Unexpected registration') })
   const response = await register(new NextRequest('http://localhost/api/auth/register', {
     method: 'POST', body: JSON.stringify({
-      firstName: 'Asesor', lastName: 'QA', email: 'buyer@example.com', password: 'A long test password', role: 'BUYER',
+      firstName: 'Asesor', lastName: 'QA', email: 'buyer@example.com', phone: '+59171234567', password: 'A long test password', role: 'BUYER',
     }),
   }))
   assert.equal(response.status, 400)
   assert.ok((await response.json()).error.fieldErrors.role.length)
   assert.equal(signUp.mock.callCount(), 0)
+})
+
+test('register requires a phone and sends the normalized number to the pending signup flow', async t => {
+  const payload = { firstName: 'Asesor', lastName: 'QA', email: 'qa@example.com', password: 'A long test password', role: 'ADVISOR' }
+  const signUp = t.mock.method(authService, 'signUp', async () => ({ status: 'EMAIL_VERIFICATION_REQUIRED', email: payload.email }))
+  const request = (body: unknown) => new NextRequest('http://localhost/api/auth/register', { method: 'POST', body: JSON.stringify(body) })
+  const missing = await register(request(payload))
+  assert.equal(missing.status, 400)
+  assert.ok((await missing.json()).error.fieldErrors.phone.length)
+  assert.equal(signUp.mock.callCount(), 0)
+  const pending = await register(request({ ...payload, phone: '+591 7123-4567' }))
+  assert.equal(pending.status, 200)
+  assert.deepEqual((await pending.json()).data, { status: 'EMAIL_VERIFICATION_REQUIRED', email: payload.email })
+  assert.deepEqual(signUp.mock.calls[0].arguments, [{ ...payload, phone: '+59171234567' }])
 })
 
 test('conversation endpoints and profile photo uploads enforce browser-bound authorization', async (t) => {

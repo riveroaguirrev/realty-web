@@ -1,20 +1,30 @@
 import './setup'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { registrationFormSchema, loginSchema, profileSchema, passwordSchema, verifySchema } from '../packages/shared/src/validation/auth'
+import { registrationFormSchema, loginSchema, profileSchema, advisorProfileSchema, organizationSchema, passwordSchema, verifySchema, resendSchema } from '../packages/shared/src/validation/auth'
 import { UserRole } from '../packages/shared/src/types'
 import { sessionIsAllowed, hashSecret } from '../packages/backend/src/services/session.service'
 import { availableSeats } from '../packages/backend/src/services/seats.service'
 import { canRefreshRequest } from '../packages/frontend/src/utils/sessionIdentity'
 
-const valid = { firstName: ' María  José ', lastName: " O’Neill Pérez ", email: ' User@Example.COM ', role: UserRole.ADVISOR, password: 'Una frase larga 2026', confirmPassword: 'Una frase larga 2026' }
+const valid = { firstName: ' María  José ', lastName: " O’Neill Pérez ", email: ' User@Example.COM ', phone: '+591 (7123) 4567', role: UserRole.ADVISOR, password: 'Una frase larga 2026', confirmPassword: 'Una frase larga 2026' }
 test('registration preserves names and normalizes identity, but never alters passwords', () => {
   const data = registrationFormSchema.parse(valid)
   assert.equal(data.firstName, 'María José')
   assert.equal(data.lastName, 'O’Neill Pérez')
   assert.equal(data.email, 'user@example.com')
+  assert.equal(data.phone, '+59171234567')
   assert.equal(data.password, valid.password)
   assert.equal(registrationFormSchema.safeParse({ ...valid, confirmPassword: 'otra' }).success, false)
+})
+test('registration requires an international phone and legacy advisor profile updates can omit it', () => {
+  for (const phone of [undefined, '', '+591', '71234567', '+591 7123 abcd', '+0123456789', '+5911234567890123']) {
+    assert.equal(registrationFormSchema.safeParse({ ...valid, phone }).success, false)
+  }
+  assert.equal(advisorProfileSchema.safeParse({ firstName: 'Asesor' }).success, true)
+  assert.equal(advisorProfileSchema.safeParse({ phone: '' }).success, false)
+  assert.equal(advisorProfileSchema.parse({ phone: '+1 (415) 555-0123' }).phone, '+14155550123')
+  assert.equal(organizationSchema.safeParse({ name: 'Sucursal', city: 'La Paz', region: 'La Paz', phone: '' }).success, true)
 })
 test('rejects malformed API types, whitespace names, missing roles, invalid email and forbidden profile changes', () => {
   for (const input of [null, [], {}, { ...valid, firstName: 23 }, { ...valid, firstName: '  ' }, { ...valid, email: 'bad' }, { ...valid, role: 'DIRECTOR' }, { ...valid, role: 'BUYER' }]) {
@@ -37,6 +47,12 @@ test('new passwords are long enough and do not silently exceed bcrypt byte limit
 test('codes are six digits and challenge identifiers are validated', () => {
   assert.equal(verifySchema.safeParse({ purpose: 'device', email: 'a@b.com', code: '123456', challengeId: 'invalid' }).success, false)
   assert.equal(verifySchema.safeParse({ purpose: 'signup', email: 'a@b.com', code: '12345' }).success, false)
+  const challengeId = '00000000-0000-4000-8000-000000000001'
+  for (const purpose of ['signup', 'recovery']) assert.equal(resendSchema.safeParse({ purpose, email: 'a@b.com', challengeId }).success, false)
+  for (const purpose of ['device', 'email_change']) {
+    assert.equal(resendSchema.safeParse({ purpose, email: 'a@b.com' }).success, false)
+    assert.equal(resendSchema.safeParse({ purpose, email: 'a@b.com', challengeId }).success, true)
+  }
 })
 test('an unexpired JWT cannot grant access to replaced, unapproved, wrong-account or blocked sessions', () => {
   const advisor = { userRole: 'ADVISOR', status: 'ACTIVE', activeSessionId: 'latest' }

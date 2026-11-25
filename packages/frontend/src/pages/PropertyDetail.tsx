@@ -2,8 +2,10 @@ import './PropertyDetail.css'
 import { PropertyLocationMap } from '@/components/map/PropertyLocationMap'
 import { formatPrice, PROPERTY_TYPES } from '@/utils/propertyPresentation'
 import { Icon } from '@/components/ui/Icon'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { User } from '@shared/types'
 import { useAuth } from '@/hooks/useAuth'
 import { propertyAPI } from '@/services/property'
 import { favoritesAPI } from '@/services/favorites'
@@ -11,81 +13,46 @@ import { conversationsAPI } from '@/services/conversations'
 import { canManageProperty } from '@/utils/propertyPermissions'
 import { PropertyFullDetails } from '@/components/property/PropertyFullDetails'
 import { SimilarProperties } from '@/components/property/SimilarProperties'
+import { WhatsAppContact } from '@/components/ui/WhatsAppContact'
+import { PROPERTY_OPERATIONS, propertyOperation } from '@/utils/propertyOperations'
+import { authSessionIdentity } from '@/utils/sessionIdentity'
 
 export const PropertyDetail = () => {
-  const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const { accessToken, user } = useAuth()
+  if (!id || !accessToken) return null
+  const session = authSessionIdentity(accessToken) ?? accessToken
+  return <PropertyDetailView key={`${session}:${id}`} id={id} user={user} accessToken={accessToken} session={session} />
+}
 
-  const [property, setProperty] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+function PropertyDetailView({ id, accessToken, user, session }: { id: string; accessToken: string; user: User | null; session: string }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [selectedImage, setSelectedImage] = useState(0)
-  const [actionError, setActionError] = useState('')
-  const [isFavorite, setIsFavorite] = useState(false)
-  const [toggleFavLoading, setToggleFavLoading] = useState(false)
-  const [contactLoading, setContactLoading] = useState(false)
+  const propertyQuery = useQuery({
+    queryKey: ['property-detail', session, id],
+    queryFn: ({ signal }) => propertyAPI.get(accessToken, id, signal),
+    retry: false,
+  })
+  const favoriteKey = ['property-favorite', session, id]
+  const favoriteQuery = useQuery({
+    queryKey: favoriteKey,
+    queryFn: ({ signal }) => favoritesAPI.isFavorite(accessToken, id, signal),
+    retry: false,
+  })
+  const favorite = useMutation({
+    mutationFn: async (save: boolean) => {
+      await queryClient.cancelQueries({ queryKey: favoriteKey })
+      if (save) await favoritesAPI.add(accessToken, id)
+      else await favoritesAPI.remove(accessToken, id)
+    },
+    onSuccess: (_, saved) => queryClient.setQueryData(favoriteKey, saved),
+  })
+  const contact = useMutation({ mutationFn: (advisorId: string) => conversationsAPI.create(accessToken, [advisorId]) })
+  const property = propertyQuery.data
+  const isFavorite = favoriteQuery.data ?? false
 
-  useEffect(() => {
-    if (!id || !accessToken) return
-
-    const loadProperty = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        setSelectedImage(0)
-        const [prop, favorite] = await Promise.all([
-          propertyAPI.get(accessToken, id),
-          favoritesAPI.isFavorite(accessToken, id),
-        ])
-        setProperty(prop)
-        setIsFavorite(favorite)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'No pudimos cargar la propiedad')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadProperty()
-  }, [id, accessToken])
-
-  const handleToggleFavorite = async () => {
-    if (!accessToken || !property) return
-
-    try {
-      setToggleFavLoading(true)
-      setActionError('')
-      if (isFavorite) {
-        await favoritesAPI.remove(accessToken, property.id)
-        setIsFavorite(false)
-      } else {
-        await favoritesAPI.add(accessToken, property.id)
-        setIsFavorite(true)
-      }
-    } catch (err) {
-      setActionError('No pudimos actualizar tus favoritos. Inténtalo de nuevo.')
-    } finally {
-      setToggleFavLoading(false)
-    }
-  }
-
-  const handleContactAdvisor = async () => {
-    if (!accessToken || !property?.advisor) return
-
-    try {
-      setContactLoading(true)
-      setActionError('')
-      const conversation = await conversationsAPI.create(accessToken, [property.advisor.id])
-      navigate(`/messages/${conversation.id}`)
-    } catch (err) {
-      setActionError('No pudimos iniciar la conversación. Inténtalo de nuevo.')
-    } finally {
-      setContactLoading(false)
-    }
-  }
-
-  if (isLoading) {
+  if (propertyQuery.isPending) {
     return (
       <>
         <div className="page-surface flex items-center justify-center">
@@ -98,13 +65,13 @@ export const PropertyDetail = () => {
     )
   }
 
-  if (error || !property) {
+  if (propertyQuery.isError || !property) {
     return (
       <>
         <div className="page-surface flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
-            <p className="text-gray-600 mb-4">{error || 'Propiedad no encontrada'}</p>
+            <p className="text-gray-600 mb-4">{propertyQuery.error?.message || 'Propiedad no encontrada'}</p>
             <button
               onClick={() => navigate('/search')}
               className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
@@ -242,24 +209,27 @@ export const PropertyDetail = () => {
                 )}
 
                 <div className="mt-8 space-y-3">
-                  {actionError && <p role="alert" className="form-error">{actionError}</p>}
-                  {property.advisor && property.advisor.id !== user?.id && (
+                  {contact.isError && <p role="alert" className="form-error">No pudimos iniciar la conversación. Inténtalo de nuevo.</p>}
+                  {property.advisor && property.advisor.id !== user?.id && <>
+                    {property.status !== 'ARCHIVED' && <WhatsAppContact phone={property.advisor.whatsappPhone} recipient={property.advisor.firstName}
+                      context={{ kind: 'property', title: property.title, city: property.city, operation: PROPERTY_OPERATIONS[propertyOperation(property.operation)].label, url: new URL(`/properties/${encodeURIComponent(property.id)}`, window.location.origin).href }} className="w-full" />}
                     <button
-                      onClick={handleContactAdvisor}
-                      disabled={contactLoading}
+                      onClick={() => contact.mutate(property.advisor.id, { onSuccess: conversation => navigate(`/messages/${conversation.id}`) })}
+                      disabled={contact.isPending}
                       className="button button-primary w-full"
                     >
-                      <Icon name="message" />{contactLoading ? 'Abriendo conversación…' : 'Contactar al asesor'}
+                      <Icon name="message" />{contact.isPending ? 'Abriendo conversación…' : 'Contactar al asesor'}
                     </button>
-                  )}
-                  <button
+                  </>}
+                  {favorite.isError && <p role="alert" className="form-error">No pudimos actualizar tus favoritos. Inténtalo de nuevo.</p>}
+                  {favoriteQuery.isError ? <button type="button" className="button button-secondary w-full" onClick={() => void favoriteQuery.refetch()} disabled={favoriteQuery.isFetching}>Reintentar cargar favorito</button> : <button
                     aria-pressed={isFavorite}
-                    onClick={handleToggleFavorite}
-                    disabled={toggleFavLoading}
+                    onClick={() => favorite.mutate(!isFavorite)}
+                    disabled={favoriteQuery.isPending || favorite.isPending}
                     className="pd-favorite w-full py-3 px-4 rounded-lg font-semibold transition-all disabled:opacity-50"
                   >
-                    {toggleFavLoading ? '...' : isFavorite ? 'Guardado en favoritos' : 'Guardar en favoritos'}
-                  </button>
+                    {favoriteQuery.isPending || favorite.isPending ? 'Cargando favorito…' : isFavorite ? 'Guardado en favoritos' : 'Guardar en favoritos'}
+                  </button>}
 
                   {canManageProperty(user, property) && (
                     <button
