@@ -1,0 +1,17 @@
+.property-status-control { display: grid; gap: 8px; min-width: 0; padding: 18px 0; text-align: left; }
+.property-status-control > label { color: #27394d; font-size: 14px; font-weight: 650; }
+.property-status-control .filter-select > .filter-select-trigger { height: 44px; font-size: 14px; font-weight: 600; }
+.property-status-control[data-status=AVAILABLE] .filter-select > .filter-select-trigger { background: #edf6ef; border-color: #bbd7c5; color: #27623c; }
+.property-status-control[data-status=ARCHIVED] .filter-select > .filter-select-trigger { background: #f0f2f5; border-color: #d5dbe2; color: #576579; }
+.property-status-control[data-status=UNDER_OFFER] .filter-select > .filter-select-trigger { background: #fdf4e5; border-color: #e5cca5; color: #845b20; }
+.property-status-control[data-status=SOLD] .filter-select > .filter-select-trigger { background: #eaf0f7; border-color: #bfccdc; color: #365676; }
+.property-status-control .filter-select-options > button { min-height: 42px; font-size: 14px; }
+.property-status-control .filter-select > .filter-select-trigger:disabled { opacity: .65; cursor: wait; }
+.property-status-control > .property-status-description { margin: 0; color: #677383; font-size: 13px; line-height: 1.5; }
+.property-status-control > .property-status-feedback { color: #39734e; font-size: 12px; line-height: 1.4; }
+.property-status-control > .property-status-feedback:empty { display: none; }
+.property-status-control > .property-status-error { margin: 0; color: #a33b32; font-size: 13px; line-height: 1.5; }
+.property-status-control.is-compact { padding: 0; }
+.property-status-control.is-compact .filter-select > .filter-select-trigger { height: 38px; padding-inline: 10px; border-radius: 9px; font-size: 13px; }
+.property-status-control.is-compact .filter-select-options { top: auto; bottom: calc(100% + 8px); }
+.property-management > .property-management-actions { display: flex; align-items: flex-start; }

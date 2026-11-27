@@ -1,3 +1,4 @@
+import { Icon } from '@/components/ui/Icon'
 import { radiusPolygon } from '@/utils/mapGeometry'
 import { propertyOperationColor } from '@/utils/propertyOperations'
 import { useEffect, useRef, useState } from 'react'
@@ -256,7 +257,7 @@ export default function MapboxPropertyLocationMap({ value, operation, onChange, 
     {onChange && (locating || locationMessage) && <p className="map-geocoding-status" role="status">{locating ? 'Buscando ubicación en Mapbox…' : locationMessage}</p>}
     {onChange && <div className="map-search">
       <label htmlFor="map-search">Buscar dirección o zona</label>
-      <input id="map-search" value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); if (e.key === 'Escape') setSearch('') }} placeholder="Ej. Cala Cala, Cochabamba" autoComplete="off" />
+      <div className="property-icon-control"><Icon name="search" className="property-control-icon" /><input id="map-search" value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); if (e.key === 'Escape') setSearch('') }} placeholder="Ej. Cala Cala, Cochabamba" autoComplete="off" /></div>
       {searching && <p role="status">Buscando lugares…</p>}
       {searchError && <p role="status">{searchError}</p>}
       {places.length > 0 && <ul className="map-search-results" aria-label="Lugares encontrados">{places.map(place => <li key={place.id}><button type="button" onClick={() => {
@@ -276,7 +277,7 @@ export default function MapboxPropertyLocationMap({ value, operation, onChange, 
     </div>
     <div className="map-bottom-controls">
             {value.locationMode === 'RADIUS' && onRadiusChange && <div className="radius-field">
-              <div className="radius-label-row"><label htmlFor="location-radius" className="property-label">Radio de la zona</label><output htmlFor="location-radius">{value.locationRadiusMeters.toLocaleString('es-BO')} m</output></div>
+              <div className="radius-label-row"><label htmlFor="location-radius" className="property-label property-radius-label"><Icon name="area" />Radio de la zona</label><output htmlFor="location-radius">{value.locationRadiusMeters.toLocaleString('es-BO')} m</output></div>
               <div className="radius-slider-wrap">
                 <input id="location-radius" className="radius-slider" type="range" min="100" max="1000" step="1" value={value.locationRadiusMeters} aria-valuetext={`${value.locationRadiusMeters} metros`} onChange={e => onRadiusChange(Number(e.target.value))} style={{ background: `linear-gradient(to right, #14243b ${(value.locationRadiusMeters - 100) / 9}%, #dce2e9 ${(value.locationRadiusMeters - 100) / 9}%)` }} />
               </div>

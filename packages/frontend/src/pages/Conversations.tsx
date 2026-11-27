@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
@@ -28,6 +28,7 @@ export const Conversations = () => {
   const client = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const searchInput = useRef<HTMLInputElement>(null)
   const [unreadOnly, setUnreadOnly] = useState(false)
   const query = useQuery({ queryKey: ['conversations', accessToken, page], queryFn: () => conversationsAPI.list(accessToken!, page, 20), enabled: !!accessToken })
   useRealtimeInbox({ accessToken, onNewMessage: () => { void client.invalidateQueries({ queryKey: ['conversations', accessToken] }) } })
@@ -50,15 +51,14 @@ export const Conversations = () => {
   })
 
   return <div className="messages-page">
-    <div className="page-heading messages-heading"><div><h1>Mensajes</h1><p>Conecta con otros asesores y encuentra nuevas oportunidades.</p></div></div>
+    <header className="page-heading messages-heading"><div className="messages-heading-title"><span className="messages-heading-icon"><Icon name="message" width="25" height="25" /></span><h1>Mensajes</h1></div>{user?.role === 'ADVISOR' && user.organizationId && <Link to="/organization/dashboard" className="messages-team-link"><Icon name="team" width="18" height="18" />Tu equipo<Icon name="arrow" width="16" height="16" /></Link>}</header>
     <div className={`messages-workspace ${id ? 'has-conversation' : ''}`}>
       <aside className="messages-inbox" aria-label="Conversaciones">
         <div className="messages-inbox-header">
-          <h2>Conversaciones{unreadConversations > 0 && <span className="inbox-count" aria-label={`${unreadConversations} conversaciones sin leer en esta página`}>{unreadConversations > 99 ? '99+' : unreadConversations}</span>}</h2>
-          <div className="inbox-search"><Icon name="search" /><input type="search" aria-label="Buscar conversación" placeholder="Buscar conversación" value={search} onChange={event => setSearch(event.target.value)} /></div>
+          <div className="inbox-search"><Icon name="search" /><input ref={searchInput} type="search" aria-label="Buscar conversación" placeholder="Buscar conversación" value={search} onChange={event => setSearch(event.target.value)} />{search && <button type="button" className="inbox-clear-search" aria-label="Limpiar búsqueda" onClick={() => { setSearch(''); searchInput.current?.focus() }}><Icon name="close" width="15" height="15" /></button>}</div>
           <div className="inbox-filters" role="group" aria-label="Filtrar conversaciones">
-            <button type="button" aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)}>Todas</button>
-            <button type="button" aria-pressed={unreadOnly} onClick={() => setUnreadOnly(true)}>No leídas</button>
+            <button type="button" aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)}><Icon name="message" width="16" height="16" />Todas</button>
+            <button type="button" aria-pressed={unreadOnly} onClick={() => setUnreadOnly(true)}><Icon name="bell" width="16" height="16" />No leídas{unreadConversations > 0 && <span className="inbox-count" aria-label={`${unreadConversations} conversaciones sin leer en esta página`}>{unreadConversations > 99 ? '99+' : unreadConversations}</span>}</button>
           </div>
         </div>
         <nav className="inbox-list" aria-label="Lista de conversaciones" aria-busy={query.isFetching}>
@@ -78,7 +78,7 @@ export const Conversations = () => {
         </nav>
         {totalPages > 1 && <div className="inbox-pagination"><p>Los filtros se aplican a esta página.</p><Pagination page={page} totalPages={totalPages} onChange={setPage} disabled={query.isFetching} /></div>}
       </aside>
-      {id ? <ConversationDetail key={`${accessToken && (authSessionIdentity(accessToken) ?? accessToken)}:${id}`} conversationId={id} onRead={markConversationRead} /> : <section className="conversation-pane messages-placeholder" aria-label="Selecciona una conversación"><ConversationArtwork /><h2>Cada conversación abre una oportunidad.</h2><p>Selecciona una conversación para leer y enviar mensajes.</p></section>}
+      {id ? <ConversationDetail key={`${accessToken && (authSessionIdentity(accessToken) ?? accessToken)}:${id}`} conversationId={id} onRead={markConversationRead} /> : <section className="conversation-pane messages-placeholder" aria-label="Selecciona una conversación"><ConversationArtwork /><h2>Selecciona una conversación</h2><p>Lee, comparte y coordina con tu equipo.</p></section>}
     </div>
   </div>
 }

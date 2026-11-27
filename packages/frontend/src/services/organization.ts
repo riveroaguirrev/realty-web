@@ -3,9 +3,9 @@ import type { OrganizationAdvisorDetail } from '@shared/types/organizationAdviso
 import { ApiResponse } from '@shared/types'
 
 export const organizationAPI = {
-  async getAdvisor(token: string, orgId: string, advisorId: string, page = 1) {
+  async getAdvisor(token: string, orgId: string, advisorId: string, page = 1, status = '') {
     const response = await client.get<ApiResponse<OrganizationAdvisorDetail>>(`/organizations/${orgId}/advisors/${advisorId}`, {
-      params: { page }, headers: { Authorization: `Bearer ${token}` },
+      params: { page, status: status || undefined }, headers: { Authorization: `Bearer ${token}` },
     })
     if (!response.data.success || !response.data.data) throw new Error(response.data.error?.message || 'No pudimos cargar el asesor.')
     return response.data.data

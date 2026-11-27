@@ -1,10 +1,12 @@
 import { InputHTMLAttributes, useState } from 'react'
-export function AuthField({ label, error, hint, id, name, type = 'text', ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string[]; hint?: string }) {
+import { Icon, type IconName } from './Icon'
+export function AuthField({ label, error, hint, id, name, type = 'text', icon, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string[]; hint?: string; icon?: IconName }) {
   const [visible, setVisible] = useState(false)
   const fieldId = id ?? name
   return <div>
     <label htmlFor={fieldId} className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-    <div className={type === 'password' ? 'password-wrap' : ''}>
+    <div className={`${type === 'password' ? 'password-wrap' : ''}${icon ? ' auth-field-with-icon' : ''}`}>
+      {icon && <Icon name={icon} className="auth-field-icon" {...(icon === 'whatsapp' ? { fill: 'currentColor', stroke: 'none' } : {})} />}
       <input {...props} id={fieldId} name={name} type={type === 'password' && visible ? 'text' : type}
         aria-invalid={!!error?.length} aria-describedby={error?.length ? fieldId + '-error' : hint ? fieldId + '-hint' : undefined}
         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50" />

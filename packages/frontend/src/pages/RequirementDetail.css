@@ -1,4 +1,8 @@
-.requirement-detail-page .req-back-button { width: fit-content; margin-bottom: 22px; min-height: 42px; border: 1px solid var(--swiss-line); background: white; border-radius: 11px; font-size: 14px; }
+.requirement-detail-page .req-back-button { display: inline-flex; align-items: center; gap: 9px; width: fit-content; max-width: 100%; min-height: 44px; margin-bottom: 16px; padding: 8px 10px; border-radius: 9px; color: var(--rd-accent); font-size: 14px; font-weight: 600; line-height: 1.4; text-decoration: none; transition: background .15s; }
+.requirement-detail-page .req-back-button > svg { width: 19px; height: 19px; flex-shrink: 0; transition: transform .15s; }
+.requirement-detail-page .req-back-button:hover > svg { transform: translateX(-3px); }
+.requirement-detail-page .req-back-button:focus-visible { outline: 2px solid var(--rd-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .requirement-detail-page .req-back-button, .requirement-detail-page .req-back-button > svg { transition: none; } .requirement-detail-page .req-back-button:hover > svg { transform: none; } }
 .rd-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:24px; }
 .rd-heading h1 { font-size:clamp(26px,2.7vw,36px); line-height:1.2; letter-spacing:-.04em; margin:10px 0; }
 .rd-badges { display:flex; gap:10px; flex-wrap:wrap; }

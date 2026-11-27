@@ -62,7 +62,7 @@ export const RequirementDetail = () => {
   if (!r) return null
   const owner = r.buyerId === user?.id
   return <div className="requirements-page requirement-detail-page">
-    <Link className="button button-secondary req-back-button" to="/requirements"><Icon name="back" />Volver a requerimientos</Link>
+    <Link className="req-back-button" to="/requirements"><Icon name="back" />Volver a requerimientos</Link>
     <header className="rd-heading"><div><div className="rd-badges"><span className={`rd-operation rd-operation-${r.operation.toLowerCase()}`}>{OPERATIONS[r.operation]}</span><span className={`rd-status rd-status-${r.status.toLowerCase()}`}><i />{STATUSES[r.status]}</span></div><h1>{r.title}</h1><p className="rd-author"><span className="rd-avatar" aria-hidden="true">{r.buyer.firstName?.slice(0,1)}{r.buyer.lastName?.slice(0,1)}</span>{r.buyer.firstName} {r.buyer.lastName}<span>· {new Date(r.createdAt).toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' })}</span></p></div>{owner && <Link className="button button-secondary" to={`/requirements/${r.id}/edit`}><Icon name="edit" />Editar</Link>}</header>
     <section className="rd-summary" aria-label="Detalle del requerimiento"><div className="rd-summary-top"><div><h2>{requirementBudget(r)}{r.operation === 'RENTAL' && r.priceMax != null ? ' / mes' : ''}</h2><p className="rd-location"><Icon name="pin" />{r.cities.join(', ')}{r.zones.length ? ` · ${r.zones.join(', ')}` : ''}</p><p className="rd-type">{r.propertyType.map(t => PROPERTY_TYPES[t] || t).join(', ')}</p></div>
     {owner && (user?.organizationId || r.visibility === 'ORGANIZATION') && <RequirementVisibilityControl value={r.visibility || 'PUBLIC'} onChange={updateVisibility} disabled={busy} />}

@@ -7,9 +7,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUnreadMessageCount } from '@/hooks/useUnreadMessageCount'
 import { Icon, IconName } from '@/components/ui/Icon'
 import { Avatar } from '@/components/ui/Avatar'
+import { LogoutDialog } from './LogoutDialog'
 import { RequirementNotices } from '@/components/requirements/RequirementNotices'
 import '@/pages/Requirements.css'
 import './Navigation.css'
+import './Topbar.css'
 
 const links: { to: string; label: string; icon: IconName }[] = [
   { to: '/dashboard', label: 'Inicio', icon: 'grid' },
@@ -38,6 +40,17 @@ export const AppShell = () => {
   const profileRef = useRef<HTMLDivElement>(null)
   const profileTriggerRef = useRef<HTMLButtonElement>(null)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [logoutOpen, setLogoutOpen] = useState(false)
+  const logoutTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const requestLogout = (trigger: HTMLButtonElement, fromProfile = false) => {
+    logoutTriggerRef.current = fromProfile ? profileTriggerRef.current : trigger
+    setProfileOpen(false)
+    setLogoutOpen(true)
+  }
+  const cancelLogout = () => {
+    setLogoutOpen(false)
+    window.requestAnimationFrame(() => logoutTriggerRef.current?.focus())
+  }
   useEffect(() => {
     if (!profileOpen) return
     const onPointerDown = (event: PointerEvent) => {
@@ -68,6 +81,7 @@ export const AppShell = () => {
     document.body.style.overflow = 'hidden'
     sidebarRef.current?.querySelector<HTMLButtonElement>('.navigation-close')?.focus()
     const onKeyDown = (event: KeyboardEvent) => {
+      if (document.querySelector('.logout-dialog[open]')) return
       if (event.key === 'Escape') { setMenuOpen(false); menuTriggerRef.current?.focus() }
       if (event.key !== 'Tab') return
       const controls = sidebarRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')
@@ -98,21 +112,32 @@ export const AppShell = () => {
         <nav id="workspace-navigation" aria-label="Navegación principal" className="sidebar-nav">
           {links.filter(({ to }) => isAdvisor || (!to.startsWith('/organization') && to !== '/properties' && to !== '/requirements')).map(({ to, label, icon }) => <NavLink key={to} to={to} title={label} aria-label={to === '/messages' && unread > 0 ? `${label}: ${unread} sin leer` : label} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}><Icon name={icon} /><span className="nav-label">{label}</span>{to === '/messages' && unread > 0 && <span className="nav-count" aria-label={`${unread} mensajes sin leer`}>{unread}</span>}</NavLink>)}
           {isAdvisor && <div className="sidebar-tip"><span className="eyebrow">CRECE EN EQUIPO</span><strong>Más conexiones.<br />Más oportunidades.</strong><p>Conecta con tu inmobiliaria y trabaja junto a otros asesores.</p><Link to="/organization/dashboard">Ver mi equipo <Icon name="arrow" /></Link></div>}
-          <div className="sidebar-account"><NavLink to="/auth/profile" title="Mi perfil" className="nav-item"><Icon name="user" /><span className="nav-label">Mi perfil</span></NavLink><button className="nav-item" title="Cerrar sesión" onClick={() => { void logout().catch(() => {}) }}><Icon name="logout" /><span className="nav-label">Cerrar sesión</span></button></div>
+          <div className="sidebar-account"><NavLink to="/auth/profile" title="Mi perfil" className="nav-item"><Icon name="user" /><span className="nav-label">Mi perfil</span></NavLink><button type="button" className="nav-item" title="Cerrar sesión" aria-haspopup="dialog" onClick={event => requestLogout(event.currentTarget)}><Icon name="logout" /><span className="nav-label">Cerrar sesión</span></button></div>
         </nav>
 
       </aside>
       <div className="workspace">
-        <header className={`topbar ${pathname === '/map' ? 'map-topbar' : ''}`}><button ref={menuTriggerRef} className="navigation-toggle icon-button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="workspace-sidebar" onClick={() => setMenuOpen(value => !value)}><Icon name="menu" /></button><div className="breadcrumb">Mi espacio <span>/</span> <strong>{pathname === '/auth/profile' ? 'Mi perfil' : current?.label || 'Propiedades'}</strong></div>{isAdvisor && <div className="organization-identity" aria-label="Tu organización"><span className="organization-identity-icon"><Icon name="building" /></span><div><span>Tu organización</span><strong title={organization?.name || undefined}>{organization?.name || (user?.organizationId ? 'Mi inmobiliaria' : 'Asesor independiente')}</strong></div></div>}<div className="topbar-actions">{isAdvisor && <RequirementNotices />}{isAdvisor && <Link to="/properties/create" className="button button-primary button-small" aria-label="Publicar propiedad"><Icon name="plus" />Publicar propiedad</Link>}<div className="profile-account" ref={profileRef} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setProfileOpen(false) }}>
-          <button type="button" ref={profileTriggerRef} className="profile-trigger" aria-label="Abrir opciones de cuenta" aria-expanded={profileOpen} aria-controls="profile-account-panel" onClick={() => setProfileOpen(value => !value)}><Avatar user={user} /></button>
+        <header className={`topbar topbar-ordered ${pathname === '/map' ? 'map-topbar' : ''}`}>
+          <button ref={menuTriggerRef} className="navigation-toggle icon-button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} aria-controls="workspace-sidebar" onClick={() => setMenuOpen(value => !value)}><Icon name="menu" /></button>
+          <nav className="topbar-context" aria-label="Ubicación actual">
+            {isAdvisor ? <Link to="/organization/dashboard" className="topbar-organization" title={organization?.name || (user?.organizationId ? 'Mi inmobiliaria' : 'Asesor independiente')} aria-label={`Tu organización: ${organization?.name || (user?.organizationId ? 'Mi inmobiliaria' : 'Asesor independiente')}`}><Icon name="building" width="22" height="22" /><span>{organization?.name || (user?.organizationId ? 'Mi inmobiliaria' : 'Asesor independiente')}</span></Link> : <Link className="topbar-organization" to="/dashboard"><Icon name="home" width="21" height="21" /><span>Mi espacio</span></Link>}
+            <span className="topbar-context-divider" aria-hidden="true">/</span>
+            <strong className="topbar-current" aria-current="page" title={pathname === '/auth/profile' ? 'Mi perfil' : current?.label || 'Propiedades'}>{pathname === '/auth/profile' ? 'Mi perfil' : current?.label || 'Propiedades'}</strong>
+          </nav>
+          <div className="topbar-actions">
+            {isAdvisor && <RequirementNotices />}
+            {isAdvisor && pathname !== "/properties" && <Link to="/properties/create" className="button button-primary button-small topbar-publish" aria-label="Publicar propiedad" title="Publicar propiedad"><Icon name="plus" /><span>Publicar propiedad</span></Link>}
+            <div className="profile-account" ref={profileRef} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setProfileOpen(false) }}>
+          <button type="button" ref={profileTriggerRef} className="profile-trigger" aria-label={profileOpen ? 'Cerrar opciones de cuenta' : 'Abrir opciones de cuenta'} aria-expanded={profileOpen} aria-controls="profile-account-panel" title="Mi cuenta" onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); setProfileOpen(true); window.requestAnimationFrame(() => profileRef.current?.querySelector<HTMLAnchorElement>('.profile-account-actions a')?.focus()) } }} onClick={() => setProfileOpen(value => !value)}><Avatar user={user} /><Icon name="chevronRight" className="topbar-profile-chevron" width="15" height="15" /></button>
           {profileOpen && <div id="profile-account-panel" className="profile-account-panel" aria-label="Opciones de cuenta">
             <div className="profile-account-details"><strong>{user?.firstName} {user?.lastName}</strong><span>{user?.email}</span></div>
-            <div className="profile-account-actions"><Link to="/auth/profile" onClick={() => setProfileOpen(false)}><Icon name="user" />Ver perfil</Link><button type="button" onClick={() => { setProfileOpen(false); void logout().catch(() => {}) }}><Icon name="logout" />Cerrar sesión</button></div>
+            <div className="profile-account-actions"><Link to="/auth/profile" onClick={() => setProfileOpen(false)}><Icon name="user" />Ver perfil</Link><button type="button" aria-haspopup="dialog" onClick={event => requestLogout(event.currentTarget, true)}><Icon name="logout" />Cerrar sesión</button></div>
           </div>}
         </div></div></header>
         <main id="main-content" className={`workspace-content ${pathname === '/map' ? 'map-content' : ''} ${isMessagesPage ? 'messages-content' : ''}`} tabIndex={-1}><Outlet /></main>
         <footer className={`workspace-footer ${pathname === '/map' ? 'map-footer-hidden' : ''} ${isMessagesPage ? 'messages-footer-hidden' : ''}`}><span>realty. · Tu próxima oportunidad empieza aquí.</span><span>Un espacio para conectar.</span></footer>
       </div>
+      {logoutOpen && <LogoutDialog onCancel={cancelLogout} onConfirm={logout} />}
     </div>
   )
 }

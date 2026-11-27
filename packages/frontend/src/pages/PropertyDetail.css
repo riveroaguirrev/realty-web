@@ -17,10 +17,10 @@
 .property-detail-page .full-detail-grid > div > dt > svg,
 .property-detail-page .pd-highlights svg,
 .property-detail-page .pd-advisor > h2 svg { color:var(--pd-accent); }
-.property-detail-page { --pd-favorite-bg:#e4edf5; --pd-favorite-hover:#d5e3ef; }
-.property-detail-rental { --pd-favorite-bg:#e0eee8; --pd-favorite-hover:#cfe4da; }
-.property-detail-anticretic { --pd-favorite-bg:#f8e6dc; --pd-favorite-hover:#f1d6c6; }
-.property-detail-page .pd-advisor .pd-favorite { background:var(--pd-favorite-bg); color:var(--pd-accent); border:1px solid transparent; }
+.property-detail-page { --pd-favorite-bg:#17324d; --pd-favorite-hover:#10263c; }
+.property-detail-rental { --pd-favorite-bg:#20756f; --pd-favorite-hover:#195d58; }
+.property-detail-anticretic { --pd-favorite-bg:#b9532e; --pd-favorite-hover:#9a4324; }
+.property-detail-page .pd-advisor .pd-favorite { background:var(--pd-favorite-bg); color:#fff; border:1px solid var(--pd-favorite-bg); }
 .property-detail-page .pd-advisor .pd-favorite:hover:not(:disabled) { background:var(--pd-favorite-hover); }
 .property-detail-page .pd-advisor .pd-favorite[aria-pressed=true] { background:var(--pd-favorite-hover); border-color:var(--pd-accent); }
 .property-detail-page .pd-advisor .pd-favorite:focus-visible { outline:2px solid var(--pd-accent); outline-offset:3px; }

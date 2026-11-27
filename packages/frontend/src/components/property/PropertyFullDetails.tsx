@@ -1,10 +1,10 @@
 import { Icon, type IconName } from '@/components/ui/Icon'
 import type { ReactNode } from 'react'
 import { formatPrice } from '@/utils/propertyPresentation'
+import { getPropertyStatusLabel } from '@/utils/propertyStatus'
 import './PropertyFullDetails.css'
 
 const labels: Record<string, string> = {
-  AVAILABLE: 'Disponible', UNDER_OFFER: 'Con oferta', SOLD: 'Vendido', RENT: 'Alquilado', ARCHIVED: 'Archivado',
   NEW: 'Nuevo', EXCELLENT: 'Excelente', GOOD: 'Bueno', FAIR: 'Regular', NEEDS_REPAIR: 'Requiere reparación',
   UNFURNISHED: 'Sin amoblar', PARTIALLY_FURNISHED: 'Parcialmente amoblado', FULLY_FURNISHED: 'Completamente amoblado', DOESNT_MATTER: 'Indiferente',
   ALLOWED: 'Permitidas', NOT_ALLOWED: 'No permitidas', RESTRICTIONS: 'Con restricciones',
@@ -25,10 +25,10 @@ function display(value: unknown): ReactNode {
   return humanize(text)
 }
 const fieldIcons: Record<string, IconName> = {
-  'Estado de la publicación': 'check', 'Condición': 'home', 'Amoblado': 'sofa', 'Parqueos': 'car', 'Garaje': 'car', 'Jardín': 'garden', 'Piscina': 'pool',
+  'Estado de la publicación': 'check', 'Condición': 'home', 'Amoblado': 'sofa', 'Parqueos': 'car', 'Jardín': 'garden', 'Piscina': 'pool',
   'Superficie del terreno (m²)': 'area', 'Año de construcción': 'calendar', 'Año de remodelación': 'calendar', 'Características adicionales': 'home', 'Comodidades': 'sofa', 'Electrodomésticos': 'bolt',
   'Comisión (%)': 'money', 'Impuesto del inmueble': 'money', 'Expensas': 'money', 'Servicios': 'bolt', 'Alquiler mensual': 'money', 'Amoblado para alquiler': 'sofa',
-  'Mascotas permitidas': 'paw', 'Política de mascotas': 'paw', 'Expensas incluidas': 'money', 'Wifi incluido': 'wifi', 'Disponible desde': 'calendar',
+  'Mascotas': 'paw', 'Expensas incluidas': 'money', 'Wifi incluido': 'wifi', 'Disponible desde': 'calendar',
   'Código postal': 'pin', 'Exclusiva': 'check', 'Ubicación publicada': 'pin', 'Radio aproximado (m)': 'map', 'Centro educativo cercano': 'building', 'Distancia al centro educativo (km)': 'pin', 'Distancia al transporte (km)': 'car',
   'Video': 'video', 'Recorrido virtual': 'eye', 'Publicado': 'calendar', 'Creado': 'calendar', 'Contacto registrado': 'user', 'Notas de visita': 'file', 'Documentación': 'file', 'Historial de precios': 'money', 'Visualizaciones': 'eye', 'Guardados en favoritos': 'heart', 'Última actualización': 'calendar',
 }
@@ -37,9 +37,9 @@ export function PropertyFullDetails({ property: p, canManage }: { property: Reco
   const money = (value: unknown) => value == null ? undefined : formatPrice(Number(value), p.currency)
   const date = (value: unknown) => value && !Number.isNaN(new Date(String(value)).getTime()) ? new Date(String(value)).toLocaleDateString('es-BO') : undefined
   const sections: { title: string; rows: Row[] }[] = [
-    { title: 'Características del inmueble', rows: [['Estado de la publicación', p.status], ['Condición', p.condition], ['Amoblado', p.furnished], ['Parqueos', p.parking], ['Garaje', p.hasGarage], ['Jardín', p.hasGarden], ['Piscina', p.hasPool], ['Superficie del terreno (m²)', p.lotSize], ['Año de construcción', p.yearBuilt], ['Año de remodelación', p.yearRenovated]] },
+    { title: 'Características del inmueble', rows: [['Estado de la publicación', getPropertyStatusLabel(p.status)], ['Condición', p.condition], ['Amoblado', p.furnished], ['Parqueos', p.parking], ['Jardín', p.hasGarden], ['Piscina', p.hasPool], ['Superficie del terreno (m²)', p.lotSize], ['Año de construcción', p.yearBuilt], ['Año de remodelación', p.yearRenovated]] },
     { title: 'Equipamiento y comodidades', rows: [['Características adicionales', p.features], ['Comodidades', p.amenities], ['Electrodomésticos', p.appliances]] },
-    { title: 'Costos y condiciones', rows: [['Comisión (%)', p.commissionPercentage], ['Impuesto del inmueble', money(p.propertyTax)], ['Expensas', money(p.hoaFees)], ['Servicios', p.utilities], ['Alquiler mensual', money(p.rentalMonthlyRate)], ['Amoblado para alquiler', p.rentalFurnished], ['Mascotas permitidas', p.petsAllowed], ['Política de mascotas', p.petPolicy], ['Expensas incluidas', p.expensesIncluded], ['Wifi incluido', p.wifiIncluded], ['Disponible desde', date(p.availableDate)]] },
+    { title: 'Costos y condiciones', rows: [['Comisión (%)', p.commissionPercentage], ['Impuesto del inmueble', money(p.propertyTax)], ['Expensas', money(p.hoaFees)], ['Servicios', p.utilities], ['Alquiler mensual', money(p.rentalMonthlyRate)], ['Amoblado para alquiler', p.rentalFurnished], ['Mascotas', p.petsAllowed], ['Expensas incluidas', p.expensesIncluded], ['Wifi incluido', p.wifiIncluded], ['Disponible desde', date(p.availableDate)]] },
     { title: 'Ubicación y entorno', rows: [['Código postal', p.zipCode], ['Exclusiva', p.isExclusive], ['Ubicación publicada', p.isExclusive && p.locationMode === 'EXACT' ? 'Exacta' : 'Aproximada'], ['Radio aproximado (m)', p.locationMode !== 'EXACT' ? p.locationRadiusMeters : undefined], ['Centro educativo cercano', p.school], ['Distancia al centro educativo (km)', p.distanceToSchool], ['Distancia al transporte (km)', p.distanceToTransit]] },
     { title: 'Videos y recorridos', rows: [['Video', p.videoUrl], ['Recorrido virtual', p.virtualTourUrl]] },
     { title: 'Publicación', rows: [['Publicado', date(p.publishedAt)], ['Creado', date(p.createdAt)]] },

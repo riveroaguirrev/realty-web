@@ -72,8 +72,8 @@ export const SimilarProperties = ({ propertyId }: SimilarPropertiesProps) => {
             <div className="relative">
               <PropertyCard {...match.property} price={Number(match.property.price)} />
               {/* Match score badge */}
-              <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                {Math.round(match.score)}%
+              <div title="Similitud según los datos registrados" className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                {Number.isFinite(match.score) ? Math.max(0, Math.min(100, Math.round(match.score))) : 0}%
               </div>
               {/* Match reason tooltip */}
               <div className="mt-2 text-xs text-gray-600">

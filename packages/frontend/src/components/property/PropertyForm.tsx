@@ -2,19 +2,29 @@ import { useAuth } from '@/hooks/useAuth'
 import { PROPERTY_STEPS, validatePropertyStep } from '@/utils/propertyWizard'
 import './PropertyForm.css'
 import { CityAutocomplete } from './CityAutocomplete'
-import { Icon } from '@/components/ui/Icon'
+import { Icon, type IconName } from '@/components/ui/Icon'
 import { PropertyImageEditor } from './PropertyImageEditor'
 import { PropertyLocationMap } from '@/components/map/PropertyLocationMap'
 import { Link } from 'react-router-dom'
 import { PROPERTY_TYPES, formatPrice } from '@/utils/propertyPresentation'
-import { FormEvent, useState, useEffect, useRef } from 'react'
+import { FormEvent, useState, useEffect, useRef, type ReactNode } from 'react'
 import { propertyAPI } from '@/services/property'
 import { getErrorMessage } from '@/utils/errorMessage'
-import { PROPERTY_STATUS_OPTIONS } from '@/utils/propertyStatus'
+import { PROPERTY_STATUS_OPTIONS, getPropertyStatusDescription, propertyStatusValue } from '@/utils/propertyStatus'
+import { FilterSelect } from '@/components/ui/FilterSelect'
 
 const NUMERIC_FIELDS = ['price', 'bedrooms', 'bathrooms', 'areaSquareMeters']
 const INPUT_CLASS = 'property-control'
 const LABEL_CLASS = 'property-label'
+const STEP_ICONS: IconName[] = ['home', 'pin', 'photos', 'check']
+
+const FIELD_ICONS: Record<string, IconName> = {
+  title: 'edit', address: 'pin', region: 'map', areaSquareMeters: 'area',
+  bedrooms: 'bed', bathrooms: 'bath',
+}
+const FieldControl = ({ icon, children }: { icon: IconName; children: ReactNode }) => (
+  <div className="property-icon-control"><Icon name={icon} className="property-control-icon" />{children}</div>
+)
 
 export interface EditableProperty {
   visibility?: 'PUBLIC' | 'ORGANIZATION'
@@ -99,7 +109,7 @@ const toFormData = (property?: EditableProperty) =>
         bedrooms: property.bedrooms ?? 0,
         bathrooms: property.bathrooms ?? 0,
         areaSquareMeters: Number(property.areaSquareMeters ?? 0),
-        status: property.status ?? 'AVAILABLE',
+        status: propertyStatusValue(property.status ?? 'AVAILABLE'),
         isExclusive: property.isExclusive ?? false,
         locationMode: property.isExclusive && property.locationMode === 'EXACT' ? 'EXACT' as const : 'RADIUS' as const,
         locationRadiusMeters: Math.max(100, Math.min(1000, property.locationRadiusMeters ?? 500)),
@@ -112,6 +122,8 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
   const { user } = useAuth()
   const isEditing = Boolean(property)
   const [step, setStep] = useState(0)
+  const [furthestStep, setFurthestStep] = useState(0)
+  const [editSection, setEditSection] = useState(0)
   const stepStatus = useRef<HTMLParagraphElement>(null)
   const previousStep = useRef(0)
   const formRef = useRef<HTMLFormElement>(null)
@@ -121,7 +133,31 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
     stepStatus.current?.focus({ preventScroll: true })
     stepStatus.current?.scrollIntoView({ block: 'start', behavior: 'auto' })
   }, [step, isEditing])
-  const goToStep = (next: number) => { setError(null); setStep(next) }
+  const goToStep = (next: number) => {
+    if (next > step) {
+      for (let stage = 0; stage < next; stage++) {
+        const issue = validatePropertyStep(stage, formData, existingImages.length + images.length)
+        if (issue) {
+          setStep(stage)
+          setError(issue.message)
+          window.requestAnimationFrame(() => {
+            const field = issue.field ? document.getElementById(issue.field) : null
+            if (field && formRef.current?.contains(field)) field.focus()
+          })
+          return
+        }
+      }
+    }
+    setError(null)
+    setStep(next)
+    setFurthestStep(previous => Math.max(previous, next))
+  }
+  const jumpToSection = (index: number) => {
+    setEditSection(index)
+    const section = formRef.current?.querySelector<HTMLElement>(`[data-editor-section="${index}"]`)
+    section?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+    section?.querySelector<HTMLElement>('h3')?.focus({ preventScroll: true })
+  }
 
   const [formData, setFormData] = useState(() => toFormData(property))
   const [existingImages, setExistingImages] = useState<string[]>(property?.images ?? [])
@@ -140,6 +176,16 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
     setPreviews(urls)
     return () => urls.forEach(url => URL.revokeObjectURL(url))
   }, [images])
+  useEffect(() => {
+    if (!isEditing) return
+    const observer = new IntersectionObserver(entries => {
+      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+      if (visible) setEditSection(Number((visible.target as HTMLElement).dataset.editorSection))
+    }, { rootMargin: '-100px 0px -55% 0px', threshold: 0 })
+    formRef.current?.querySelectorAll('[data-editor-section]').forEach(section => observer.observe(section))
+    return () => observer.disconnect()
+  }, [isEditing])
+
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -264,50 +310,50 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
 
   const field = (name: keyof typeof formData, label: string, required = false, placeholder?: string) => <div>
     <label htmlFor={`property-${name}`} className={LABEL_CLASS}>{label}{required ? ' *' : ''}</label>
-    <input id={`property-${name}`} name={name} type={NUMERIC_FIELDS.includes(name) ? 'number' : 'text'} value={String(formData[name] ?? '')} onChange={handleChange} className={INPUT_CLASS} required={required} placeholder={placeholder} min={NUMERIC_FIELDS.includes(name) ? 0 : undefined} step={NUMERIC_FIELDS.includes(name) ? name === 'areaSquareMeters' ? '0.01' : '1' : undefined} />
+    <FieldControl icon={FIELD_ICONS[name] ?? 'file'}><input id={`property-${name}`} name={name} type={NUMERIC_FIELDS.includes(name) ? 'number' : 'text'} value={String(formData[name] ?? '')} onChange={handleChange} className={INPUT_CLASS} required={required} placeholder={placeholder} min={NUMERIC_FIELDS.includes(name) ? 0 : undefined} step={NUMERIC_FIELDS.includes(name) ? name === 'areaSquareMeters' ? '0.01' : '1' : undefined} /></FieldControl>
   </div>
   return <form ref={formRef} onSubmit={handleSubmit} className={`property-form ${!isEditing ? 'property-wizard' : ''} bg-white shadow rounded-xl p-8`}>
-    <div className="page-heading"><div><p className="eyebrow">{isEditing ? 'ACTUALIZA TU PUBLICACIÓN' : 'UNA NUEVA OPORTUNIDAD'}</p><h1>{isEditing ? 'Editar propiedad' : 'Publicar propiedad'}</h1><p>{isEditing ? 'Actualiza los datos del inmueble. Los campos con * son obligatorios.' : 'Publica tu inmueble paso a paso. Puedes volver atrás sin perder los datos.'}</p></div></div>
-    {!isEditing && <div className="property-wizard-progress"><ol aria-label="Pasos para publicar">{PROPERTY_STEPS.map((label, index) => <li key={label} className={index === step ? 'is-current' : index < step ? 'is-complete' : ''} aria-current={index === step ? 'step' : undefined}><button type="button" onClick={() => goToStep(index)} disabled={index >= step || isLoading || success} aria-label={`Volver al paso ${index + 1}: ${label}`}><span className="wizard-step-dot">{index < step ? <Icon name="check" width="16" height="16" /> : index + 1}</span><span>{label}</span></button></li>)}</ol><div className="wizard-progress-track" aria-hidden="true"><span style={{ width: `${((step + 1) / PROPERTY_STEPS.length) * 100}%` }} /></div><p ref={stepStatus} className="wizard-step-status" tabIndex={-1}>Paso {step + 1} de {PROPERTY_STEPS.length} · {PROPERTY_STEPS[step]}</p></div>}
+    <div className="page-heading"><div><p className="eyebrow">{isEditing ? 'ACTUALIZA TU PUBLICACIÓN' : 'UNA NUEVA OPORTUNIDAD'}</p><h1>{isEditing ? 'Editar propiedad' : 'Publicar propiedad'}</h1><p>{isEditing ? 'Edita por secciones. Guarda al terminar.' : 'Completa, revisa y publica.'}</p></div></div>
+    {!isEditing && <div className="property-wizard-progress"><ol aria-label="Pasos para publicar">{PROPERTY_STEPS.map((label, index) => <li key={label} className={index === step ? 'is-current' : index < step ? 'is-complete' : ''} aria-current={index === step ? 'step' : undefined}><button type="button" onClick={() => goToStep(index)} disabled={index > furthestStep || isLoading || success} aria-label={`Volver al paso ${index + 1}: ${label}`}><span className="wizard-step-dot">{index < step ? <Icon name="check" width="16" height="16" /> : <Icon name={STEP_ICONS[index]} width="18" height="18" />}</span><span>{label}</span></button></li>)}</ol><div className="wizard-progress-track" aria-hidden="true"><span style={{ width: `${((step + 1) / PROPERTY_STEPS.length) * 100}%` }} /></div><p ref={stepStatus} className="wizard-step-status" tabIndex={-1}>Paso {step + 1} de {PROPERTY_STEPS.length} · {PROPERTY_STEPS[step]}</p></div>}
+    {isEditing && <nav className="property-editor-nav" aria-label="Secciones de la propiedad">{PROPERTY_STEPS.slice(0, 3).map((label, index) => <button type="button" key={label} aria-current={editSection === index ? 'location' : undefined} disabled={isLoading || success} onClick={() => jumpToSection(index)}><Icon name={STEP_ICONS[index]} /><span>{label}</span>{index === 2 && <span className="editor-photo-count">{existingImages.length + images.length}</span>}</button>)}</nav>}
+    {(!isEditing && step !== 3) && <aside className="property-live-preview" aria-label="Vista previa de tu publicación">
+      <span className="property-live-cover">{existingImages[0] || previews[0] ? <img src={existingPreviews[existingImages[0]] ?? existingImages[0] ?? previews[0]} alt="Portada de tu publicación" /> : <Icon name="home" width="28" height="28" />}</span>
+      <div className="property-live-copy"><span className="property-live-kicker">Tu publicación · {formData.operation === 'SALE' ? 'Venta' : formData.operation === 'RENTAL' ? 'Alquiler' : 'Anticrético'}</span><strong>{formData.title.trim() || 'El título aparecerá aquí'}</strong><span>{formData.price > 0 ? formatPrice(formData.price, formData.currency) : 'Precio por definir'}{formData.region || formData.city ? ` · ${[formData.region, formData.city].filter(Boolean).join(', ')}` : ''}</span></div>
+      <span className="property-live-photos"><Icon name="photos" />{existingImages.length + images.length}<span> / 20</span></span>
+    </aside>}
     {error && <div role="alert" className="form-error">{error}</div>}
     {success && <p role="status" className="text-green-700 mb-4">Propiedad guardada correctamente.</p>}
     <fieldset disabled={isLoading || success}>
-      {(isEditing || step === 0) && <section className="form-section"><div className="form-section-heading"><span className="step-number">01</span><div><h3>Información principal</h3><p>Un título claro ayuda a encontrar tu propiedad.</p></div></div>
-        {(user?.organizationId || formData.visibility === 'ORGANIZATION') && <fieldset className="property-visibility"><legend>Visibilidad de la publicación</legend><p>{formData.visibility === 'ORGANIZATION' ? 'Solo los miembros de tu organización podrán ver esta propiedad.' : 'Todos los asesores podrán ver esta propiedad.'}</p><div role="group" aria-label="Visibilidad de la propiedad"><button type="button" aria-pressed={formData.visibility === 'PUBLIC'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'PUBLIC' }))}>Todos</button>{user?.organizationId && <button type="button" aria-pressed={formData.visibility === 'ORGANIZATION'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'ORGANIZATION' }))}>Solo mi organización</button>}</div></fieldset>}
+      {(isEditing || step === 0) && <section className="form-section" data-editor-section="0" id="property-section-information"><div className="form-section-heading"><span className="step-number"><Icon name="home" /></span><div><h3 tabIndex={-1}>Información principal</h3><p>Los campos con * son obligatorios.</p></div></div>
+        {(user?.organizationId || formData.visibility === 'ORGANIZATION') && <fieldset className="property-visibility"><legend>Visibilidad de la publicación</legend><p>{formData.visibility === 'ORGANIZATION' ? 'Solo los miembros de tu organización podrán ver esta propiedad.' : 'Todos los asesores podrán ver esta propiedad.'}</p><div role="group" aria-label="Visibilidad de la propiedad"><button type="button" aria-pressed={formData.visibility === 'PUBLIC'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'PUBLIC' }))}><Icon name="team" />Todos</button>{user?.organizationId && <button type="button" aria-pressed={formData.visibility === 'ORGANIZATION'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'ORGANIZATION' }))}><Icon name="building" />Solo mi organización</button>}</div></fieldset>}
         <div className="property-fields">
           <div className="property-title-field">{field('title', 'Título de la publicación', true, 'Ej. Departamento luminoso en Sopocachi')}</div>
           <div>
             <label htmlFor="property-operation" className={LABEL_CLASS}>Tipo de operación *</label>
-            <select id="property-operation" name="operation" value={formData.operation} onChange={handleChange} className={INPUT_CLASS} required>
-              <option value="SALE">Venta</option><option value="RENTAL">Alquiler</option><option value="ANTICRETIC">Anticrético</option>
-            </select>
+            <FieldControl icon="home"><FilterSelect id="property-operation" label="Tipo de operación" value={formData.operation} disabled={isLoading || success} onChange={operation => setFormData(prev => ({ ...prev, operation: operation as typeof formData.operation }))} options={[[ 'SALE', 'Venta' ], [ 'RENTAL', 'Alquiler' ], [ 'ANTICRETIC', 'Anticrético' ]]} /></FieldControl>
           </div>
           <div>
             <label htmlFor="property-type" className={LABEL_CLASS}>Tipo de propiedad *</label>
-            <select id="property-type" name="type" value={formData.type} onChange={handleChange} className={INPUT_CLASS} required>
-              {Object.entries(PROPERTY_TYPES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
+            <FieldControl icon="building"><FilterSelect id="property-type" label="Tipo de propiedad" value={formData.type} disabled={isLoading || success} onChange={type => setFormData(prev => ({ ...prev, type }))} options={Object.entries(PROPERTY_TYPES)} /></FieldControl>
           </div>
           <div>
             <label htmlFor="property-price" className={LABEL_CLASS}>Precio *</label>
-            <input id="property-price" name="price" type="number" value={formData.price} onChange={handleChange} className={INPUT_CLASS} required min="1" step="1" />
+            <FieldControl icon="money"><input id="property-price" name="price" type="number" value={formData.price} onChange={handleChange} className={INPUT_CLASS} required min="1" step="1" /></FieldControl>
           </div>
           <div>
             <label htmlFor="property-currency" className={LABEL_CLASS}>Moneda *</label>
-            <select id="property-currency" name="currency" value={formData.currency} onChange={handleChange} className={INPUT_CLASS} required>
-              <option value="USD">Dólares (USD)</option><option value="BOB">Bolivianos (Bs)</option>
-            </select>
+            <FieldControl icon="money"><FilterSelect id="property-currency" label="Moneda" value={formData.currency} disabled={isLoading || success} onChange={currency => setFormData(prev => ({ ...prev, currency }))} options={[[ 'USD', 'Dólares (USD)' ], [ 'BOB', 'Bolivianos (Bs)' ]]} /></FieldControl>
           </div>
           {formData.operation === 'SALE' && <div>
             <label htmlFor="property-sale-commission" className={LABEL_CLASS}>Comisión a cobrar (%)</label>
-            <input id="property-sale-commission" name="commissionPercentage" type="number" min="0" max="100" step="1" value={formData.commissionPercentage} onChange={e => setFormData(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))} className={INPUT_CLASS} />
+            <FieldControl icon="money"><input id="property-sale-commission" name="commissionPercentage" type="number" min="0" max="100" step="1" value={formData.commissionPercentage} onChange={e => setFormData(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))} className={INPUT_CLASS} /></FieldControl>
           </div>}
-          {isEditing && <div><label htmlFor="property-status" className={LABEL_CLASS}>Estado de la publicación</label><select id="property-status" name="status" value={formData.status} onChange={handleChange} className={INPUT_CLASS}>{PROPERTY_STATUS_OPTIONS.map(({value,label}) => <option key={value} value={value}>{label}</option>)}</select></div>}
+          {isEditing && <div><label htmlFor="property-status" className={LABEL_CLASS}>Estado de la publicación</label><FieldControl icon="eye"><FilterSelect id="property-status" label="Estado de la publicación" value={formData.status} options={PROPERTY_STATUS_OPTIONS.map(({ value, label }) => [value, label])} disabled={isLoading} onChange={status => setFormData(prev => ({ ...prev, status }))} /></FieldControl><p className="location-privacy-note">{getPropertyStatusDescription(formData.status, formData.visibility)}</p></div>}
         </div>
-        <div className="mt-6"><label htmlFor="property-description" className={LABEL_CLASS}>Descripción</label><textarea id="property-description" name="description" value={formData.description} onChange={handleChange} rows={4} className={INPUT_CLASS} placeholder="Cuéntanos qué hace especial a esta propiedad: distribución, servicios y lugares cercanos." /></div>
-        {(formData.operation === 'RENTAL' || formData.operation === 'ANTICRETIC') && <div className="operation-options"><h4>{formData.operation === 'RENTAL' ? 'Condiciones del alquiler' : 'Condiciones del anticrético'}</h4><div className="options-grid"><label><input type="checkbox" checked={formData.furnished !== 'UNFURNISHED'} onChange={e => setFormData(prev => ({ ...prev, furnished: e.target.checked ? 'FULLY_FURNISHED' : 'UNFURNISHED' }))} /> Amoblado</label><label><input type="checkbox" checked={formData.petsAllowed} onChange={e => setFormData(prev => ({ ...prev, petsAllowed: e.target.checked }))} /> Se permiten mascotas</label><label><input type="checkbox" checked={formData.expensesIncluded} onChange={e => setFormData(prev => ({ ...prev, expensesIncluded: e.target.checked }))} /> Expensas incluidas</label><label><input type="checkbox" checked={formData.wifiIncluded} onChange={e => setFormData(prev => ({ ...prev, wifiIncluded: e.target.checked }))} /> Wifi incluido</label><label className="commission-field">Comisión a pagar por el lado colocador (%)<input aria-describedby="placing-commission-hint" type="number" min="0" max="100" step="1" value={formData.commissionPercentage} onChange={e => setFormData(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))} /><span id="placing-commission-hint" className="commission-hint">Este porcentaje corresponde a la comisión que debe pagar el lado colocador de la operación.</span></label></div></div>}
+        <div className="mt-6"><label htmlFor="property-description" className={LABEL_CLASS}>Notas (opcional)</label><FieldControl icon="file"><textarea id="property-description" name="description" value={formData.description} onChange={handleChange} rows={4} className={INPUT_CLASS} placeholder="Agrega condiciones, aclaraciones o información adicional que consideres importante." /></FieldControl></div>
+        <div className="operation-options"><h4>{formData.operation === 'SALE' ? 'Condiciones de la propiedad' : formData.operation === 'RENTAL' ? 'Condiciones del alquiler' : 'Condiciones del anticrético'}</h4><div className="options-grid"><label><input type="checkbox" checked={formData.furnished !== 'UNFURNISHED'} onChange={e => setFormData(prev => ({ ...prev, furnished: e.target.checked ? 'FULLY_FURNISHED' : 'UNFURNISHED' }))} /> <Icon name="sofa" />Amoblado</label><label><input type="checkbox" checked={formData.petsAllowed} onChange={e => setFormData(prev => ({ ...prev, petsAllowed: e.target.checked }))} /> <Icon name="paw" />Se permiten mascotas</label><label><input type="checkbox" checked={formData.expensesIncluded} onChange={e => setFormData(prev => ({ ...prev, expensesIncluded: e.target.checked }))} /> <Icon name="money" />Expensas incluidas</label><label><input type="checkbox" checked={formData.wifiIncluded} onChange={e => setFormData(prev => ({ ...prev, wifiIncluded: e.target.checked }))} /> <Icon name="wifi" />Wifi incluido</label>{formData.operation !== 'SALE' && <label className="commission-field"><span className="property-icon-label"><Icon name="money" />Comisión a pagar por el lado colocador (%)</span><input aria-describedby="placing-commission-hint" type="number" min="0" max="100" step="1" value={formData.commissionPercentage} onChange={e => setFormData(prev => ({ ...prev, commissionPercentage: Number(e.target.value) }))} /><span id="placing-commission-hint" className="commission-hint">Este porcentaje corresponde a la comisión que debe pagar el lado colocador de la operación.</span></label>}</div></div>
       </section>}
-      {(isEditing || step === 1) && <section className="form-section"><div className="form-section-heading"><span className="step-number">02</span><div><h3>Ubicación y características</h3><p>Ayuda a los interesados a saber si este es su próximo espacio.</p></div></div>
+      {(isEditing || step === 1) && <section className="form-section" data-editor-section="1" id="property-section-location"><div className="form-section-heading"><span className="step-number"><Icon name="pin" /></span><div><h3 tabIndex={-1}>Ubicación y características</h3><p>Ubica el inmueble y completa sus características.</p></div></div>
         <div className="location-settings">
           <div className={`exclusivity-card${formData.isExclusive ? ' is-active' : ''}`}>
             <div className="exclusivity-card-top">
@@ -320,7 +366,7 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
               </span>
               <span className="exclusivity-copy">
                 <span className="exclusivity-title">Tengo la exclusiva de esta propiedad</span>
-                <span className="exclusivity-description" id="exclusivity-description">Activa esta opción si cuentas con la exclusiva para comercializar este inmueble.</span>
+                <span className="exclusivity-description" id="exclusivity-description">Actívala si tienes la exclusiva de comercialización.</span>
               </span>
               <span className="exclusivity-switch">
                 <input id="property-exclusive" type="checkbox" role="switch" aria-describedby="exclusivity-description exclusivity-location-hint" checked={formData.isExclusive} onChange={e => {
@@ -332,14 +378,12 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
             </label>
             <div className="exclusivity-location-hint" id="exclusivity-location-hint" aria-live="polite">
               <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>
-              <span><strong>{formData.isExclusive ? 'Tú eliges qué mostrar.' : 'La ubicación exacta queda protegida.'}</strong> {formData.isExclusive ? 'Puedes publicar un marcador exacto o mantener una zona aproximada.' : 'En la publicación solo se verá una zona aproximada.'}</span>
+              <span><strong>{formData.isExclusive ? 'Tú eliges qué mostrar.' : 'La ubicación exacta queda protegida.'}</strong> {formData.isExclusive ? 'Elige un punto exacto o una zona.' : 'Se mostrará solo una zona aproximada.'}</span>
             </div>
           </div>
           <div className="property-fields mt-4">
             <div><label htmlFor="location-mode" className={LABEL_CLASS}>Mostrar ubicación como</label>
-              <select id="location-mode" className={INPUT_CLASS} value={formData.locationMode} disabled={!formData.isExclusive} onChange={e => setFormData(prev => ({ ...prev, locationMode: e.target.value as 'EXACT' | 'RADIUS', latitude: null, longitude: null }))}>
-                <option value="RADIUS">Zona con radio</option>{formData.isExclusive && <option value="EXACT">Marcador exacto</option>}
-              </select>
+              <FieldControl icon="map"><FilterSelect id="location-mode" label="Mostrar ubicación como" value={formData.locationMode} disabled={!formData.isExclusive || isLoading || success} onChange={locationMode => setFormData(prev => ({ ...prev, locationMode: locationMode as 'EXACT' | 'RADIUS', latitude: null, longitude: null }))} options={formData.isExclusive ? [[ 'RADIUS', 'Zona con radio' ], [ 'EXACT', 'Marcador exacto' ]] : [[ 'RADIUS', 'Zona con radio' ]]} /></FieldControl>
             </div>
 
           </div>
@@ -349,16 +393,16 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
             city: prev.city === baseline.city ? details.city : prev.city,
             region: prev.region === baseline.neighborhood ? details.neighborhood : prev.region,
           }))} onRadiusChange={radius => setFormData(prev => ({ ...prev, locationRadiusMeters: radius }))} onChange={coordinates => setFormData(prev => ({ ...prev, ...coordinates }))} />
-          {!formData.isExclusive && <p className="location-privacy-note">La dirección escrita queda disponible para gestionar tu publicación. Los demás usuarios verán la zona.</p>}
+          {!formData.isExclusive && <p className="location-privacy-note">Tu dirección exacta queda protegida; los demás verán la zona.</p>}
         </div>
-        {(user?.organizationId || formData.visibility === 'ORGANIZATION') && <fieldset className="property-visibility"><legend>Visibilidad de la publicación</legend><p>{formData.visibility === 'ORGANIZATION' ? 'Solo los miembros de tu organización podrán ver esta propiedad.' : 'Todos los asesores podrán ver esta propiedad.'}</p><div role="group" aria-label="Visibilidad de la propiedad"><button type="button" aria-pressed={formData.visibility === 'PUBLIC'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'PUBLIC' }))}>Todos</button>{user?.organizationId && <button type="button" aria-pressed={formData.visibility === 'ORGANIZATION'} onClick={() => setFormData(prev => ({ ...prev, visibility: 'ORGANIZATION' }))}>Solo mi organización</button>}</div></fieldset>}
-        <div className="property-fields">{field('address','Dirección',true)}<CityAutocomplete value={formData.city} onChange={city => setFormData(prev => ({ ...prev, city }))} />{field('region','Zona o barrio',true)}{field('areaSquareMeters','Superficie (m²)')}{field('bedrooms','Habitaciones')}{field('bathrooms','Baños')}</div>
+
+        <div className="property-fields">{field('address','Dirección',true)}<CityAutocomplete icon="pin" value={formData.city} onChange={city => setFormData(prev => ({ ...prev, city }))} />{field('region','Zona o barrio',true)}{field('areaSquareMeters','Superficie (m²)')}{field('bedrooms','Habitaciones')}{field('bathrooms','Baños')}</div>
       </section>}
-      {(isEditing || step === 2) && <section className="form-section property-photos-section"><div className="form-section-heading"><span className="step-number">03</span><div><h3>Fotografías</h3><p>Muestra lo mejor de tu propiedad. Puedes ampliar cada foto y ajustar su encuadre.</p></div></div>
+      {(isEditing || step === 2) && <section className="form-section property-photos-section" data-editor-section="2" id="property-section-photos"><div className="form-section-heading"><span className="step-number"><Icon name="photos" /></span><div><h3 tabIndex={-1}>Fotografías</h3><p>Toca una foto para ajustar su encuadre.</p></div></div>
         <label htmlFor="property-images" className="photo-upload">
           <input id="property-images" type="file" multiple accept="image/*" onChange={handleImageSelect} className="photo-upload-input" aria-describedby="photo-upload-help" />
           <span className="photo-upload-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9M17 3h6m-3-3v6M3 16l5-5 9 10m-4-4 3-3 5 5" /><circle cx="8" cy="7" r="1" /></svg></span>
-          <span className="photo-upload-copy"><strong>Un buen espacio merece buenas fotos</strong><span id="photo-upload-help">Selecciona varias imágenes · Hasta 20 fotos · 4 MB por foto</span></span>
+          <span className="photo-upload-copy"><strong>Agrega las fotos de tu inmueble</strong><span id="photo-upload-help">Selecciona varias imágenes · Hasta 20 fotos · 4 MB por foto</span></span>
           <span className="photo-upload-cta"><Icon name="plus" />Agregar fotos</span>
         </label>
         {(existingImages.length > 0 || images.length > 0) && <>
@@ -375,19 +419,19 @@ export const PropertyForm = ({ token, property, onSubmit }: PropertyFormProps) =
             <button type="button" onClick={() => handleRemoveImage(index)} aria-label={`Quitar ${file.name}`} className="property-photo-remove"><Icon name="close" width="15" height="15" /></button>
           </div>)}
         </div></>}
-        {(isEditing || isLoading) && <p className="form-review-note" role="status">{isLoading ? 'Estamos guardando los datos y las fotografías…' : 'Revisa la información antes de guardar.'}</p>}
+        {(isEditing || isLoading) && <p className="form-review-note" role="status">{isLoading ? 'Estamos guardando los datos y las fotografías…' : 'Guarda al terminar tus cambios.'}</p>}
       </section>}
       {!isEditing && step === 3 && <section className="form-section wizard-review" aria-labelledby="review-title">
         <div className="form-section-heading"><span className="step-number">04</span><div><h3 id="review-title">Revisa tu publicación</h3><p>Comprueba los datos antes de compartir tu propiedad.</p></div></div>
         <div className="wizard-review-overview">{previews[0] ? <img src={previews[0]} alt="Portada de la propiedad" /> : <span className="wizard-review-placeholder"><Icon name="home" width="38" height="38" /></span>}<div><span className="eyebrow">{formData.operation === 'RENTAL' ? 'Alquiler' : formData.operation === 'ANTICRETIC' ? 'Anticrético' : 'Venta'} · {PROPERTY_TYPES[formData.type] || formData.type}</span><h3>{formData.title}</h3><strong>{formatPrice(formData.price, formData.currency)}</strong><p>{formData.city} · {formData.region}</p></div></div>
         <div className="wizard-review-grid">
-          <div className="wizard-review-card"><div className="wizard-review-card-heading"><h4>Información principal</h4><button type="button" className="text-link" onClick={() => goToStep(0)}><Icon name="edit" width="15" height="15" />Editar</button></div><p className="wizard-review-description">{formData.description || 'Sin descripción adicional.'}</p><dl><div><dt>Comisión</dt><dd>{formData.commissionPercentage}%</dd></div>{formData.operation !== 'SALE' && <><div><dt>Amoblado</dt><dd>{formData.furnished === 'UNFURNISHED' ? 'No' : 'Sí'}</dd></div><div><dt>Mascotas</dt><dd>{formData.petsAllowed ? 'Permitidas' : 'No permitidas'}</dd></div><div><dt>Expensas incluidas</dt><dd>{formData.expensesIncluded ? 'Sí' : 'No'}</dd></div><div><dt>Wifi incluido</dt><dd>{formData.wifiIncluded ? 'Sí' : 'No'}</dd></div></>}</dl></div>
-          <div className="wizard-review-card"><div className="wizard-review-card-heading"><h4>Ubicación y características</h4><button type="button" className="text-link" onClick={() => goToStep(1)}><Icon name="edit" width="15" height="15" />Editar</button></div><p>{formData.address}<br />{formData.region}, {formData.city}</p><dl><div><dt>Visibilidad</dt><dd>{formData.visibility === 'ORGANIZATION' ? 'Solo mi organización' : 'Todos'}</dd></div><div><dt>Ubicación pública</dt><dd>{formData.isExclusive && formData.locationMode === 'EXACT' ? 'Exacta' : `Zona de ${formData.locationRadiusMeters} m`}</dd></div><div><dt>Exclusiva</dt><dd>{formData.isExclusive ? 'Sí' : 'No'}</dd></div><div><dt>Superficie</dt><dd>{formData.areaSquareMeters ? `${formData.areaSquareMeters} m²` : 'Sin especificar'}</dd></div><div><dt>Habitaciones</dt><dd>{formData.bedrooms || 'Sin especificar'}</dd></div><div><dt>Baños</dt><dd>{formData.bathrooms || 'Sin especificar'}</dd></div></dl></div>
-          <div className="wizard-review-card wizard-review-photos"><div className="wizard-review-card-heading"><h4>Fotografías · {images.length}</h4><button type="button" className="text-link" onClick={() => goToStep(2)}><Icon name="edit" width="15" height="15" />Editar</button></div>{previews.length ? <div className="wizard-review-thumbnails">{previews.map((src, index) => <img key={src} src={src} alt={`Fotografía ${index + 1}${index === 0 ? ' · Portada' : ''}`} />)}</div> : <p>Publicarás sin fotografías. Podrás agregarlas al editar la propiedad.</p>}</div>
+          <div className="wizard-review-card"><div className="wizard-review-card-heading"><h4>Información principal</h4><button type="button" className="text-link" onClick={() => goToStep(0)}><Icon name="edit" width="15" height="15" />Editar</button></div><p className="wizard-review-description">{formData.description || 'Sin notas adicionales.'}</p><dl><div><dt><Icon name="money" width="17" height="17" />Comisión</dt><dd>{formData.commissionPercentage}%</dd></div><div><dt><Icon name="sofa" width="17" height="17" />Amoblado</dt><dd>{formData.furnished === 'UNFURNISHED' ? 'No' : 'Sí'}</dd></div><div><dt><Icon name="paw" width="17" height="17" />Mascotas</dt><dd>{formData.petsAllowed ? 'Permitidas' : 'No permitidas'}</dd></div><div><dt><Icon name="money" width="17" height="17" />Expensas incluidas</dt><dd>{formData.expensesIncluded ? 'Sí' : 'No'}</dd></div><div><dt><Icon name="wifi" width="17" height="17" />Wifi incluido</dt><dd>{formData.wifiIncluded ? 'Sí' : 'No'}</dd></div></dl></div>
+          <div className="wizard-review-card"><div className="wizard-review-card-heading"><h4>Ubicación y características</h4><button type="button" className="text-link" onClick={() => goToStep(1)}><Icon name="edit" width="15" height="15" />Editar</button></div><p>{formData.address}<br />{formData.region}, {formData.city}</p><dl><div><dt><Icon name="eye" width="17" height="17" />Visibilidad</dt><dd>{formData.visibility === 'ORGANIZATION' ? 'Solo mi organización' : 'Todos'}</dd></div><div><dt><Icon name="pin" width="17" height="17" />Ubicación pública</dt><dd>{formData.isExclusive && formData.locationMode === 'EXACT' ? 'Exacta' : `Zona de ${formData.locationRadiusMeters} m`}</dd></div><div><dt><Icon name="shield" width="17" height="17" />Exclusiva</dt><dd>{formData.isExclusive ? 'Sí' : 'No'}</dd></div><div><dt><Icon name="area" width="17" height="17" />Superficie</dt><dd>{formData.areaSquareMeters ? `${formData.areaSquareMeters} m²` : 'Sin especificar'}</dd></div><div><dt><Icon name="bed" width="17" height="17" />Habitaciones</dt><dd>{formData.bedrooms || 'Sin especificar'}</dd></div><div><dt><Icon name="bath" width="17" height="17" />Baños</dt><dd>{formData.bathrooms || 'Sin especificar'}</dd></div></dl></div>
+          <div className="wizard-review-card wizard-review-photos"><div className="wizard-review-card-heading"><h4>Fotografías · {images.length}</h4><button type="button" className="text-link" onClick={() => goToStep(2)}><Icon name="edit" width="15" height="15" />Editar</button></div>{previews.length ? <div className="wizard-review-thumbnails">{previews.map((src, index) => <img key={src} src={src} alt={`Fotografía ${index + 1}${index === 0 ? ' · Portada' : ''}`} />)}</div> : <p>Sin fotos. Puedes agregarlas después.</p>}</div>
         </div>
         <p className="wizard-publish-hint"><Icon name="check" />Al publicar, la propiedad aparecerá en Explorar y en el mapa.</p>
       </section>}
-      <div className={`form-actions ${!isEditing ? 'wizard-actions' : ''}`}>
+      <div className="form-actions wizard-actions">
         {!isLoading && <Link to="/properties" className={isEditing ? 'button button-secondary' : 'text-link wizard-cancel'}>{isEditing ? 'Volver a mis propiedades' : 'Cancelar'}</Link>}
         <div className="wizard-actions-main">
           {!isEditing && step > 0 && <button type="button" disabled={isLoading || success} className="button button-secondary" onClick={() => goToStep(step - 1)}>Anterior</button>}

@@ -1,0 +1,9 @@
+.property-status-filter { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.property-status-filter > label { color: var(--swiss-muted, #677383); font-size: 14px; }
+.property-status-filter .filter-select { width: 210px; max-width: 100%; }
+.property-status-filter .filter-select > .filter-select-trigger { height: 44px; font-size: 14px; }
+.property-status-filter .filter-select-options > button { min-height: 42px; font-size: 14px; }
+@media (max-width: 600px) {
+  .property-status-filter { width: 100%; }
+  .property-status-filter .filter-select { flex: 1; width: auto; }
+}

@@ -1,4 +1,5 @@
 import { apiClient } from './api'
+import type { PropertyStatus } from '@shared/types'
 
 export const propertyAPI = {
   listProperties: async (filters?: any) => {
@@ -24,11 +25,11 @@ export const propertyAPI = {
     return res.data
   },
 
-  getMyPropertiesPage: async (token: string, page = 1, pageSize = 12) => {
+  getMyPropertiesPage: async (token: string, page = 1, pageSize = 12, status = '') => {
     const res = await apiClient.get('/properties/my-properties', {
-      params: { page, pageSize }, headers: { Authorization: `Bearer ${token}` },
+      params: { page, pageSize, status: status || undefined }, headers: { Authorization: `Bearer ${token}` },
     })
-    return { properties: res.data, total: res.meta?.total || 0, totalPages: Math.ceil((res.meta?.total || 0) / pageSize) }
+    return { properties: res.data, total: res.meta?.total || 0, page: res.meta?.page || page, totalPages: Math.ceil((res.meta?.total || 0) / pageSize) }
   },
 
   get: async (token: string, id: string, signal?: AbortSignal) => {
@@ -76,6 +77,13 @@ export const propertyAPI = {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+    })
+    return res.data
+  },
+
+  updateStatus: async (token: string, id: string, status: PropertyStatus) => {
+    const res = await apiClient.put<{ id: string; status: PropertyStatus }>(`/properties/${id}/status`, { status }, {
+      headers: { Authorization: `Bearer ${token}` },
     })
     return res.data
   },

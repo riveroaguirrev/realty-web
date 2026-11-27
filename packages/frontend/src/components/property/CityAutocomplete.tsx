@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Icon, type IconName } from '@/components/ui/Icon'
 import type { MapboxPlace } from '@/utils/mapboxAddress'
 
-export function CityAutocomplete({ value, onChange, onSelect, id = 'property-city', label = 'Ciudad *', required = true, includeZones = false, placeholder = 'Escribe para buscar una ciudad', withinCity }: {
+export function CityAutocomplete({ value, onChange, onSelect, id = 'property-city', label = 'Ciudad *', required = true, includeZones = false, placeholder = 'Escribe para buscar una ciudad', withinCity, icon }: {
   value: string; onChange: (city: string) => void; onSelect?: (place: MapboxPlace) => void
-  id?: string; label?: string; required?: boolean; includeZones?: boolean; placeholder?: string; withinCity?: string
+  id?: string; label?: string; required?: boolean; includeZones?: boolean; placeholder?: string; withinCity?: string; icon?: IconName
 }) {
   const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
   const [query, setQuery] = useState<string | null>(null)
@@ -56,7 +57,7 @@ export function CityAutocomplete({ value, onChange, onSelect, id = 'property-cit
 
   return <div className="city-autocomplete">
     <label htmlFor={id} className="property-label">{label}</label>
-    <input id={id} name="city" className="property-control" value={value} required={required} autoComplete="off" spellCheck={false} placeholder={placeholder}
+    <div className={icon ? "property-icon-control" : undefined}>{icon && <Icon name={icon} className="property-control-icon" />}<input id={id} name="city" className="property-control" value={value} required={required} autoComplete="off" spellCheck={false} placeholder={placeholder}
       role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-suggestions`} aria-activedescendant={open && active >= 0 ? `${id}-option-${active}` : undefined}
       onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
       onChange={event => { setQuery(event.target.value); setPlaces([]); setActive(-1); onChange(event.target.value) }}
@@ -66,7 +67,7 @@ export function CityAutocomplete({ value, onChange, onSelect, id = 'property-cit
           setActive(previous => event.key === 'ArrowDown' ? (previous + 1) % places.length : previous <= 0 ? places.length - 1 : previous - 1)
         } else if (event.key === 'Escape') { event.preventDefault(); setQuery(null); setActive(-1) }
         else if (event.key === 'Enter' && open) { event.preventDefault(); if (places.length) choose(places[active >= 0 ? active : 0]) }
-      }} />
+      }} /></div>
     {open && <div className="city-suggestions">
       {loading && <p role="status">Buscando ubicaciones…</p>}
       {message && <p role="status">{message}</p>}

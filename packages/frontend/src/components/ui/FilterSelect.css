@@ -1,20 +1,18 @@
 .filter-select { position: relative; min-width: 0; color: var(--swiss-ink, #17283f); }
-.filter-select > summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; height: var(--filter-control-height, 46px); padding: 0 13px; border: 1px solid #d5d9dc; border-radius: 12px; background: #fdfdfc; cursor: pointer; list-style: none; font-size: 12px; }
-.filter-select > summary::-webkit-details-marker { display: none; }
-.filter-select > summary > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.filter-select > summary > svg { flex-shrink: 0; color: #728092; transition: transform .18s; }
-.filter-select[open] > summary > svg { transform: rotate(180deg); }
-.filter-select[open] { z-index: 12; }
-.filter-select[open] > summary, .filter-select > summary:focus-visible { outline: 2px solid #bca68a; outline-offset: 2px; }
-.filter-select-options { position: absolute; top: calc(100% + 8px); left: 0; min-width: 100%; width: max-content; max-width: min(340px, 80vw); max-height: 300px; overflow-y: auto; padding: 6px; border: 1px solid #e2dcd4; border-radius: 14px; background: #fffdfa; box-shadow: 0 14px 32px #14243b20; }
-.filter-select .filter-select-options > button { display: flex; position: relative; align-items: center; justify-content: space-between; gap: 18px; margin: 0; padding: 11px 13px; border-radius: 9px; color: #26364c; font-size: 12px; font-weight: 500; cursor: pointer; }
-.filter-select-options > button:hover, .filter-select-options > button:focus-within { background: #f5eee5; }
-.filter-select-options > button.is-selected { background: #eee1d0; color: #17283f; font-weight: 600; }
-.filter-select .filter-select-options input { position: absolute; opacity: 0; width: 1px; height: 1px; min-height: 0; padding: 0; }
-.property-search-page .filter-basic .filter-select > summary { height: 50px; padding-left: 45px; font-size: 13px; }
-.property-search-page .filter-basic .filter-select-options > button { position: relative; width: auto; height: auto; padding: 11px 13px; margin: 0; clip-path: none; white-space: normal; overflow: visible; }
-@media (max-width: 640px) { .property-search-page .filter-basic .filter-select > summary { padding-left: 36px; font-size: 12px; } }
-
-.filter-select .filter-select-options > button { width: 100%; border: 0; background: transparent; text-align: left; font-family: inherit; }
-.filter-select .filter-select-options > button:hover, .filter-select .filter-select-options > button:focus-visible { background: #f5eee5; outline: 2px solid #bca68a; outline-offset: -2px; }
-.filter-select .filter-select-options > button.is-selected { background: #eee1d0; }
+.filter-select > .filter-select-trigger { box-sizing: border-box; display: block; width: 100%; height: var(--filter-control-height, 46px); margin: 0; padding: 0 13px; border: 1px solid #d5d9dc; border-radius: 12px; background: #fdfdfc; color: inherit; font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.filter-select-value { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-width: 0; }
+.filter-select-value > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filter-select-value > svg { flex-shrink: 0; color: #728092; transition: transform .18s; }
+.filter-select[data-open=true] .filter-select-value > svg { transform: rotate(180deg); }
+.filter-select[data-open=true] { z-index: 30; }
+.filter-select[data-open=true] > .filter-select-trigger, .filter-select > .filter-select-trigger:focus-visible { outline: 2px solid #bca68a; outline-offset: 2px; }
+.filter-select > .filter-select-trigger:disabled { opacity: .65; cursor: wait; }
+.filter-select-options { box-sizing: border-box; position: absolute; top: calc(100% + 8px); left: 0; min-width: 100%; width: max-content; max-width: min(340px, 80vw); max-height: 300px; overflow-y: auto; padding: 6px; border: 1px solid #e2dcd4; border-radius: 14px; background: #fffdfa; box-shadow: 0 14px 32px #14243b20; }
+.filter-select .filter-select-options > button { box-sizing: border-box; display: flex; position: relative; align-items: center; justify-content: space-between; gap: 18px; width: 100%; min-height: 42px; height: auto; margin: 0; padding: 11px 13px; border: 0; border-radius: 9px; background: transparent; color: #26364c; font-family: inherit; font-size: 13px; font-weight: 500; text-align: left; white-space: normal; cursor: pointer; }
+.filter-select .filter-select-options > button:hover, .filter-select .filter-select-options > button:focus-visible { background: #f5eee5; }
+.filter-select .filter-select-options > button:focus-visible { outline: 2px solid #bca68a; outline-offset: -2px; }
+.filter-select .filter-select-options > button.is-selected { background: #eee1d0; color: #17283f; font-weight: 600; }
+.filter-select .filter-select-options > button.is-selected:hover { background: #e5d4bf; }
+.filter-select-check { display: flex; width: 16px; flex-shrink: 0; }
+.property-search-page .filter-basic .filter-select > .filter-select-trigger { height: 50px; padding-left: 45px; font-size: 13px; }
+@media (max-width: 640px) { .property-search-page .filter-basic .filter-select > .filter-select-trigger { padding-left: 36px; font-size: 12px; } }

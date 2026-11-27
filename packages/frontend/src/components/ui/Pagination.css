@@ -1,0 +1,18 @@
+.pagination.realty-pagination { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:10px; margin:26px 0 14px; font-size:14px; }
+.realty-pagination .pagination-pages { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:4px; margin:0; padding:0; list-style:none; }
+.realty-pagination .pagination-pages > li { display:flex; }
+.realty-pagination .pagination-step,.realty-pagination .pagination-number { display:grid; place-items:center; flex-shrink:0; min-width:40px; height:40px; min-height:40px; padding:0 7px; border:1px solid transparent; border-radius:10px; background:transparent; color:#53677d; font-size:14px; font-weight:600; line-height:1; cursor:pointer; transition:background .15s,border-color .15s,color .15s; }
+.realty-pagination .pagination-step { border-color:#d8e2eb; background:white; color:#18324b; }
+.realty-pagination .pagination-number:hover:not(:disabled),.realty-pagination .pagination-step:hover:not(:disabled) { border-color:#c3d2e0; background:#e7eef5; color:#18324b; }
+.realty-pagination .pagination-number[aria-current=page],.realty-pagination .pagination-number[aria-current=page]:hover { border-color:#18324b; background:#18324b; color:white; box-shadow:0 2px 5px #18324b15; }
+.realty-pagination .pagination-step:disabled { opacity:.35; cursor:default; }
+.realty-pagination .pagination-number:disabled { cursor:wait; opacity:.6; }
+.realty-pagination .pagination-step:focus-visible,.realty-pagination .pagination-number:focus-visible { outline:2px solid #365b79; outline-offset:3px; }
+.realty-pagination .pagination-ellipsis { display:grid; place-items:center; min-width:22px; height:40px; color:#8996a4; }
+.inbox-pagination .pagination.realty-pagination { gap:6px; }
+.inbox-pagination .realty-pagination .pagination-pages { gap:2px; }
+.inbox-pagination .realty-pagination .pagination-number,.inbox-pagination .realty-pagination .pagination-step { min-width:34px; height:36px; min-height:36px; font-size:13px; }
+@media(max-width:480px) { .pagination.realty-pagination { gap:6px; } .realty-pagination .pagination-pages { gap:2px; } .realty-pagination .pagination-number { min-width:36px; padding:0 5px; } .realty-pagination .pagination-ellipsis { min-width:16px; } }
+@media(max-width:360px) { .pagination.realty-pagination { column-gap:4px; } .realty-pagination .pagination-number { min-width:32px; padding:0 3px; } .realty-pagination .pagination-step { min-width:36px; } .realty-pagination .pagination-ellipsis { min-width:12px; } }
+@media(max-width:360px) { .inbox-pagination .realty-pagination .pagination-number,.inbox-pagination .realty-pagination .pagination-step { min-width:32px; } }
+@media(prefers-reduced-motion:reduce) { .realty-pagination .pagination-number,.realty-pagination .pagination-step { transition:none; } }

@@ -1,13 +1,14 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { changeEmailSchema, changePasswordSchema, verifySchema } from '@shared/validation/auth'
 import { AuthField, FormError } from '@/components/ui/AuthField'
 import { useAuth } from '@/hooks/useAuth'
 import { authAPI } from '@/services/auth'
 import { acceptSession } from '@/services/authSession'
 import { formErrors } from '@/utils/authFlow'
+import { Icon } from '@/components/ui/Icon'
 
 interface EmailProgress { challengeId: string; email: string; newEmail: string; userId: string; side: 'old' | 'new'; sentAt: number }
-export function AccountSecurity() {
+export function AccountSecurity({ emailRequest = 0 }: { emailRequest?: number }) {
   const { user, accessToken, getProfile } = useAuth()
   const [password, setPassword] = useState({ currentPassword: '', password: '', confirmPassword: '' })
   const [email, setEmail] = useState({ email: '', currentPassword: '' })
@@ -22,6 +23,8 @@ export function AccountSecurity() {
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string[]>>({})
   const [emailErrors, setEmailErrors] = useState<Record<string, string[]>>({})
   const [notice, setNotice] = useState('')
+  const [expanded, setExpanded] = useState<'password' | 'email' | null>(progress ? 'email' : null)
+  useEffect(() => { if (emailRequest > 0) setExpanded('email') }, [emailRequest])
   const saveProgress = (value: EmailProgress | null) => {
     setProgress(value)
     if (value) sessionStorage.setItem('auth-email-change', JSON.stringify(value))
@@ -76,28 +79,40 @@ export function AccountSecurity() {
     } catch (error) { setEmailErrors(formErrors(error)) }
     finally { setBusy(false) }
   }
-  return <section className="bg-white shadow rounded-lg p-6 space-y-8">
-    <h2 className="text-xl font-bold">Seguridad de tu cuenta</h2>
-    {notice && <p role="status" className="text-green-700">{notice}</p>}
-    <form noValidate onSubmit={changePassword} className="space-y-4">
-      <h3 className="font-semibold">Cambiar contraseña</h3><FormError errors={passwordErrors} />
+  return <section className="account-security" aria-labelledby="account-security-heading">
+    <div className="profile-section-heading"><span className="profile-section-icon"><Icon name="shield" /></span><div><h2 id="account-security-heading">Acceso y seguridad</h2></div></div>
+    {notice && <p role="status" className="profile-feedback profile-feedback-success"><Icon name="check" />{notice}</p>}
+    <div className="profile-security-item">
+      <button type="button" className="profile-security-toggle" aria-expanded={expanded === 'password'} aria-controls="profile-password-panel" onClick={() => setExpanded(expanded === 'password' ? null : 'password')}>
+        <span className="profile-security-icon"><Icon name="lock" /></span><span><strong>Contraseña</strong><small>Actualiza tu contraseña.</small></span><span className="profile-security-action">{expanded === 'password' ? 'Cerrar' : 'Cambiar'}<Icon name="chevronRight" /></span>
+      </button>
+      <div id="profile-password-panel" hidden={expanded !== 'password'} className="profile-security-content">
+      <form noValidate onSubmit={changePassword} className="space-y-4" aria-label="Cambiar contraseña">
+      <FormError errors={passwordErrors} />
       <AuthField id="password-current" name="currentPassword" label="Contraseña actual" type="password" autoComplete="current-password" value={password.currentPassword} onChange={(e) => setPassword({ ...password, currentPassword: e.target.value })} error={passwordErrors.currentPassword} disabled={busy} />
       <AuthField id="password-new" name="password" label="Nueva contraseña" type="password" autoComplete="new-password" hint="Al menos 12 caracteres." value={password.password} onChange={(e) => setPassword({ ...password, password: e.target.value })} error={passwordErrors.password} disabled={busy} />
       <AuthField id="password-confirm" name="confirmPassword" label="Confirmar nueva contraseña" type="password" autoComplete="new-password" value={password.confirmPassword} onChange={(e) => setPassword({ ...password, confirmPassword: e.target.value })} error={passwordErrors.confirmPassword} disabled={busy} />
-      <button className="button button-primary" disabled={busy}>Actualizar contraseña</button>
-    </form>
-    <div className="border-t pt-6">
-      <h3 className="font-semibold mb-4">Cambiar correo electrónico</h3><FormError errors={emailErrors} />
-      {progress ? <form noValidate onSubmit={verifyEmail} className="space-y-4">
+      <button className="button button-primary" disabled={busy}>{busy ? 'Actualizando…' : 'Actualizar contraseña'}</button>
+      </form></div>
+    </div>
+    <div className="profile-security-item">
+      <button type="button" className="profile-security-toggle" aria-expanded={expanded === 'email'} aria-controls="profile-email-panel" onClick={() => setExpanded(expanded === 'email' ? null : 'email')}>
+        <span className="profile-security-icon"><Icon name="mail" /></span><span><strong>Correo electrónico</strong><small>{user?.email}</small></span><span className="profile-security-action">{expanded === 'email' ? 'Cerrar' : progress ? 'Continuar' : 'Cambiar'}<Icon name="chevronRight" /></span>
+      </button>
+      <div id="profile-email-panel" hidden={expanded !== 'email'} className="profile-security-content">
+      <FormError errors={emailErrors} />
+      {progress ? <form noValidate onSubmit={verifyEmail} className="space-y-4" aria-label="Verificar cambio de correo">
         <p>Confirma el código recibido en <strong>{progress.side === 'old' ? progress.email : progress.newEmail}</strong>. Debes confirmar ambos correos; tu correo anterior sigue vigente hasta finalizar.</p>
         <AuthField label="Código de confirmación" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} error={emailErrors.code} disabled={busy} />
-        <button className="button button-primary" disabled={busy}>Confirmar código</button>
+        <button className="button button-primary" disabled={busy}>{busy ? 'Verificando…' : 'Confirmar código'}</button>
         <button type="button" className="button button-secondary ml-2" disabled={busy} onClick={() => { void resend() }}>Reenviar códigos</button>
-      </form> : <form noValidate onSubmit={changeEmail} className="space-y-4">
+      </form> : <form noValidate onSubmit={changeEmail} className="space-y-4" aria-label="Cambiar correo electrónico">
+        <p className="profile-security-help">Confirmaremos el cambio en ambos correos.</p>
         <AuthField label="Nuevo correo electrónico" name="email" type="email" autoComplete="email" value={email.email} onChange={(e) => setEmail({ ...email, email: e.target.value })} error={emailErrors.email} disabled={busy} />
         <AuthField id="email-current" label="Contraseña actual" name="currentPassword" type="password" autoComplete="current-password" value={email.currentPassword} onChange={(e) => setEmail({ ...email, currentPassword: e.target.value })} error={emailErrors.currentPassword} disabled={busy} />
-        <button className="button button-primary" disabled={busy}>Solicitar cambio de correo</button>
+        <button className="button button-primary" disabled={busy}>{busy ? 'Enviando…' : 'Solicitar cambio de correo'}</button>
       </form>}
+      </div>
     </div>
   </section>
 }

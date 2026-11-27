@@ -1,4 +1,19 @@
 .property-form.property-wizard { border-radius: 24px; }
+.property-form .property-icon-control { position: relative; min-width: 0; width: 100%; }
+.property-form .property-control-icon { position: absolute; left: 14px; top: 24px; transform: translateY(-50%); color: var(--swiss-ink); pointer-events: none; z-index: 1; }
+.property-form .property-icon-control > input:not([type=file]):not([type=checkbox]),
+.property-form .property-icon-control > select,
+.property-form .property-icon-control > textarea,
+.property-form .property-icon-control > .filter-select > .filter-select-trigger { padding-left: 44px; }
+.property-form .property-icon-control > .filter-select > .filter-select-trigger { height: 48px; border-color: #d8dce1; border-radius: 10px; background: #fcfcfd; font-size: 14px; font-weight: 400; }
+.property-form .property-icon-control:has(.filter-select[data-open=true]) > .property-control-icon { z-index: 31; }
+.property-form .property-icon-label,
+.property-form .radius-label-row .property-radius-label,
+.property-form .wizard-review-card dt,
+.property-form .property-visibility button { display: flex; align-items: center; gap: 8px; }
+.property-form .options-grid label > svg,
+.property-form .property-icon-label > svg,
+.property-form .wizard-review-card dt > svg { flex-shrink: 0; color: var(--swiss-ink); }
 .property-wizard-progress { padding: 24px 0 0; }
 .property-wizard-progress ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; padding: 0; margin: 0 0 20px; list-style: none; }
 .property-wizard-progress li button { display: flex; gap: 10px; align-items: center; text-align: left; font-size: 12px; color: var(--swiss-muted); }
@@ -57,3 +72,63 @@
 .property-visibility [role="group"] { display:flex; gap:6px; flex-wrap:wrap; }
 .property-visibility button { border:1px solid #dce2e8; border-radius:9px; padding:10px 16px; background:white; color:#526174; cursor:pointer; font:inherit; }
 .property-visibility button[aria-pressed="true"] { background:#14243b; border-color:#14243b; color:white; }
+
+/* Navigation and feedback around the existing form controls. */
+.property-form .page-heading { margin-bottom: 12px; }
+.property-form .page-heading .eyebrow { font-size: 10px; letter-spacing: .12em; }
+.property-form .page-heading h1 { margin: 5px 0 8px; }
+.property-form .page-heading p:last-child { font-size: 14px; }
+.property-form .property-wizard-progress { padding-top: 12px; }
+.property-form .property-wizard-progress ol { gap: 8px; margin-bottom: 12px; }
+.property-form .property-wizard-progress li button { width: 100%; padding: 12px; border: 1px solid #e5e9ed; border-radius: 12px; background: #fafbfc; transition: background .15s, border-color .15s; }
+.property-form .property-wizard-progress li.is-current button { background: #edf2f7; border-color: #b9cbdc; }
+.property-form .property-wizard-progress li button:not(:disabled):hover { border-color: #8ca6be; background: #edf2f7; }
+.property-form .property-wizard-progress li button:focus-visible,
+.property-form .property-editor-nav button:focus-visible { outline: 2px solid var(--swiss-accent); outline-offset: 3px; }
+.property-form .wizard-step-status { font-size: 12px; margin-top: 10px; }
+.property-form .form-section { scroll-margin-top: 150px; }
+.property-form .form-section-heading { margin-bottom: 20px; }
+.property-form .form-section-heading h3:focus { outline: none; }
+.property-form .form-section-heading .step-number { background: #edf2f7; color: #17324d; }
+.property-form .property-live-preview { display: flex; gap: 14px; align-items: center; margin: 20px 0 24px; padding: 14px; border: 1px solid #e2e7ec; border-radius: 14px; background: #f8fafb; }
+.property-live-cover { display: grid; place-items: center; flex: 0 0 62px; height: 62px; overflow: hidden; border-radius: 10px; background: #e8eef4; color: #526d86; }
+.property-live-cover img { width: 100%; height: 100%; object-fit: cover; }
+.property-live-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.property-live-copy strong { font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
+.property-live-copy > span:last-child { font-size: 12px; color: var(--swiss-muted); }
+.property-live-kicker { font-size: 10px; color: #526d86; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.property-live-photos { display: flex; align-items: center; gap: 5px; margin-left: auto; flex-shrink: 0; color: #526d86; font-size: 12px; }
+.property-live-photos > span { color: #8491a0; }
+.property-editor-nav { display: flex; gap: 6px; position: sticky; top: 80px; z-index: 12; margin: 20px 0; padding: 6px; border: 1px solid #e2e7ec; border-radius: 13px; background: #fff; box-shadow: 0 5px 16px #14243b08; }
+.property-editor-nav button { flex: 1; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; color: #667588; transition: background .15s, color .15s; }
+.property-editor-nav button:hover { background: #f1f5f8; }
+.property-editor-nav button[aria-current] { background: #17324d; color: #fff; }
+.editor-photo-count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 6px; background: #e9eef3; color: #17324d; font-size: 11px; }
+.property-form .options-grid { gap: 10px; }
+.property-form .options-grid label:not(.commission-field) { padding: 14px; min-height: 52px; border: 1px solid #dce3e9; border-radius: 10px; background: #fafbfc; cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s; }
+.property-form .options-grid label:not(.commission-field):hover { border-color: #9eb4c8; background: #f0f4f8; }
+.property-form .options-grid label:has(input:checked) { background: #edf3f9; border-color: #7796b2; color: #17324d; }
+.property-form .options-grid label:has(input:focus-visible) { outline: 2px solid var(--swiss-accent); outline-offset: 2px; }
+.property-form .options-grid .commission-field { grid-column: 1 / -1; margin-top: 4px; }
+.property-form .property-visibility { padding-bottom: 18px; margin-bottom: 22px; }
+.property-form .property-visibility p { font-size: 12px; }
+.property-form .property-visibility button { min-height: 44px; font-size: 13px; }
+.property-form .wizard-actions { padding: 16px 0 max(12px, env(safe-area-inset-bottom)); border-top: 1px solid #e2e7ec; box-shadow: 0 -10px 18px #ffffffed; }
+@media (max-width: 600px) {
+  .property-form .property-wizard-progress li button { padding: 10px 4px; gap: 6px; font-size: 10px; }
+  .property-form .property-wizard-progress ol { gap: 5px; }
+  .property-form .property-live-preview { gap: 10px; padding: 12px; }
+  .property-live-cover { flex-basis: 48px; height: 54px; }
+  .property-live-copy strong { font-size: 13px; }
+  .property-live-photos { flex-direction: column; gap: 2px; }
+  .property-live-photos > span { display: none; }
+  .property-editor-nav { top: 70px; padding: 4px; }
+  .property-editor-nav button { flex-direction: column; gap: 5px; font-size: 11px; padding: 9px 4px; }
+  .editor-photo-count { display: none; }
+  .property-form .options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .property-form .options-grid label:not(.commission-field) { flex-wrap: wrap; font-size: 12px; padding: 12px; }
+  .property-form .wizard-actions-main { gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .property-form *, .property-form *::before, .property-form *::after { scroll-behavior: auto; transition: none; }
+}

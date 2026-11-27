@@ -12,10 +12,12 @@ import { favoritesAPI } from '@/services/favorites'
 import { conversationsAPI } from '@/services/conversations'
 import { canManageProperty } from '@/utils/propertyPermissions'
 import { PropertyFullDetails } from '@/components/property/PropertyFullDetails'
+import { PropertyStatusControl } from '@/components/property/PropertyStatusControl'
 import { SimilarProperties } from '@/components/property/SimilarProperties'
 import { WhatsAppContact } from '@/components/ui/WhatsAppContact'
 import { PROPERTY_OPERATIONS, propertyOperation } from '@/utils/propertyOperations'
 import { authSessionIdentity } from '@/utils/sessionIdentity'
+import { PropertyShare } from '@/components/property/PropertyShare'
 
 export const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -132,7 +134,7 @@ function PropertyDetailView({ id, accessToken, user, session }: { id: string; ac
 
                 {property.description && (
                   <div className="mb-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-2">Descripción</h2>
+                    <h2 className="text-lg font-bold text-gray-900 mb-2">Notas</h2>
                     <p className="text-gray-700">{property.description}</p>
                   </div>
                 )}
@@ -209,10 +211,11 @@ function PropertyDetailView({ id, accessToken, user, session }: { id: string; ac
                 )}
 
                 <div className="mt-8 space-y-3">
+                  <PropertyShare property={property} user={user} />
                   {contact.isError && <p role="alert" className="form-error">No pudimos iniciar la conversación. Inténtalo de nuevo.</p>}
-                  {property.advisor && property.advisor.id !== user?.id && <>
-                    {property.status !== 'ARCHIVED' && <WhatsAppContact phone={property.advisor.whatsappPhone} recipient={property.advisor.firstName}
-                      context={{ kind: 'property', title: property.title, city: property.city, operation: PROPERTY_OPERATIONS[propertyOperation(property.operation)].label, url: new URL(`/properties/${encodeURIComponent(property.id)}`, window.location.origin).href }} className="w-full" />}
+                  {property.status === 'AVAILABLE' && property.advisor && property.advisor.id !== user?.id && <>
+                    <WhatsAppContact phone={property.advisor.whatsappPhone} recipient={property.advisor.firstName}
+                      context={{ kind: 'property', title: property.title, city: property.city, operation: PROPERTY_OPERATIONS[propertyOperation(property.operation)].label, url: new URL(`/properties/${encodeURIComponent(property.id)}`, window.location.origin).href }} className="w-full" />
                     <button
                       onClick={() => contact.mutate(property.advisor.id, { onSuccess: conversation => navigate(`/messages/${conversation.id}`) })}
                       disabled={contact.isPending}
@@ -232,12 +235,15 @@ function PropertyDetailView({ id, accessToken, user, session }: { id: string; ac
                   </button>}
 
                   {canManageProperty(user, property) && (
+                    <>
+                    <PropertyStatusControl token={accessToken} property={property} />
                     <button
                       onClick={() => navigate(`/properties/${property.id}/edit`)}
                       className="w-full py-3 px-4 border-2 border-blue-600 text-blue-700 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
                     >
                       Editar propiedad
                     </button>
+                    </>
                   )}
 
 

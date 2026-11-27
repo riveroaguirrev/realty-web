@@ -1,0 +1,12 @@
+.filter-advanced .advanced-filter-control { position: relative; min-width: 0; }
+.filter-advanced .advanced-filter-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); z-index: 1; color: var(--swiss-ink); pointer-events: none; }
+.filter-panel .filter-advanced .advanced-filter-control > input,
+.filter-panel .filter-advanced .advanced-filter-control .filter-select > .filter-select-trigger { padding-left: 44px; }
+@media (max-width: 640px) {
+  .filter-advanced .advanced-filter-icon { left: 11px; width: 18px; height: 18px; }
+  .filter-panel .filter-advanced .advanced-filter-control > input,
+  .filter-panel .filter-advanced .advanced-filter-control .filter-select > .filter-select-trigger { padding-left: 36px; }
+}
+
+.filter-basic .field:has(.filter-select[data-open=true]) > .search-field-icon,
+.advanced-filter-control:has(.filter-select[data-open=true]) > .advanced-filter-icon { z-index: 31; }
