@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { ApiError, Errors } from '@/utils/errors'
 import { propertyCardSelect } from '@/utils/propertyView'
 import { whatsappPhoneFor } from '@/utils/whatsappContact'
+import { readPropertyStatusFilter } from '@/utils/propertyStatusFilter'
 
 export const organizationAdvisorProfileSelect = {
   id: true, firstName: true, lastName: true, email: true, phone: true,
@@ -10,7 +11,7 @@ export const organizationAdvisorProfileSelect = {
   reviewCount: true, isVerified: true, createdAt: true,
 } as const
 
-export async function getOrganizationAdvisorDetail(requesterId: string, organizationId: string, advisorId: string, page = 1) {
+export async function getOrganizationAdvisorDetail(requesterId: string, organizationId: string, advisorId: string, requestedPage = 1, status?: string) {
   // Check the current persisted role and membership; do not trust client-supplied roles.
   const director = await prisma.advisor.findFirst({
     where: { id: requesterId, organizationId, role: 'DIRECTOR', userRole: 'ADVISOR', status: 'ACTIVE' },
@@ -23,17 +24,18 @@ export async function getOrganizationAdvisorDetail(requesterId: string, organiza
   })
   if (!advisor) throw new ApiError(404, 'ADVISOR_NOT_FOUND', 'Este asesor ya no pertenece a tu organización o no existe.')
   const pageSize = 12
-  const safePage = Number.isSafeInteger(page) && page > 0 ? Math.min(page, 10000) : 1
-  const where = { advisorId, organizationId }
-  const [properties, groups] = await Promise.all([
-    prisma.property.findMany({ where, select: { ...propertyCardSelect, status: true }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: pageSize, skip: (safePage - 1) * pageSize }),
-    prisma.property.groupBy({ by: ['status'], where, _count: { _all: true } }),
-  ])
+  const statuses = readPropertyStatusFilter(status)
+  const scope = { advisorId, organizationId }
+  const where = { ...scope, ...(statuses ? { status: { in: statuses } } : {}) }
+  const groups = await prisma.property.groupBy({ by: ['status'], where: scope, _count: { _all: true } })
   const count = (status: string) => groups.find(group => group.status === status)?._count._all ?? 0
   const total = groups.reduce((sum, group) => sum + group._count._all, 0)
+  const filteredTotal = statuses ? statuses.reduce((sum, status) => sum + count(status), 0) : total
+  const safePage = Math.min(Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1, Math.max(1, Math.ceil(filteredTotal / pageSize)))
+  const properties = await prisma.property.findMany({ where, select: { ...propertyCardSelect, status: true }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: pageSize, skip: (safePage - 1) * pageSize })
   return {
     advisor: { ...advisor, whatsappPhone: whatsappPhoneFor({ ...advisor, userRole: 'ADVISOR' }, requesterId) }, properties,
-    summary: { total, available: count('AVAILABLE'), closed: count('SOLD') + count('RENT'), archived: count('ARCHIVED') },
-    pagination: { page: safePage, pageSize, total, pages: Math.ceil(total / pageSize) },
+    summary: { total, available: count('AVAILABLE'), paused: count('ARCHIVED'), reserved: count('UNDER_OFFER'), closed: count('SOLD') + count('RENT') },
+    pagination: { page: safePage, pageSize, total: filteredTotal, pages: Math.ceil(filteredTotal / pageSize) },
   }
 }

@@ -35,6 +35,6 @@ export interface OrganizationAdvisorProperty {
 export interface OrganizationAdvisorDetail {
   advisor: OrganizationAdvisorProfile
   properties: OrganizationAdvisorProperty[]
-  summary: { total: number; available: number; closed: number; archived: number }
+  summary: { total: number; available: number; paused: number; reserved: number; closed: number }
   pagination: { page: number; pageSize: number; total: number; pages: number }
 }

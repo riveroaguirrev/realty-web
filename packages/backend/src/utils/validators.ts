@@ -1,5 +1,6 @@
 import { emailSchema, passwordSchema, registerSchema, loginSchema } from '@shared/validation/auth'
 import type { PropertyStatus, PropertyType } from '@prisma/client'
+import { isPropertyStatus } from '@shared/propertyStatus'
 
 export const validateEmail = (value: unknown) => emailSchema.safeParse(value).success
 export const validatePassword = (value: unknown) => passwordSchema.safeParse(value).success
@@ -11,7 +12,6 @@ export const validateSignUp = (payload: unknown) => validate(registerSchema, pay
 export const validateLogin = (payload: unknown) => validate(loginSchema, payload)
 
 const PROPERTY_TYPES = ['RESIDENTIAL', 'COMMERCIAL', 'LAND', 'APARTMENT', 'HOUSE', 'OFFICE', 'INDUSTRIAL']
-const PROPERTY_STATUSES = ['AVAILABLE', 'UNDER_OFFER', 'SOLD', 'RENT', 'ARCHIVED']
 const MAX_PROPERTY_IMAGES = 20
 
 export interface PropertyInput {
@@ -110,8 +110,8 @@ export const validatePropertyInput = (payload: any) => {
     else areaSquareMeters = body.areaSquareMeters
   }
 
-  if (body.status !== undefined && !PROPERTY_STATUSES.includes(body.status)) {
-    errors.push(`Status must be one of: ${PROPERTY_STATUSES.join(', ')}`)
+  if (body.status !== undefined && !isPropertyStatus(body.status)) {
+    errors.push('Selecciona un estado válido: Disponible, En pausa, Reservada o Cerrada.')
   }
 
   const images = body.images ?? []

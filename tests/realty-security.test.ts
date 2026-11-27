@@ -7,7 +7,7 @@ import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { Permission, UserRole } from '@shared/types'
 import { GET as similar } from '../packages/backend/src/app/api/properties/[id]/similar/route'
-import { visiblePropertyWhere } from '../packages/backend/src/lib/permissions'
+import { propertyAudienceWhere, visiblePropertyWhere } from '../packages/backend/src/lib/permissions'
 import { propertyImageService } from '../packages/backend/src/services/propertyImage.service'
 import { readPagination } from '../packages/backend/src/utils/pagination'
 import { propertyCardSelect, propertyDiscoverySelect } from '../packages/backend/src/utils/propertyView'
@@ -29,14 +29,16 @@ test('similar listings require a session and the card projection contains only d
   }
 })
 
-test('the archived listing visibility filter admits the managing advisor and director in the same office', () => {
-  const publicStatus = { status: { not: 'ARCHIVED' } }
-  assert.deepEqual(visiblePropertyWhere({ id: 'buyer', role: UserRole.BUYER }), publicStatus)
-  assert.deepEqual(visiblePropertyWhere({ id: 'advisor', role: UserRole.ADVISOR, organizationId: 'office' }),
-    { OR: [publicStatus, { advisorId: 'advisor' }] })
-  assert.deepEqual(visiblePropertyWhere({
+test('unavailable properties remain accessible only to their managing advisor and authorized office director', () => {
+  const buyer = { id: 'buyer', role: UserRole.BUYER }
+  const advisor = { id: 'advisor', role: UserRole.ADVISOR, organizationId: 'office' }
+  const director = {
     id: 'director', role: UserRole.ADVISOR, permissions: [Permission.ORG_ADMIN], organizationId: 'office',
-  }), { OR: [publicStatus, { advisorId: 'director' }, { organizationId: 'office' }] })
+  }
+  const published = (actor: typeof buyer) => ({ status: 'AVAILABLE', ...propertyAudienceWhere(actor) })
+  assert.deepEqual(visiblePropertyWhere(buyer), published(buyer))
+  assert.deepEqual(visiblePropertyWhere(advisor), { OR: [published(advisor), { advisorId: 'advisor' }] })
+  assert.deepEqual(visiblePropertyWhere(director), { OR: [published(director), { advisorId: 'director' }, { organizationId: 'office' }] })
 })
 
 test('retaining a legacy photo requires no registration and removal queues only images linked to the listing', async () => {

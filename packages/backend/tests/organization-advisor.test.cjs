@@ -11,6 +11,9 @@ function load(file, mocks) {
   new Function('require', 'module', 'exports', source)(name => { if (!(name in mocks)) throw new Error('Unexpected dependency: ' + name); return mocks[name] }, module, module.exports)
   return module.exports
 }
+const statusTypes = load('../../shared/src/types/index.ts', {})
+const statusDefinitions = load('../../shared/src/propertyStatus.ts', { './types': statusTypes })
+const statusFilter = load('../src/utils/propertyStatusFilter.ts', { '@shared/propertyStatus': statusDefinitions, './errors': { ApiError } })
 function setup({ director = true, member = true } = {}) {
   const calls = { advisors: [], properties: [], groups: [] }
   const profile = { id: 'agent', firstName: 'Ana', lastName: 'Test', email: 'ana@example.com' }
@@ -18,13 +21,14 @@ function setup({ director = true, member = true } = {}) {
     advisor: { findFirst: async args => { calls.advisors.push(args); return calls.advisors.length === 1 ? director ? { id: 'director' } : null : member ? profile : null } },
     property: {
       findMany: async args => { calls.properties.push(args); return [{ id: 'p1', title: 'Casa', status: 'AVAILABLE' }] },
-      groupBy: async args => { calls.groups.push(args); return [{ status: 'AVAILABLE', _count: { _all: 13 } }, { status: 'SOLD', _count: { _all: 2 } }, { status: 'RENT', _count: { _all: 1 } }, { status: 'ARCHIVED', _count: { _all: 4 } }] },
+      groupBy: async args => { calls.groups.push(args); return [{ status: 'AVAILABLE', _count: { _all: 11 } }, { status: 'UNDER_OFFER', _count: { _all: 2 } }, { status: 'SOLD', _count: { _all: 2 } }, { status: 'RENT', _count: { _all: 1 } }, { status: 'ARCHIVED', _count: { _all: 4 } }] },
     },
   }
   const service = load('../src/services/organizationAdvisor.service.ts', {
     '@/lib/prisma': { prisma: db }, '@/utils/errors': { ApiError, Errors: { FORBIDDEN: forbidden } },
     '@/utils/propertyView': { propertyCardSelect: { id: true, title: true, price: true, images: true } },
     '@/utils/whatsappContact': { whatsappPhoneFor: () => null },
+    '@/utils/propertyStatusFilter': statusFilter,
   })
   return { calls, profile, service }
 }
@@ -59,7 +63,7 @@ test('properties and accurate totals are restricted to both agent and organizati
   assert.deepEqual(calls.groups[0].where, calls.properties[0].where)
   assert.equal(calls.properties[0].take, 12)
   assert.equal(calls.properties[0].skip, 12)
-  assert.deepEqual(data.summary, { total: 20, available: 13, closed: 3, archived: 4 })
+  assert.deepEqual(data.summary, { total: 20, available: 11, reserved: 2, closed: 3, paused: 4 })
   assert.deepEqual(data.pagination, { page: 2, pageSize: 12, total: 20, pages: 2 })
 })
 test('invalid page values cannot create unbounded or negative queries', async () => {
@@ -70,7 +74,7 @@ test('invalid page values cannot create unbounded or negative queries', async ()
   }
   const { calls, service } = setup()
   await service.getOrganizationAdvisorDetail('director', 'org-a', 'agent', 100000)
-  assert.equal(calls.properties[0].skip, 119988)
+  assert.equal(calls.properties[0].skip, 12)
 })
 test('the detail route authenticates before querying and disables caching for contact information', async () => {
   let fail = true, reads = 0
@@ -80,14 +84,14 @@ test('the detail route authenticates before querying and disables caching for co
     'next/server': { NextResponse: { json: (body, options) => ({ body, ...options }) } },
     '@shared/types': {}, '@/middleware/auth': { requireUser: async () => { if (fail) throw new ApiError(401); return { id: 'director' } } },
     '@/services/advisor.service': {}, '@/lib/permissions': {},
-    '@/services/organizationAdvisor.service': { getOrganizationAdvisorDetail: async (...args) => { reads++; assert.deepEqual(args, ['director', 'org-a', 'agent', 2]); return { advisor: { id: 'agent' } } } },
+    '@/services/organizationAdvisor.service': { getOrganizationAdvisorDetail: async (...args) => { reads++; assert.deepEqual(args, ['director', 'org-a', 'agent', 2, 'UNDER_OFFER']); return { advisor: { id: 'agent' } } } },
     '@/utils/pagination': { readPagination: () => ({ page: 2 }) },
   })
   const params = { params: Promise.resolve({ id: 'org-a', advisorId: 'agent' }) }
   assert.equal((await route.GET({}, params)).status, 401)
   assert.equal(reads, 0)
   fail = false
-  const response = await route.GET({ nextUrl: { searchParams: new URLSearchParams() } }, params)
+  const response = await route.GET({ nextUrl: { searchParams: new URLSearchParams('status=UNDER_OFFER') } }, params)
   assert.equal(response.headers['Cache-Control'], 'no-store')
   assert.equal(response.body.success, true)
 })

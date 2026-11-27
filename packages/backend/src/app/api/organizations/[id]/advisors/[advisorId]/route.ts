@@ -14,7 +14,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const user = await requireUser(request)
     const { id, advisorId } = await params
     const { page } = readPagination(request.nextUrl.searchParams, 12)
-    const data = await getOrganizationAdvisorDetail(user.id, id, advisorId, page)
+    const status = request.nextUrl.searchParams.get('status') || undefined
+    const data = await getOrganizationAdvisorDetail(user.id, id, advisorId, page, status)
     return NextResponse.json({ success: true, data }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) { return accountErrorResponse(error) }
 }

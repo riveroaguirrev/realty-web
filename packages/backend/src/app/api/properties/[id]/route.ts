@@ -12,7 +12,7 @@ const PROPERTY_NOT_FOUND = new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not
 const PROPERTY_IN_USE = new ApiError(
   409,
   'PROPERTY_IN_USE',
-  'This property has related records and cannot be deleted. Archive it instead.'
+  'Esta propiedad tiene registros relacionados y no puede eliminarse. Puedes ponerla en pausa.'
 )
 const FOREIGN_KEY_VIOLATION = 'P2003'
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 
     const canManage = canManageProperty(auth.user, property)
     if (!canManage && property.visibility === 'ORGANIZATION' && (!auth.user.organizationId || property.organizationId !== auth.user.organizationId)) return sendError(PROPERTY_NOT_FOUND, 404)
-    if (!canManage && property.status === 'ARCHIVED') return sendError(PROPERTY_NOT_FOUND, 404)
+    if (!canManage && property.status !== 'AVAILABLE') return sendError(PROPERTY_NOT_FOUND, 404)
 
     const { status, userRole, ...advisor } = property.advisor
     const detail = {

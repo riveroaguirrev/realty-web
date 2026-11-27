@@ -11,7 +11,7 @@ export interface MatchScore {
 type SimilarProperty = Prisma.PropertyGetPayload<{ select: typeof propertyCardSelect }>
 
 const scoringSelect = {
-  type: true, price: true, city: true, region: true, bedrooms: true,
+  type: true, operation: true, currency: true, price: true, city: true, region: true, bedrooms: true,
   areaSquareMeters: true, features: true,
 } satisfies Prisma.PropertySelect
 const candidateLimit = 500
@@ -24,7 +24,7 @@ const normalizeFeatures = (features: Prisma.JsonValue | null): string[] => {
   if (!features) return []
 
   if (Array.isArray(features)) {
-    return features.filter((feature): feature is string => typeof feature === 'string')
+    return [...new Set(features.filter((feature): feature is string => typeof feature === 'string'))]
   }
 
   if (typeof features === 'object') {
@@ -53,81 +53,88 @@ export class MatchingService {
         id: { not: propertyId },
         AND: [visibility],
         status: 'AVAILABLE',
+        operation: refProperty.operation,
+        currency: refProperty.currency,
       },
       select: { ...scoringSelect, id: true },
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       take: candidateLimit,
     })
 
+    const refPrice = Number(refProperty.price)
+    const refFeatures = normalizeFeatures(refProperty.features)
+    const normalizeLocation = (value: string | null) => value?.trim().toLocaleLowerCase('es') ?? ''
+    const refCity = normalizeLocation(refProperty.city)
+    const refRegion = normalizeLocation(refProperty.region)
+    // Only criteria recorded on the reference property contribute to the denominator.
+    const possibleScore = 30
+      + (refPrice > 0 ? 25 : 0)
+      + (refCity || refRegion ? 20 : 0)
+      + (refProperty.bedrooms !== null ? 10 : 0)
+      + (refProperty.areaSquareMeters !== null && refProperty.areaSquareMeters > 0 ? 10 : 0)
+      + (refFeatures.length > 0 ? 5 : 0)
+
     const scores = allProperties.map((prop) => {
-      let score = 0
-      let reason = ''
-
-      // 1. Type match (30 points)
+      let points = 0
+      const reasons: string[] = []
       if (prop.type === refProperty.type) {
-        score += 30
-        reason += 'Tipo coincide. '
+        points += 30
+        reasons.push('Tipo coincide.')
       }
 
-      // 2. Price match - within 50-150% (25 points)
-      const refPrice = Number(refProperty.price)
-      const propertyPrice = Number(prop.price)
-      const priceRatio = refPrice > 0 ? propertyPrice / refPrice : 0
+      const priceRatio = refPrice > 0 ? Number(prop.price) / refPrice : 0
       if (priceRatio >= 0.5 && priceRatio <= 1.5) {
-        score += 25
-        reason += 'Precio compatible. '
+        points += 25
+        reasons.push('Precio compatible.')
       }
 
-      // 3. Location match (20 points)
-      if (prop.city === refProperty.city && prop.region === refProperty.region) {
-        score += 20
-        reason += 'Ubicación exacta. '
-      } else if (prop.region === refProperty.region) {
-        score += 10
-        reason += 'Mismo región. '
+      const sameCity = !!refCity && normalizeLocation(prop.city) === refCity
+      const sameRegion = !!refRegion && normalizeLocation(prop.region) === refRegion
+      if ((sameCity && (!refRegion || sameRegion)) || (!refCity && sameRegion)) {
+        points += 20
+        reasons.push(sameCity ? 'Misma ciudad y región registrada.' : 'Misma región.')
+      } else if (sameCity || sameRegion) {
+        points += 10
+        reasons.push(sameCity ? 'Misma ciudad.' : 'Misma región.')
       }
 
-      // 4. Bedroom match (10 points)
-      if (
-        refProperty.bedrooms &&
-        prop.bedrooms &&
-        Math.abs(prop.bedrooms - refProperty.bedrooms) <= 1
-      ) {
-        score += 10
-        reason += 'Dormitorios similares. '
+      if (refProperty.bedrooms !== null && prop.bedrooms !== null
+        && Math.abs(prop.bedrooms - refProperty.bedrooms) <= 1) {
+        points += 10
+        reasons.push('Dormitorios similares.')
       }
 
-      // 5. Area match (10 points)
-      if (
-        refProperty.areaSquareMeters &&
-        prop.areaSquareMeters &&
-        Math.abs(prop.areaSquareMeters - refProperty.areaSquareMeters) <= 50
-      ) {
-        score += 10
-        reason += 'Área similar. '
+      if (refProperty.areaSquareMeters !== null && refProperty.areaSquareMeters > 0
+        && prop.areaSquareMeters !== null && prop.areaSquareMeters > 0
+        && Math.abs(prop.areaSquareMeters - refProperty.areaSquareMeters) <= 50) {
+        points += 10
+        reasons.push('Área similar.')
       }
 
-      // 6. Features bonus
-      const refFeatures = normalizeFeatures(refProperty.features)
       const propertyFeatures = new Set(normalizeFeatures(prop.features))
-      if (refFeatures.length > 0 && propertyFeatures.size > 0) {
-        const commonFeatures = refFeatures.filter((feature) => propertyFeatures.has(feature)).length
-        score += commonFeatures * 5
-        if (commonFeatures > 0) {
-          reason += `${commonFeatures} característica(s) en común. `
-        }
+      const commonFeatures = refFeatures.filter(feature => propertyFeatures.has(feature)).length
+      if (commonFeatures > 0) {
+        // Features share a fixed five-point weight, regardless of their count.
+        points += 5 * commonFeatures / refFeatures.length
+        reasons.push(`${commonFeatures} característica(s) en común.`)
       }
 
       return {
         propertyId: prop.id,
-        score,
-        matchReason: reason.trim(),
+        score: Math.max(0, Math.min(100, Math.round(points / possibleScore * 100))),
+        matchReason: reasons.join(' '),
       }
     })
 
     const ranked = scores.sort((a, b) => b.score - a.score).slice(0, limit)
     const visibleProperties = await prisma.property.findMany({
-      where: { id: { in: ranked.map(match => match.propertyId) }, status: 'AVAILABLE', AND: [visibility] },
+      where: {
+        id: { in: ranked.map(match => match.propertyId) },
+        status: 'AVAILABLE',
+        operation: refProperty.operation,
+        currency: refProperty.currency,
+        AND: [visibility],
+      },
       select: propertyCardSelect,
     })
     const byId = new Map(visibleProperties.map(property => [property.id, property]))

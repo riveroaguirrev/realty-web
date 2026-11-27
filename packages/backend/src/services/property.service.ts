@@ -5,6 +5,8 @@ import { propertyAudienceWhere, requirePropertyManagement } from '@/lib/permissi
 import { ApiError } from '@/utils/errors'
 import { prisma } from '@/lib/prisma'
 import { PropertyStatus } from '@shared/types'
+import { isPropertyStatus, propertyStatusForOperation } from '@shared/propertyStatus'
+import { readPropertyStatusFilter } from '@/utils/propertyStatusFilter'
 import { slugify } from '@/utils/slug'
 import { PropertyInput } from '@/utils/validators'
 import { Prisma } from '@prisma/client'
@@ -283,18 +285,19 @@ export class PropertyService {
     }
   }
 
-  async getAdvisorProperties(advisorId: string, page = 1, pageSize = 10) {
-    const skip = (page - 1) * pageSize
-
-    const [properties, total] = await Promise.all([
-      prisma.property.findMany({
-        where: { advisorId },
-        skip,
-        take: pageSize,
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.property.count({ where: { advisorId } }),
-    ])
+  async getAdvisorProperties(advisorId: string, requestedPage = 1, requestedPageSize = 10, status?: string) {
+    const normalized = normalizePagination(requestedPage, requestedPageSize)
+    const pageSize = normalized.pageSize
+    const statuses = readPropertyStatusFilter(status)
+    const where: Prisma.PropertyWhereInput = { advisorId, ...(statuses ? { status: { in: statuses } } : {}) }
+    const total = await prisma.property.count({ where })
+    const page = Math.min(normalized.page, Math.max(1, Math.ceil(total / pageSize)))
+    const properties = await prisma.property.findMany({
+      where,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    })
 
     return {
       properties,
@@ -341,7 +344,9 @@ export class PropertyService {
           bathrooms: data.bathrooms ?? null,
           areaSquareMeters: data.areaSquareMeters ?? null,
           images: data.images,
-          ...(data.status && { status: data.status }),
+          ...((data.status || data.operation !== existing.operation) && {
+            status: propertyStatusForOperation(data.status ?? existing.status, data.operation),
+          }),
         },
         include: {
           advisor: {
@@ -367,10 +372,17 @@ export class PropertyService {
     })
   }
 
-  async updatePropertyStatus(id: string, status: PropertyStatus) {
-    return await prisma.property.update({
-      where: { id },
-      data: { status },
+  async updatePropertyStatus(id: string, status: PropertyStatus, actor: Parameters<typeof requirePropertyManagement>[0]) {
+    if (!isPropertyStatus(status)) throw new ApiError(400, 'INVALID_PROPERTY_STATUS', 'Selecciona un estado válido.')
+    return serializable(async tx => {
+      const existing = await tx.property.findUnique({ where: { id }, select: { advisorId: true, organizationId: true, operation: true } })
+      if (!existing) throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Propiedad no encontrada.')
+      requirePropertyManagement(actor, existing)
+      return tx.property.update({
+        where: { id },
+        data: { status: propertyStatusForOperation(status, existing.operation) },
+        select: { id: true, status: true },
+      })
     })
   }
 }

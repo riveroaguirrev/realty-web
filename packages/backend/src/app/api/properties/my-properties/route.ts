@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { propertyService } from '@/services/property.service'
 import { verifyAuth, sendError } from '@/middleware/auth'
 import { Errors } from '@/utils/errors'
+import { readPagination } from '@/utils/pagination'
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,10 +16,10 @@ export async function GET(req: NextRequest) {
     }
 
     const url = new URL(req.url)
-    const page = parseInt(url.searchParams.get('page') || '1')
-    const pageSize = parseInt(url.searchParams.get('pageSize') || '10')
+    const { page, pageSize } = readPagination(url.searchParams, 10)
+    const status = url.searchParams.get('status') || undefined
 
-    const result = await propertyService.getAdvisorProperties(auth.user.id, page, pageSize)
+    const result = await propertyService.getAdvisorProperties(auth.user.id, page, pageSize, status)
 
     const response = NextResponse.json({
       success: true,

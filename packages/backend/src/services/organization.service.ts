@@ -4,6 +4,7 @@ import { ApiError, Errors } from '@/utils/errors'
 import { serializable } from '@/lib/transactions'
 import { organizationSchema } from '@shared/validation/auth'
 import { seatUsage } from './seats.service'
+import { visiblePropertyWhere } from '@/lib/permissions'
 
 export class OrganizationService {
   async createOrganization(
@@ -135,12 +136,13 @@ export class OrganizationService {
     return advisors
   }
 
-  async getOrganizationProperties(orgId: string, page = 1, pageSize = 20) {
+  async getOrganizationProperties(orgId: string, viewer: Parameters<typeof visiblePropertyWhere>[0], page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize
+    const where = { organizationId: orgId, ...visiblePropertyWhere(viewer) }
 
     const [properties, total] = await Promise.all([
       prisma.property.findMany({
-        where: { organizationId: orgId },
+        where,
         include: {
           advisor: {
             select: {
@@ -156,7 +158,7 @@ export class OrganizationService {
         orderBy: { createdAt: 'desc' },
       }),
       prisma.property.count({
-        where: { organizationId: orgId },
+        where,
       }),
     ])
 

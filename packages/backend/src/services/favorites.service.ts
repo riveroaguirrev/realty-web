@@ -10,7 +10,7 @@ export class FavoritesService {
   async addFavorite(user: PropertyViewer, propertyId: string) {
     return serializable(async (tx) => {
       const property = await tx.property.findFirst({
-        where: { id: propertyId, ...visiblePropertyWhere(user) },
+        where: { id: propertyId, status: 'AVAILABLE', AND: [visiblePropertyWhere(user)] },
         select: { id: true },
       })
       if (!property) throw new ApiError(404, 'PROPERTY_NOT_FOUND', 'Property not found')
@@ -27,7 +27,7 @@ export class FavoritesService {
   }
 
   async listFavorites(user: PropertyViewer, page = 1, pageSize = 10) {
-    const where = { buyerId: user.id, property: visiblePropertyWhere(user) }
+    const where = { buyerId: user.id, property: { status: 'AVAILABLE' as const, AND: [visiblePropertyWhere(user)] } }
     const [favorites, total] = await Promise.all([
       prisma.favorite.findMany({
         where,

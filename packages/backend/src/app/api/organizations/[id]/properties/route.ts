@@ -22,7 +22,7 @@ export async function GET(
     const page = parseInt(url.searchParams.get('page') || '1')
     const pageSize = parseInt(url.searchParams.get('pageSize') || '20')
 
-    const result = await organizationService.getOrganizationProperties(orgId, page, pageSize)
+    const result = await organizationService.getOrganizationProperties(orgId, user, page, pageSize)
 
     return NextResponse.json(
       {

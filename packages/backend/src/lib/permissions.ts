@@ -62,7 +62,7 @@ export const requirePropertyManagement = (actor: PropertyActor, property: Proper
 }
 
 export const visiblePropertyWhere = (actor: PropertyActor): Prisma.PropertyWhereInput => {
-  const published: Prisma.PropertyWhereInput = { status: { not: 'ARCHIVED' }, ...propertyAudienceWhere(actor) }
+  const published: Prisma.PropertyWhereInput = { status: 'AVAILABLE', ...propertyAudienceWhere(actor) }
   if (actor.role === UserRole.BUYER) return published
 
   const accessible: Prisma.PropertyWhereInput[] = [published, { advisorId: actor.id }]
